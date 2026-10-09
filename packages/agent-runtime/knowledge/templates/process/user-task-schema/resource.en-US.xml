@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Resources Culture="en-US">
+	<Group Type="String">
+		<Items>
+			<Item Name="Caption" Value="Test step 17: custom process action" />
+			<Item Name="Description" Value="Test action: creates a TestProcEntity record and returns text." />
+			<Item Name="Parameters.TestExtra.Caption" Value="TestExtra text" />
+			<Item Name="Parameters.TestNumber.Caption" Value="TestNumber (step 18)" />
+			<Item Name="Parameters.TestResult.Caption" Value="TestResult" />
+			<Item Name="Parameters.TestText.Caption" Value="TestText" />
+		</Items>
+	</Group>
+</Resources>

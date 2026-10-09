@@ -1,0 +1,167 @@
+{
+  "about": "Шаблон элемента «Выполнить действие процесса (своё действие)» из тестового процесса, подтверждённого записью в CRM. Как вставлять — process-edit.md, раздел про «Выполнить действие процесса (своё действие)». Плейсхолдеры <UId процесса>, <UId пакета>, <UId дорожки>, <UId элемента> замени на свои. Все остальные UId элемента (параметры BP2, маппинги BK15, Id внутри JSON-строк значений) — на новые GUID, согласованно во всех местах, кроме констант из рецепта (BL7, J6, A3/A4 параметров, равные J6, GT4, GT5, L1, L9). Значения параметров (объект, колонки, фильтры, тексты) — свои. Ресурсы — строки BaseElements.<Имя элемента>.* в обе локали.",
+  "j6": "<UId схемы действия>",
+  "bl7": "1418e61a-82c3-403e-8221-01088f52c125",
+  "element": {
+    "BL1": "BPMSoft.Core.Process.ProcessSchemaUserTask",
+    "UId": "<UId элемента>",
+    "A2": "UserTask1",
+    "A3": "<UId процесса>",
+    "A4": "<UId процесса>",
+    "A5": "<UId пакета>",
+    "IL2": "<UId дорожки>",
+    "BL3": "150;172",
+    "BL7": "1418e61a-82c3-403e-8221-01088f52c125",
+    "BL8": "<UId процесса>",
+    "BN2": "69;55",
+    "BO3": true,
+    "BP2": [
+      {
+          "BL1": "BPMSoft.Core.Process.ProcessSchemaParameter",
+          "UId": "0142fbff-48be-4925-b4a0-364818ac236b",
+          "A2": "TestText",
+          "A3": "<UId схемы действия>",
+          "A4": "<UId схемы действия>",
+          "IL2": "<UId элемента>",
+          "L1": "ddb3a1ee-07e8-4d62-b7a9-d0e618b00fbd",
+          "L8": {
+            "GS1": 3,
+            "GS2": "\"Привет из процесса\"",
+            "GS5": "<UId процесса>"
+        },
+        "L6": true,
+        "L12": 0
+      },
+      {
+        "BL1": "BPMSoft.Core.Process.ProcessSchemaParameter",
+        "UId": "863e693a-1ab3-42ff-acf4-e7646f740318",
+        "A2": "TestNumber",
+        "A3": "<UId схемы действия>",
+        "A4": "<UId схемы действия>",
+        "IL2": "<UId элемента>",
+        "L1": "6b6b74e2-820d-490e-a017-2b73d4ccf2b0",
+        "L8": {
+          "GS1": 1,
+          "GS2": "17",
+          "GS5": "<UId процесса>"
+        },
+        "L12": 0
+      },
+      {
+        "BL1": "BPMSoft.Core.Process.ProcessSchemaParameter",
+        "UId": "99baae75-db9f-4c77-a431-9142bcce625f",
+        "A2": "TestResult",
+        "A3": "<UId схемы действия>",
+        "A4": "<UId схемы действия>",
+        "IL2": "<UId элемента>",
+        "L1": "ddb3a1ee-07e8-4d62-b7a9-d0e618b00fbd",
+        "L8": {
+          "GS5": "<UId процесса>"
+        },
+        "L12": 1
+      },
+      {
+        "BL1": "BPMSoft.Core.Process.ProcessSchemaParameter",
+        "UId": "f947d74f-f3a1-4644-89c6-5ce285941f51",
+        "A2": "TestExtra",
+        "A3": "<UId схемы действия>",
+        "A4": "<UId схемы действия>",
+        "IL2": "<UId элемента>",
+        "L1": "ddb3a1ee-07e8-4d62-b7a9-d0e618b00fbd",
+        "L8": {
+          "GS1": 3,
+          "GS2": "\"Доп из процесса\"",
+          "GS5": "<UId процесса>"
+        },
+        "L12": 0
+      }
+    ],
+    "CL2": "FFFFFFFF",
+    "J6": "<UId схемы действия>"
+  },
+  "mappings": [
+    {
+      "BL1": "BPMSoft.Core.Process.ProcessSchemaMapping",
+      "UId": "6f097b8c-a10f-4f3e-bbc4-332ece9d5cd5",
+      "A2": "UserTask1",
+      "A3": "<UId процесса>",
+      "A4": "<UId процесса>",
+      "GT2": "[Element:{<UId элемента>}].[Parameter:{0142fbff-48be-4925-b4a0-364818ac236b}]",
+      "GT3": "0142fbff-48be-4925-b4a0-364818ac236b",
+      "GT5": "390ff932-a96a-4ce3-9811-b19a9ad9d018",
+      "GT4": "<UId схемы действия>",
+      "GT1": {
+        "GS1": 3,
+        "GS2": "\"Привет из процесса\""
+      }
+    },
+    {
+      "BL1": "BPMSoft.Core.Process.ProcessSchemaMapping",
+      "UId": "1a728184-96cf-4598-a755-53b8e332feb1",
+      "A2": "UserTask1",
+      "A3": "<UId процесса>",
+      "A4": "<UId процесса>",
+      "GT2": "[Element:{<UId элемента>}].[Parameter:{863e693a-1ab3-42ff-acf4-e7646f740318}]",
+      "GT3": "863e693a-1ab3-42ff-acf4-e7646f740318",
+      "GT5": "ffe58cb1-beee-4ae5-9667-b130b5db4533",
+      "GT4": "<UId схемы действия>",
+      "GT1": {
+        "GS1": 1,
+        "GS2": "17"
+      }
+    },
+    {
+      "BL1": "BPMSoft.Core.Process.ProcessSchemaMapping",
+      "UId": "3c558e8b-e981-4da8-909c-94206abd77d0",
+      "A2": "UserTask1",
+      "A3": "<UId процесса>",
+      "A4": "<UId процесса>",
+      "GT2": "[Element:{<UId элемента>}].[Parameter:{99baae75-db9f-4c77-a431-9142bcce625f}]",
+      "GT3": "99baae75-db9f-4c77-a431-9142bcce625f",
+      "GT5": "7e8ccd79-66ed-4228-bd67-38b42cf2e850",
+      "GT4": "<UId схемы действия>",
+      "GT1": {}
+    },
+    {
+      "BL1": "BPMSoft.Core.Process.ProcessSchemaMapping",
+      "UId": "2ede3db3-03ae-40da-bbc3-e486367bee5b",
+      "A2": "UserTask1",
+      "A3": "<UId процесса>",
+      "A4": "<UId процесса>",
+      "GT2": "[Element:{<UId элемента>}].[Parameter:{f947d74f-f3a1-4644-89c6-5ce285941f51}]",
+      "GT3": "f947d74f-f3a1-4644-89c6-5ce285941f51",
+      "GT5": "3f33f47e-5ae4-4395-a3f2-6ed706d0a74a",
+      "GT4": "<UId схемы действия>",
+      "GT1": {
+        "GS1": 3,
+        "GS2": "\"Доп из процесса\""
+      }
+    }
+  ],
+  "resources": {
+    "ru-RU": [
+      "<Item Name=\"BaseElements.FormulaTask1.Caption\" Value=\"Результат действия в параметр\" />",
+      "<Item Name=\"BaseElements.ScriptTask1.Caption\" Value=\"Записать результат\" />",
+      "<Item Name=\"BaseElements.UserTask1.Caption\" Value=\"Своё действие TestUserTask\" />",
+      "<Item Name=\"BaseElements.UserTask1.Parameters.TestExtra.Caption\" Value=\"Доп. текст\" />",
+      "<Item Name=\"BaseElements.UserTask1.Parameters.TestExtra.DisplayValue\" Value=\"&quot;Доп из процесса&quot;\" />",
+      "<Item Name=\"BaseElements.UserTask1.Parameters.TestNumber.Caption\" Value=\"Число (шаг 18)\" />",
+      "<Item Name=\"BaseElements.UserTask1.Parameters.TestNumber.DisplayValue\" Value=\"17\" />",
+      "<Item Name=\"BaseElements.UserTask1.Parameters.TestResult.Caption\" Value=\"Результат\" />",
+      "<Item Name=\"BaseElements.UserTask1.Parameters.TestText.Caption\" Value=\"Текст\" />",
+      "<Item Name=\"BaseElements.UserTask1.Parameters.TestText.DisplayValue\" Value=\"&quot;Привет из процесса&quot;\" />"
+    ],
+    "en-US": [
+      "<Item Name=\"BaseElements.FormulaTask1.Caption\" Value=\"Action result to parameter\" />",
+      "<Item Name=\"BaseElements.ScriptTask1.Caption\" Value=\"Write result\" />",
+      "<Item Name=\"BaseElements.UserTask1.Caption\" Value=\"Custom action TestUserTask\" />",
+      "<Item Name=\"BaseElements.UserTask1.Parameters.TestExtra.Caption\" Value=\"TestExtra text\" />",
+      "<Item Name=\"BaseElements.UserTask1.Parameters.TestExtra.DisplayValue\" Value=\"&quot;Доп из процесса&quot;\" />",
+      "<Item Name=\"BaseElements.UserTask1.Parameters.TestNumber.Caption\" Value=\"TestNumber (step 18)\" />",
+      "<Item Name=\"BaseElements.UserTask1.Parameters.TestNumber.DisplayValue\" Value=\"17\" />",
+      "<Item Name=\"BaseElements.UserTask1.Parameters.TestResult.Caption\" Value=\"TestResult\" />",
+      "<Item Name=\"BaseElements.UserTask1.Parameters.TestText.Caption\" Value=\"TestText\" />",
+      "<Item Name=\"BaseElements.UserTask1.Parameters.TestText.DisplayValue\" Value=\"&quot;Привет из процесса&quot;\" />"
+    ]
+  }
+}

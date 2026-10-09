@@ -1,0 +1,243 @@
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { mkdtempSync, readdirSync, readFileSync } from 'fs'
+import { join } from 'path'
+import { tmpdir } from 'os'
+import {
+  initChatLog,
+  getChatLogDir,
+  startChatLogIfNeeded,
+  endChatLog,
+  getCurrentChatLogPath,
+  logChatRecord,
+  truncateDeep,
+  extractKnowledgeNotes
+} from '../src/main/chatLog'
+
+describe('chatLog', () => {
+  let tempDir: string
+
+  beforeEach(() => {
+    tempDir = mkdtempSync(join(tmpdir(), 'chatlog-'))
+    initChatLog(tempDir)
+  })
+
+  afterEach(() => {
+    endChatLog()
+  })
+
+  describe('initChatLog and getChatLogDir', () => {
+    it('sets and returns the log directory', () => {
+      const dir = '/tmp/test-logs'
+      initChatLog(dir)
+      expect(getChatLogDir()).toBe(dir)
+    })
+
+    it('resets current state', () => {
+      initChatLog(tempDir)
+      startChatLogIfNeeded({ projectPath: '/proj' })
+      expect(getCurrentChatLogPath()).toBeDefined()
+      initChatLog(tempDir)
+      expect(getCurrentChatLogPath()).toBeUndefined()
+    })
+  })
+
+  describe('startChatLogIfNeeded', () => {
+    it('is a no-op before initChatLog', () => {
+      const dir = mkdtempSync(join(tmpdir(), 'chatlog-'))
+      endChatLog()
+      initChatLog(undefined)
+      startChatLogIfNeeded({ projectPath: '/proj' })
+      expect(getCurrentChatLogPath()).toBeUndefined()
+    })
+
+    it('is a no-op if already started', () => {
+      startChatLogIfNeeded({ projectPath: '/proj' })
+      const path1 = getCurrentChatLogPath()
+      startChatLogIfNeeded({ projectPath: '/proj' })
+      const path2 = getCurrentChatLogPath()
+      expect(path1).toBe(path2)
+    })
+
+    it('creates chats directory and files', () => {
+      startChatLogIfNeeded({ projectPath: '/proj/path' })
+      const logsPath = getCurrentChatLogPath()
+      expect(logsPath).toBeDefined()
+      const content = readFileSync(logsPath!, 'utf-8')
+      expect(content).toContain('chat_start')
+    })
+
+    it('creates different files when second started after end', (done) => {
+      startChatLogIfNeeded({ projectPath: '/proj' })
+      const path1 = getCurrentChatLogPath()!
+      endChatLog()
+      setTimeout(() => {
+        startChatLogIfNeeded({ projectPath: '/proj' })
+        const path2 = getCurrentChatLogPath()!
+        expect(path1).not.toBe(path2)
+        done()
+      }, 1000)
+    })
+  })
+
+  describe('logChatRecord', () => {
+    it('is a no-op before start', () => {
+      endChatLog()
+      logChatRecord('user_message', { text: 'hello' })
+      // Should not throw
+      expect(true).toBe(true)
+    })
+
+    it('writes JSONL and Markdown', () => {
+      startChatLogIfNeeded({ projectPath: '/proj' })
+      logChatRecord('user_message', { text: 'hello' })
+      logChatRecord('agent_event', { event: { type: 'text', text: 'world' } })
+
+      const jsonlPath = getCurrentChatLogPath()!
+      const mdPath = jsonlPath.replace('.jsonl', '.md')
+      const jsonl = readFileSync(jsonlPath, 'utf-8').split('\n').filter((l) => l)
+      const md = readFileSync(mdPath, 'utf-8')
+
+      expect(jsonl).toHaveLength(3) // chat_start, user_message, agent_event
+      expect(jsonl[0]).toContain('chat_start')
+      expect(jsonl[1]).toContain('user_message')
+      expect(jsonl[2]).toContain('agent_event')
+
+      expect(md).toContain('## Вы')
+      expect(md).toContain('hello')
+      expect(md).toContain('## Агент')
+      expect(md).toContain('world')
+    })
+
+    it('handles knowledge notes in agent text', () => {
+      startChatLogIfNeeded({ projectPath: '/proj' })
+      logChatRecord('agent_event', {
+        event: {
+          type: 'text',
+          text: 'Here is content\n## Наблюдения для базы знаний\n- факт 1\n- факт 2'
+        }
+      })
+
+      const knowledgeFile = join(tempDir, 'knowledge-notes.md')
+      const content = readFileSync(knowledgeFile, 'utf-8')
+      expect(content).toContain('- факт 1')
+      expect(content).toContain('- факт 2')
+    })
+
+    it('does not create knowledge-notes for text without observations', () => {
+      const knowledgeFile = join(tempDir, 'knowledge-notes.md')
+      startChatLogIfNeeded({ projectPath: '/proj' })
+      logChatRecord('agent_event', { event: { type: 'text', text: 'just text' } })
+      expect(() => readFileSync(knowledgeFile, 'utf-8')).toThrow()
+    })
+  })
+
+  describe('truncateDeep', () => {
+    it('leaves short strings unchanged', () => {
+      const result = truncateDeep({ text: 'hello' })
+      expect(result).toEqual({ text: 'hello' })
+    })
+
+    it('truncates long strings with marker', () => {
+      const longStr = 'x'.repeat(25000)
+      const result = truncateDeep({ text: longStr })
+      const truncated = (result as any).text
+      expect(truncated).toContain('обрезано')
+      expect(truncated.length).toBeLessThan(longStr.length)
+    })
+
+    it('handles nested arrays and objects', () => {
+      const deep = {
+        level1: {
+          level2: ['a', 'b', { level3: 'nested' }]
+        }
+      }
+      const result = truncateDeep(deep)
+      expect(result).toEqual(deep)
+    })
+
+    it('truncates nested long strings', () => {
+      const longStr = 'x'.repeat(25000)
+      const nested = {
+        outer: {
+          inner: [{ text: longStr }]
+        }
+      }
+      const result = truncateDeep(nested)
+      const innerText = (result as any).outer.inner[0].text
+      expect(innerText).toContain('обрезано')
+    })
+  })
+
+  describe('extractKnowledgeNotes', () => {
+    it('returns null when heading is absent', () => {
+      const result = extractKnowledgeNotes('just text')
+      expect(result).toBeNull()
+    })
+
+    it('returns null when heading exists but no content after', () => {
+      const result = extractKnowledgeNotes('text\n## Наблюдения для базы знаний')
+      expect(result).toBeNull()
+    })
+
+    it('returns content when heading has text after', () => {
+      const text = 'intro\n## Наблюдения для базы знаний\n- факт 1\n- факт 2'
+      const result = extractKnowledgeNotes(text)
+      expect(result).toContain('- факт 1')
+      expect(result).toContain('- факт 2')
+    })
+
+    it('is case-insensitive', () => {
+      const text = 'intro\n## НАБЛЮДЕНИЯ ДЛЯ БАЗЫ ЗНАНИЙ\n- факт 1'
+      const result = extractKnowledgeNotes(text)
+      expect(result).toContain('- факт 1')
+    })
+
+    it('finds heading anywhere in text', () => {
+      const text = 'line 1\nline 2\n## наблюдения для базы знаний\n- fact'
+      const result = extractKnowledgeNotes(text)
+      expect(result).toContain('- fact')
+      expect(result).not.toContain('line 1')
+    })
+  })
+
+  describe('renderMarkdown', () => {
+    it('is a simple integration smoke test', () => {
+      startChatLogIfNeeded({ projectPath: '/test/proj' })
+      logChatRecord('user_message', { text: 'User asked something' })
+      logChatRecord('agent_event', { event: { type: 'text', text: 'Agent responded' } })
+      logChatRecord('error', { message: 'Something went wrong' })
+
+      const mdPath = getCurrentChatLogPath()!.replace('.jsonl', '.md')
+      const md = readFileSync(mdPath, 'utf-8')
+
+      expect(md).toContain('## Вы')
+      expect(md).toContain('User asked something')
+      expect(md).toContain('## Агент')
+      expect(md).toContain('Agent responded')
+      expect(md).toContain('**Ошибка:**')
+    })
+
+    it('renders exit code tool result with return symbol', () => {
+      startChatLogIfNeeded({ projectPath: '/test/proj' })
+      logChatRecord('agent_event', {
+        event: {
+          type: 'other',
+          raw: {
+            type: 'user',
+            message: {
+              content: [
+                { type: 'tool_result', is_error: true, content: 'Exit code 1\nNo matches found' }
+              ]
+            }
+          }
+        }
+      })
+
+      const mdPath = getCurrentChatLogPath()!.replace('.jsonl', '.md')
+      const md = readFileSync(mdPath, 'utf-8')
+
+      expect(md).toContain('↩︎ Команда завершилась с кодом 1:')
+      expect(md).not.toContain('⚠️ Ошибка инструмента')
+    })
+  })
+})

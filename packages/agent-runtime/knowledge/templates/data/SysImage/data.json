@@ -1,0 +1,28 @@
+{
+  "PackageData": [
+    {
+      "Row": [
+        {
+          "SchemaColumnUId": "ae0e45ca-c495-4fe7-a39d-3ab7278e1617",
+          "Value": "<Id записи SysImage>"
+        },
+        {
+          "SchemaColumnUId": "d245dcaf-23bd-4b73-8718-26fdf38b443b",
+          "Value": "<Раздел>"
+        },
+        {
+          "SchemaColumnUId": "be95e737-14e9-4253-b0c4-e280da05434d",
+          "Value": "image/svg+xml"
+        },
+        {
+          "SchemaColumnUId": "1e236958-f206-4fde-8a0e-6783fc223424",
+          "Value": "PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDMyIDMyIj48ZyBmaWxsPSJub25lIiBzdHJva2U9IiNGRkZGRkYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cmVjdCB4PSI3IiB5PSI1IiB3aWR0aD0iMTgiIGhlaWdodD0iMjQiIHJ4PSIyIi8+PHBhdGggZD0iTTEyIDVWM2g4djIiLz48cGF0aCBkPSJNMTEgMTJoMTBNMTEgMTdoMTBNMTEgMjJoNiIvPjwvZz48L3N2Zz4="
+        },
+        {
+          "SchemaColumnUId": "b3cd8485-7bd8-4b70-b2dd-bc41e45e9992",
+          "Value": true
+        }
+      ]
+    }
+  ]
+}

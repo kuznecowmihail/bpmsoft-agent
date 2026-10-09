@@ -1,0 +1,216 @@
+{
+  "about": "Шаблон элемента «Изменить данные» из тестового процесса, подтверждённого записью в CRM. Как вставлять — process-edit.md, раздел про «Изменить данные». Плейсхолдеры <UId процесса>, <UId пакета>, <UId дорожки>, <UId элемента> замени на свои. Все остальные UId элемента (параметры BP2, маппинги BK15, Id внутри JSON-строк значений) — на новые GUID, согласованно во всех местах, кроме констант из рецепта (BL7, J6, A3/A4 параметров, равные J6, GT4, GT5, L1, L9). Значения параметров (объект, колонки, фильтры, тексты) — свои. Ресурсы — строки BaseElements.<Имя элемента>.* в обе локали.",
+  "j6": "d3021ca7-7450-4678-a117-060171eb2976",
+  "bl7": "d3021ca7-7450-4678-a117-060171eb2976",
+  "element": {
+    "BL1": "BPMSoft.Core.Process.ProcessSchemaUserTask",
+    "UId": "<UId элемента>",
+    "A2": "ChangeDataUserTask1",
+    "A3": "<UId процесса>",
+    "A4": "<UId процесса>",
+    "A5": "<UId пакета>",
+    "IL2": "<UId дорожки>",
+    "BL3": "200;172",
+    "BL7": "d3021ca7-7450-4678-a117-060171eb2976",
+    "BL8": "<UId процесса>",
+    "BN2": "69;55",
+    "BO3": true,
+    "BP2": [
+      {
+          "BL1": "BPMSoft.Core.Process.ProcessSchemaParameter",
+          "UId": "5f11ddec-6f75-434b-bfde-39f1ea1dadbc",
+          "A2": "EntitySchemaUId",
+          "A3": "d3021ca7-7450-4678-a117-060171eb2976",
+          "A4": "d3021ca7-7450-4678-a117-060171eb2976",
+          "A5": "66e9e705-64b4-4dda-925e-d1e05a389eb6",
+          "IL2": "<UId элемента>",
+          "L1": "b295071f-7ea9-4e62-8d1a-919bf3732ff2",
+          "L8": {
+            "GS1": 1,
+            "GS2": "c4848520-8352-4bb4-bab1-c4be07daf0c5",
+            "GS5": "<UId процесса>"
+        },
+        "L9": "6c7394db-06ff-4050-91ef-8278e21dce15"
+      },
+      {
+        "BL1": "BPMSoft.Core.Process.ProcessSchemaParameter",
+        "UId": "7cc1b2a9-04f8-4e4b-856a-1b6326e9ec58",
+        "A2": "IsMatchConditions",
+        "A3": "d3021ca7-7450-4678-a117-060171eb2976",
+        "A4": "d3021ca7-7450-4678-a117-060171eb2976",
+        "A5": "66e9e705-64b4-4dda-925e-d1e05a389eb6",
+        "IL2": "<UId элемента>",
+        "L1": "90b65bf8-0ffc-4141-8779-2420877af907",
+        "L8": {
+          "GS1": 3,
+          "GS2": "true",
+          "GS5": "d3021ca7-7450-4678-a117-060171eb2976"
+        }
+      },
+      {
+        "BL1": "BPMSoft.Core.Process.ProcessSchemaParameter",
+        "UId": "efc0ae3a-fb05-4f4a-ad36-0b73c8fe720c",
+        "A2": "DataSourceFilters",
+        "A3": "d3021ca7-7450-4678-a117-060171eb2976",
+        "A4": "d3021ca7-7450-4678-a117-060171eb2976",
+        "A5": "66e9e705-64b4-4dda-925e-d1e05a389eb6",
+        "IL2": "<UId элемента>",
+        "L1": "394e160f-c8e0-46fa-9c0d-75d97e9e9169",
+        "L8": {
+          "GS1": 1,
+          "GS2": "{\"className\":\"BPMSoft.FilterGroup\",\"serializedFilterEditData\":\"{\\\"className\\\":\\\"BPMSoft.FilterGroup\\\",\\\"items\\\":{\\\"ae98cf7f-2857-484a-bb7d-eb07d3d8f10d\\\":{\\\"className\\\":\\\"BPMSoft.CompareFilter\\\",\\\"filterType\\\":1,\\\"comparisonType\\\":3,\\\"isEnabled\\\":true,\\\"trimDateTimeParameterToDate\\\":false,\\\"leftExpression\\\":{\\\"className\\\":\\\"BPMSoft.ColumnExpression\\\",\\\"expressionType\\\":0,\\\"columnPath\\\":\\\"Amount\\\"},\\\"isAggregative\\\":false,\\\"key\\\":\\\"ae98cf7f-2857-484a-bb7d-eb07d3d8f10d\\\",\\\"dataValueType\\\":4,\\\"leftExpressionCaption\\\":\\\"Количество\\\",\\\"rightExpression\\\":{\\\"className\\\":\\\"BPMSoft.ParameterExpression\\\",\\\"expressionType\\\":2,\\\"parameter\\\":{\\\"className\\\":\\\"BPMSoft.Parameter\\\",\\\"dataValueType\\\":4,\\\"value\\\":600}}}},\\\"logicalOperation\\\":0,\\\"isEnabled\\\":true,\\\"filterType\\\":6,\\\"rootSchemaName\\\":\\\"TestProcEntity\\\",\\\"key\\\":\\\"\\\"}\",\"dataSourceFilters\":\"{\\\"items\\\":{\\\"ae98cf7f-2857-484a-bb7d-eb07d3d8f10d\\\":{\\\"filterType\\\":1,\\\"comparisonType\\\":3,\\\"isEnabled\\\":true,\\\"trimDateTimeParameterToDate\\\":false,\\\"leftExpression\\\":{\\\"expressionType\\\":0,\\\"columnPath\\\":\\\"Amount\\\"},\\\"rightExpression\\\":{\\\"expressionType\\\":2,\\\"parameter\\\":{\\\"dataValueType\\\":4,\\\"value\\\":600}}}},\\\"logicalOperation\\\":0,\\\"isEnabled\\\":true,\\\"filterType\\\":6,\\\"rootSchemaName\\\":\\\"TestProcEntity\\\"}\"}",
+          "GS5": "<UId процесса>"
+        }
+      },
+      {
+        "BL1": "BPMSoft.Core.Process.ProcessSchemaParameter",
+        "UId": "0a052955-881a-49f9-8995-514ecaff2911",
+        "A2": "RecordColumnValues",
+        "A3": "d3021ca7-7450-4678-a117-060171eb2976",
+        "A4": "d3021ca7-7450-4678-a117-060171eb2976",
+        "A5": "66e9e705-64b4-4dda-925e-d1e05a389eb6",
+        "IL2": "<UId элемента>",
+        "L1": "b53eaa2a-4bb7-4a6b-9f4f-58ccab293e31",
+        "L8": {
+          "GS1": 1,
+          "GS2": "{\"$type\":\"BPMSoft.Core.Process.LocalizableParameterValuesList, BPMSoft.Core\",\"$values\":[{\"ItemUId\":\"e598d663-a519-45d7-b8c2-6ce94f0fdd86\",\"columnMetaPath\":{\"value\":\"736c30a7-c0ec-4fa9-b034-2552b319b633\"},\"schemaUId\":{\"value\":\"c4848520-8352-4bb4-bab1-c4be07daf0c5\"},\"value\":{\"isLczValue\":true},\"displayValue\":{\"isLczValue\":true},\"parameterValue\":{\"value\":\"{\\\"$type\\\":\\\"BPMSoft.Core.Process.ProcessSchemaParameterValue, BPMSoft.Core\\\",\\\"Source\\\":1,\\\"DisplayValue\\\":\\\"\\\",\\\"Value\\\":\\\"\\\",\\\"MetaPath\\\":null,\\\"MetaDataValue\\\":null,\\\"ModifiedInSchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"SchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"SchemaManagerName\\\":\\\"\\\",\\\"DataValueTypeUId\\\":\\\"ddb3a1ee-07e8-4d62-b7a9-d0e618b00fbd\\\",\\\"ReferenceSchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"ResourceItemName\\\":null}\"}},{\"ItemUId\":\"ab2018c1-5f30-4c70-a920-55979f618009\",\"columnMetaPath\":{\"value\":\"7e97fca4-e510-4363-9c3e-a3393421fc3e\"},\"schemaUId\":{\"value\":\"c4848520-8352-4bb4-bab1-c4be07daf0c5\"},\"value\":{\"value\":\"700\"},\"displayValue\":{\"value\":\"700\"},\"parameterValue\":{\"value\":\"{\\\"$type\\\":\\\"BPMSoft.Core.Process.ProcessSchemaParameterValue, BPMSoft.Core\\\",\\\"Source\\\":1,\\\"DisplayValue\\\":\\\"\\\",\\\"Value\\\":\\\"\\\",\\\"MetaPath\\\":null,\\\"MetaDataValue\\\":null,\\\"ModifiedInSchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"SchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"SchemaManagerName\\\":\\\"\\\",\\\"DataValueTypeUId\\\":\\\"6b6b74e2-820d-490e-a017-2b73d4ccf2b0\\\",\\\"ReferenceSchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"ResourceItemName\\\":null}\"}},{\"ItemUId\":\"676ab28b-33dd-484c-a8bc-753a6a93091f\",\"columnMetaPath\":{\"value\":\"c6b54c23-0778-41ad-9c46-006ddc2186cb\"},\"schemaUId\":{\"value\":\"c4848520-8352-4bb4-bab1-c4be07daf0c5\"},\"value\":{\"value\":\"[#BooleanValue.False#]\"},\"displayValue\":{\"value\":\"[#Логическое значение.Нет#]\"},\"parameterValue\":{\"value\":\"{\\\"$type\\\":\\\"BPMSoft.Core.Process.ProcessSchemaParameterValue, BPMSoft.Core\\\",\\\"Source\\\":3,\\\"DisplayValue\\\":\\\"\\\",\\\"Value\\\":\\\"\\\",\\\"MetaPath\\\":null,\\\"MetaDataValue\\\":null,\\\"ModifiedInSchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"SchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"SchemaManagerName\\\":\\\"\\\",\\\"DataValueTypeUId\\\":\\\"90b65bf8-0ffc-4141-8779-2420877af907\\\",\\\"ReferenceSchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"ResourceItemName\\\":null}\"}}]}",
+          "GS5": "<UId процесса>"
+        }
+      },
+      {
+        "BL1": "BPMSoft.Core.Process.ProcessSchemaParameter",
+        "UId": "60391d28-083f-4aa9-a19a-c45b3186b890",
+        "A2": "ConsiderTimeInFilter",
+        "A3": "d3021ca7-7450-4678-a117-060171eb2976",
+        "A4": "d3021ca7-7450-4678-a117-060171eb2976",
+        "IL2": "<UId элемента>",
+        "L1": "90b65bf8-0ffc-4141-8779-2420877af907",
+        "L8": {
+          "GS1": 3,
+          "GS2": "true",
+          "GS5": "d3021ca7-7450-4678-a117-060171eb2976",
+          "GS8": "false"
+        }
+      }
+    ],
+    "CL2": "FFFFFFFF",
+    "J6": "d3021ca7-7450-4678-a117-060171eb2976"
+  },
+  "mappings": [
+    {
+      "BL1": "BPMSoft.Core.Process.ProcessSchemaMapping",
+      "UId": "c5bae92a-b980-4325-99b0-83d42cd3eedd",
+      "A2": "ChangeDataUserTask1",
+      "A3": "<UId процесса>",
+      "A4": "<UId процесса>",
+      "GT2": "[Element:{<UId элемента>}].[Parameter:{5f11ddec-6f75-434b-bfde-39f1ea1dadbc}]",
+      "GT3": "5f11ddec-6f75-434b-bfde-39f1ea1dadbc",
+      "GT5": "bd2cf1ae-bbc6-4d91-8d6e-c6b40f057e95",
+      "GT4": "d3021ca7-7450-4678-a117-060171eb2976",
+      "GT1": {
+        "GS1": 1,
+        "GS2": "c4848520-8352-4bb4-bab1-c4be07daf0c5"
+      }
+    },
+    {
+      "BL1": "BPMSoft.Core.Process.ProcessSchemaMapping",
+      "UId": "47a11ea5-f2ae-4e22-b7b2-b33c821fb8b2",
+      "A2": "ChangeDataUserTask1",
+      "A3": "<UId процесса>",
+      "A4": "<UId процесса>",
+      "GT2": "[Element:{<UId элемента>}].[Parameter:{7cc1b2a9-04f8-4e4b-856a-1b6326e9ec58}]",
+      "GT3": "7cc1b2a9-04f8-4e4b-856a-1b6326e9ec58",
+      "GT5": "d6c84ba1-b6ca-4952-b517-880f22e21fdc",
+      "GT4": "d3021ca7-7450-4678-a117-060171eb2976",
+      "GT1": {
+        "GS1": 3,
+        "GS2": "true",
+        "GS5": "d3021ca7-7450-4678-a117-060171eb2976"
+      }
+    },
+    {
+      "BL1": "BPMSoft.Core.Process.ProcessSchemaMapping",
+      "UId": "ff542803-8de3-4487-b220-b9d44d9fd440",
+      "A2": "ChangeDataUserTask1",
+      "A3": "<UId процесса>",
+      "A4": "<UId процесса>",
+      "GT2": "[Element:{<UId элемента>}].[Parameter:{efc0ae3a-fb05-4f4a-ad36-0b73c8fe720c}]",
+      "GT3": "efc0ae3a-fb05-4f4a-ad36-0b73c8fe720c",
+      "GT5": "03166c4b-2e15-4768-a343-750c16b69691",
+      "GT4": "d3021ca7-7450-4678-a117-060171eb2976",
+      "GT1": {
+        "GS1": 1,
+        "GS2": "{\"className\":\"BPMSoft.FilterGroup\",\"serializedFilterEditData\":\"{\\\"className\\\":\\\"BPMSoft.FilterGroup\\\",\\\"items\\\":{\\\"ae98cf7f-2857-484a-bb7d-eb07d3d8f10d\\\":{\\\"className\\\":\\\"BPMSoft.CompareFilter\\\",\\\"filterType\\\":1,\\\"comparisonType\\\":3,\\\"isEnabled\\\":true,\\\"trimDateTimeParameterToDate\\\":false,\\\"leftExpression\\\":{\\\"className\\\":\\\"BPMSoft.ColumnExpression\\\",\\\"expressionType\\\":0,\\\"columnPath\\\":\\\"Amount\\\"},\\\"isAggregative\\\":false,\\\"key\\\":\\\"ae98cf7f-2857-484a-bb7d-eb07d3d8f10d\\\",\\\"dataValueType\\\":4,\\\"leftExpressionCaption\\\":\\\"Количество\\\",\\\"rightExpression\\\":{\\\"className\\\":\\\"BPMSoft.ParameterExpression\\\",\\\"expressionType\\\":2,\\\"parameter\\\":{\\\"className\\\":\\\"BPMSoft.Parameter\\\",\\\"dataValueType\\\":4,\\\"value\\\":600}}}},\\\"logicalOperation\\\":0,\\\"isEnabled\\\":true,\\\"filterType\\\":6,\\\"rootSchemaName\\\":\\\"TestProcEntity\\\",\\\"key\\\":\\\"\\\"}\",\"dataSourceFilters\":\"{\\\"items\\\":{\\\"ae98cf7f-2857-484a-bb7d-eb07d3d8f10d\\\":{\\\"filterType\\\":1,\\\"comparisonType\\\":3,\\\"isEnabled\\\":true,\\\"trimDateTimeParameterToDate\\\":false,\\\"leftExpression\\\":{\\\"expressionType\\\":0,\\\"columnPath\\\":\\\"Amount\\\"},\\\"rightExpression\\\":{\\\"expressionType\\\":2,\\\"parameter\\\":{\\\"dataValueType\\\":4,\\\"value\\\":600}}}},\\\"logicalOperation\\\":0,\\\"isEnabled\\\":true,\\\"filterType\\\":6,\\\"rootSchemaName\\\":\\\"TestProcEntity\\\"}\"}"
+      }
+    },
+    {
+      "BL1": "BPMSoft.Core.Process.ProcessSchemaMapping",
+      "UId": "23b6d548-a672-4e58-821c-86f00927dabe",
+      "A2": "ChangeDataUserTask1",
+      "A3": "<UId процесса>",
+      "A4": "<UId процесса>",
+      "GT2": "[Element:{<UId элемента>}].[Parameter:{0a052955-881a-49f9-8995-514ecaff2911}]",
+      "GT3": "0a052955-881a-49f9-8995-514ecaff2911",
+      "GT5": "effa11ce-90c7-4efe-8a02-be7a659d27e9",
+      "GT4": "d3021ca7-7450-4678-a117-060171eb2976",
+      "GT1": {
+        "GS1": 1,
+        "GS2": "{\"$type\":\"BPMSoft.Core.Process.LocalizableParameterValuesList, BPMSoft.Core\",\"$values\":[{\"ItemUId\":\"e598d663-a519-45d7-b8c2-6ce94f0fdd86\",\"columnMetaPath\":{\"value\":\"736c30a7-c0ec-4fa9-b034-2552b319b633\"},\"schemaUId\":{\"value\":\"c4848520-8352-4bb4-bab1-c4be07daf0c5\"},\"value\":{\"isLczValue\":true,\"value\":\"Шаг 7: изменено элементом «Изменить данные»\"},\"displayValue\":{\"isLczValue\":true,\"value\":\"Шаг 7: изменено элементом «Изменить данные»\"},\"parameterValue\":{\"value\":\"{\\\"$type\\\":\\\"BPMSoft.Core.Process.ProcessSchemaParameterValue, BPMSoft.Core\\\",\\\"Source\\\":1,\\\"DisplayValue\\\":\\\"\\\",\\\"Value\\\":\\\"\\\",\\\"MetaPath\\\":null,\\\"MetaDataValue\\\":null,\\\"ModifiedInSchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"SchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"SchemaManagerName\\\":\\\"\\\",\\\"DataValueTypeUId\\\":\\\"ddb3a1ee-07e8-4d62-b7a9-d0e618b00fbd\\\",\\\"ReferenceSchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"ResourceItemName\\\":null}\"}},{\"ItemUId\":\"ab2018c1-5f30-4c70-a920-55979f618009\",\"columnMetaPath\":{\"value\":\"7e97fca4-e510-4363-9c3e-a3393421fc3e\"},\"schemaUId\":{\"value\":\"c4848520-8352-4bb4-bab1-c4be07daf0c5\"},\"value\":{\"value\":\"700\"},\"displayValue\":{\"value\":\"700\"},\"parameterValue\":{\"value\":\"{\\\"$type\\\":\\\"BPMSoft.Core.Process.ProcessSchemaParameterValue, BPMSoft.Core\\\",\\\"Source\\\":1,\\\"DisplayValue\\\":\\\"\\\",\\\"Value\\\":\\\"\\\",\\\"MetaPath\\\":null,\\\"MetaDataValue\\\":null,\\\"ModifiedInSchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"SchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"SchemaManagerName\\\":\\\"\\\",\\\"DataValueTypeUId\\\":\\\"6b6b74e2-820d-490e-a017-2b73d4ccf2b0\\\",\\\"ReferenceSchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"ResourceItemName\\\":null}\"}},{\"ItemUId\":\"676ab28b-33dd-484c-a8bc-753a6a93091f\",\"columnMetaPath\":{\"value\":\"c6b54c23-0778-41ad-9c46-006ddc2186cb\"},\"schemaUId\":{\"value\":\"c4848520-8352-4bb4-bab1-c4be07daf0c5\"},\"value\":{\"value\":\"[#BooleanValue.False#]\"},\"displayValue\":{\"value\":\"[#Логическое значение.Нет#]\"},\"parameterValue\":{\"value\":\"{\\\"$type\\\":\\\"BPMSoft.Core.Process.ProcessSchemaParameterValue, BPMSoft.Core\\\",\\\"Source\\\":3,\\\"DisplayValue\\\":\\\"\\\",\\\"Value\\\":\\\"\\\",\\\"MetaPath\\\":null,\\\"MetaDataValue\\\":null,\\\"ModifiedInSchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"SchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"SchemaManagerName\\\":\\\"\\\",\\\"DataValueTypeUId\\\":\\\"90b65bf8-0ffc-4141-8779-2420877af907\\\",\\\"ReferenceSchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"ResourceItemName\\\":null}\"}}]}"
+      }
+    },
+    {
+      "BL1": "BPMSoft.Core.Process.ProcessSchemaMapping",
+      "UId": "b129232e-8fc4-4329-836a-5eaf6026421a",
+      "A2": "ChangeDataUserTask1",
+      "A3": "<UId процесса>",
+      "A4": "<UId процесса>",
+      "GT2": "[Element:{<UId элемента>}].[Parameter:{60391d28-083f-4aa9-a19a-c45b3186b890}]",
+      "GT3": "60391d28-083f-4aa9-a19a-c45b3186b890",
+      "GT5": "b9bc395c-1f13-d564-1257-2505f236ab7b",
+      "GT4": "d3021ca7-7450-4678-a117-060171eb2976",
+      "GT1": {
+        "GS1": 3,
+        "GS2": "true",
+        "GS5": "d3021ca7-7450-4678-a117-060171eb2976",
+        "GS8": "false"
+      }
+    }
+  ],
+  "resources": {
+    "ru-RU": [
+      "<Item Name=\"BaseElements.ChangeDataUserTask1.Caption\" Value=\"Изменить записи с количеством 600\" />",
+      "<Item Name=\"BaseElements.ChangeDataUserTask1.Parameters.ConsiderTimeInFilter.Caption\" Value=\"Учитывать время в фильтре\" />",
+      "<Item Name=\"BaseElements.ChangeDataUserTask1.Parameters.ConsiderTimeInFilter.DisplayValue\" Value=\"true\" />",
+      "<Item Name=\"BaseElements.ChangeDataUserTask1.Parameters.DataSourceFilters.Caption\" Value=\"Фильтры источника данных\" />",
+      "<Item Name=\"BaseElements.ChangeDataUserTask1.Parameters.EntitySchemaUId.Caption\" Value=\"Объект\" />",
+      "<Item Name=\"BaseElements.ChangeDataUserTask1.Parameters.IsMatchConditions.Caption\" Value=\"Если объект соответствует условиям\" />",
+      "<Item Name=\"BaseElements.ChangeDataUserTask1.Parameters.IsMatchConditions.DisplayValue\" Value=\"true\" />",
+      "<Item Name=\"BaseElements.ChangeDataUserTask1.Parameters.RecordColumnValues.Caption\" Value=\"Значения полей\" />",
+      "<Item Name=\"BaseElements.ChangeDataUserTask1.Parameters.RecordColumnValues.Value.e598d663-a519-45d7-b8c2-6ce94f0fdd86.displayValue\" Value=\"Шаг 7: изменено элементом «Изменить данные»\" />",
+      "<Item Name=\"BaseElements.ChangeDataUserTask1.Parameters.RecordColumnValues.Value.e598d663-a519-45d7-b8c2-6ce94f0fdd86.value\" Value=\"Шаг 7: изменено элементом «Изменить данные»\" />",
+      "<Item Name=\"BaseElements.DeleteDataUserTask1.Caption\" Value=\"Удалить записи с количеством 2\" />",
+      "<Item Name=\"BaseElements.DeleteDataUserTask1.Parameters.ConsiderTimeInFilter.Caption\" Value=\"Учитывать время в фильтре\" />",
+      "<Item Name=\"BaseElements.DeleteDataUserTask1.Parameters.ConsiderTimeInFilter.DisplayValue\" Value=\"true\" />",
+      "<Item Name=\"BaseElements.DeleteDataUserTask1.Parameters.DataSourceFilters.Caption\" Value=\"Фильтры источника данных\" />",
+      "<Item Name=\"BaseElements.DeleteDataUserTask1.Parameters.EntitySchemaId.Caption\" Value=\"Объект\" />",
+      "<Item Name=\"BaseElements.DeleteDataUserTask1.Parameters.IsMatchConditions.Caption\" Value=\"Объект должен соответствовать условиям\" />"
+    ],
+    "en-US": [
+      "<Item Name=\"BaseElements.ChangeDataUserTask1.Caption\" Value=\"Change records with amount 600\" />",
+      "<Item Name=\"BaseElements.ChangeDataUserTask1.Parameters.ConsiderTimeInFilter.Caption\" Value=\"Consider time in the filter\" />",
+      "<Item Name=\"BaseElements.ChangeDataUserTask1.Parameters.DataSourceFilters.Caption\" Value=\"Data source filters\" />",
+      "<Item Name=\"BaseElements.ChangeDataUserTask1.Parameters.EntitySchemaUId.Caption\" Value=\"Object\" />",
+      "<Item Name=\"BaseElements.ChangeDataUserTask1.Parameters.IsMatchConditions.Caption\" Value=\"If object meets the following conditions\" />",
+      "<Item Name=\"BaseElements.ChangeDataUserTask1.Parameters.IsMatchConditions.DisplayValue\" Value=\"true\" />",
+      "<Item Name=\"BaseElements.ChangeDataUserTask1.Parameters.RecordColumnValues.Caption\" Value=\"Set column values\" />",
+      "<Item Name=\"BaseElements.ChangeDataUserTask1.Parameters.RecordColumnValues.Value.e598d663-a519-45d7-b8c2-6ce94f0fdd86.displayValue\" Value=\"Step 7: changed by the Change data element\" />",
+      "<Item Name=\"BaseElements.ChangeDataUserTask1.Parameters.RecordColumnValues.Value.e598d663-a519-45d7-b8c2-6ce94f0fdd86.value\" Value=\"Step 7: changed by the Change data element\" />",
+      "<Item Name=\"BaseElements.DeleteDataUserTask1.Caption\" Value=\"Delete records with amount 2\" />",
+      "<Item Name=\"BaseElements.DeleteDataUserTask1.Parameters.ConsiderTimeInFilter.Caption\" Value=\"Consider time in the filter\" />",
+      "<Item Name=\"BaseElements.DeleteDataUserTask1.Parameters.ConsiderTimeInFilter.DisplayValue\" Value=\"true\" />",
+      "<Item Name=\"BaseElements.DeleteDataUserTask1.Parameters.DataSourceFilters.Caption\" Value=\"Data source filters\" />",
+      "<Item Name=\"BaseElements.DeleteDataUserTask1.Parameters.EntitySchemaId.Caption\" Value=\"Object\" />",
+      "<Item Name=\"BaseElements.DeleteDataUserTask1.Parameters.IsMatchConditions.Caption\" Value=\"Object must meet the following conditions\" />"
+    ]
+  }
+}

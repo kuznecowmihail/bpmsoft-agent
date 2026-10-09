@@ -1,0 +1,108 @@
+{
+  "about": "Шаблон элемента «Связать объект с процессом» из тестового процесса, подтверждённого записью в CRM. Как вставлять — process-edit.md, раздел про «Связать объект с процессом». Плейсхолдеры <UId процесса>, <UId пакета>, <UId дорожки>, <UId элемента> замени на свои. Все остальные UId элемента (параметры BP2, маппинги BK15, Id внутри JSON-строк значений) — на новые GUID, согласованно во всех местах, кроме констант из рецепта (BL7, J6, A3/A4 параметров, равные J6, GT4, GT5, L1, L9). Значения параметров (объект, колонки, фильтры, тексты) — свои. Ресурсы — строки BaseElements.<Имя элемента>.* в обе локали.",
+  "j6": "fcace79b-6103-4992-8a1f-8e443114321a",
+  "bl7": "fcace79b-6103-4992-8a1f-8e443114321a",
+  "element": {
+    "BL1": "BPMSoft.Core.Process.ProcessSchemaUserTask",
+    "UId": "<UId элемента>",
+    "A2": "LinkEntityToProcessUserTask1",
+    "A3": "<UId процесса>",
+    "A4": "<UId процесса>",
+    "A5": "<UId пакета>",
+    "IL2": "<UId дорожки>",
+    "BL3": "400;72",
+    "BL7": "fcace79b-6103-4992-8a1f-8e443114321a",
+    "BL8": "<UId процесса>",
+    "BN2": "69;55",
+    "BO2": true,
+    "BO3": true,
+    "BP2": [
+      {
+          "BL1": "BPMSoft.Core.Process.ProcessSchemaParameter",
+          "UId": "f39a771d-e222-4ab8-bafd-0b98102032d0",
+          "A2": "EntityId",
+          "A3": "fcace79b-6103-4992-8a1f-8e443114321a",
+          "A4": "fcace79b-6103-4992-8a1f-8e443114321a",
+          "IL2": "<UId элемента>",
+          "L1": "b295071f-7ea9-4e62-8d1a-919bf3732ff2",
+          "L8": {
+            "GS1": 3,
+            "GS2": "[#[IsOwnerSchema:false].[IsSchema:false].[Parameter:{36425787-3126-4761-ab32-37b63ab50eae}]#]",
+            "GS5": "<UId процесса>"
+        },
+        "L9": "c4848520-8352-4bb4-bab1-c4be07daf0c5",
+        "L11": false
+      },
+      {
+        "BL1": "BPMSoft.Core.Process.ProcessSchemaParameter",
+        "UId": "fc777725-7313-4c64-a7bf-0b4371891ced",
+        "A2": "EntitySchemaId",
+        "A3": "fcace79b-6103-4992-8a1f-8e443114321a",
+        "A4": "fcace79b-6103-4992-8a1f-8e443114321a",
+        "IL2": "<UId элемента>",
+        "L1": "b295071f-7ea9-4e62-8d1a-919bf3732ff2",
+        "L8": {
+          "GS1": 1,
+          "GS2": "c4848520-8352-4bb4-bab1-c4be07daf0c5",
+          "GS5": "<UId процесса>"
+        },
+        "L9": "2e155463-3ff1-4ccf-8584-4ec8d7233111",
+        "L11": false
+      }
+    ],
+    "CL2": "FFFFFFFF",
+    "J6": "fcace79b-6103-4992-8a1f-8e443114321a"
+  },
+  "mappings": [
+    {
+      "BL1": "BPMSoft.Core.Process.ProcessSchemaMapping",
+      "UId": "55744157-e341-4793-ab10-590a1305685a",
+      "A2": "LinkEntityToProcessUserTask1",
+      "A3": "<UId процесса>",
+      "A4": "<UId процесса>",
+      "GT2": "[Element:{<UId элемента>}].[Parameter:{f39a771d-e222-4ab8-bafd-0b98102032d0}]",
+      "GT3": "f39a771d-e222-4ab8-bafd-0b98102032d0",
+      "GT5": "b4e61a1e-7647-4984-a3b0-64a29ed30681",
+      "GT4": "fcace79b-6103-4992-8a1f-8e443114321a",
+      "GT1": {
+        "GS1": 3,
+        "GS2": "[#[IsOwnerSchema:false].[IsSchema:false].[Parameter:{36425787-3126-4761-ab32-37b63ab50eae}]#]"
+      }
+    },
+    {
+      "BL1": "BPMSoft.Core.Process.ProcessSchemaMapping",
+      "UId": "92dcb80d-f970-4ccc-91ab-c92b0dc26efa",
+      "A2": "LinkEntityToProcessUserTask1",
+      "A3": "<UId процесса>",
+      "A4": "<UId процесса>",
+      "GT2": "[Element:{<UId элемента>}].[Parameter:{fc777725-7313-4c64-a7bf-0b4371891ced}]",
+      "GT3": "fc777725-7313-4c64-a7bf-0b4371891ced",
+      "GT5": "06bcedca-a817-4027-8844-845966e2499b",
+      "GT4": "fcace79b-6103-4992-8a1f-8e443114321a",
+      "GT1": {
+        "GS1": 1,
+        "GS2": "c4848520-8352-4bb4-bab1-c4be07daf0c5"
+      }
+    }
+  ],
+  "resources": {
+    "ru-RU": [
+      "<Item Name=\"BaseElements.LinkEntityToProcessUserTask1.Caption\" Value=\"Связать запись с процессом\" />",
+      "<Item Name=\"BaseElements.LinkEntityToProcessUserTask1.Parameters.EntityId.Caption\" Value=\"Объект\" />",
+      "<Item Name=\"BaseElements.LinkEntityToProcessUserTask1.Parameters.EntityId.DisplayValue\" Value=\"[#Id записи#]\" />",
+      "<Item Name=\"BaseElements.LinkEntityToProcessUserTask1.Parameters.EntitySchemaId.Caption\" Value=\"Схема объекта\" />",
+      "<Item Name=\"BaseElements.LinkEntityToProcessUserTask1.Parameters.EntitySchemaId.DisplayValue\" Value=\"Тестовый объект для процессов\" />",
+      "<Item Name=\"BaseElements.ScriptTask1.Caption\" Value=\"Создать запись\" />",
+      "<Item Name=\"BaseElements.ScriptTask2.Caption\" Value=\"Отметить во второй дорожке\" />"
+    ],
+    "en-US": [
+      "<Item Name=\"BaseElements.LinkEntityToProcessUserTask1.Caption\" Value=\"Link record to process\" />",
+      "<Item Name=\"BaseElements.LinkEntityToProcessUserTask1.Parameters.EntityId.Caption\" Value=\"Object\" />",
+      "<Item Name=\"BaseElements.LinkEntityToProcessUserTask1.Parameters.EntityId.DisplayValue\" Value=\"[#Record Id#]\" />",
+      "<Item Name=\"BaseElements.LinkEntityToProcessUserTask1.Parameters.EntitySchemaId.Caption\" Value=\"Object schema\" />",
+      "<Item Name=\"BaseElements.LinkEntityToProcessUserTask1.Parameters.EntitySchemaId.DisplayValue\" Value=\"Test process entity\" />",
+      "<Item Name=\"BaseElements.ScriptTask1.Caption\" Value=\"Create record\" />",
+      "<Item Name=\"BaseElements.ScriptTask2.Caption\" Value=\"Mark in second lane\" />"
+    ]
+  }
+}

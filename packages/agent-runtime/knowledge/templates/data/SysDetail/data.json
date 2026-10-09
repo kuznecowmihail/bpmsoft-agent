@@ -1,0 +1,20 @@
+{
+  "PackageData": [
+    {
+      "Row": [
+        {
+          "SchemaColumnUId": "ae0e45ca-c495-4fe7-a39d-3ab7278e1617",
+          "Value": "<Id записи SysDetail>"
+        },
+        {
+          "SchemaColumnUId": "8585929c-62ae-4673-ae8d-bb37f87e5144",
+          "Value": "<UId схемы детали>"
+        },
+        {
+          "SchemaColumnUId": "631e7238-2751-4a21-b6d6-9f1ac0c84f95",
+          "Value": "<UId объекта детали>"
+        }
+      ]
+    }
+  ]
+}

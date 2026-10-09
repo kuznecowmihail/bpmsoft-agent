@@ -1,0 +1,10 @@
+{
+  "Descriptor": {
+    "UId": "<UId схемы действия>",
+    "Name": "TestUserTask",
+    "ModifiedOnUtc": "\/Date(1790948812000)\/",
+    "ManagerName": "ProcessUserTaskSchemaManager",
+    "Caption": "Test шаг 17: своё действие процесса",
+    "DependsOn": []
+  }
+}

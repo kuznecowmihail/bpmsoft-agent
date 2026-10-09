@@ -1,0 +1,239 @@
+{
+  "about": "Шаблон элемента «Добавить данные» из тестового процесса, подтверждённого записью в CRM. Как вставлять — process-edit.md, раздел про «Добавить данные». Плейсхолдеры <UId процесса>, <UId пакета>, <UId дорожки>, <UId элемента> замени на свои. Все остальные UId элемента (параметры BP2, маппинги BK15, Id внутри JSON-строк значений) — на новые GUID, согласованно во всех местах, кроме констант из рецепта (BL7, J6, A3/A4 параметров, равные J6, GT4, GT5, L1, L9). Значения параметров (объект, колонки, фильтры, тексты) — свои. Ресурсы — строки BaseElements.<Имя элемента>.* в обе локали.",
+  "j6": "db6abed1-0c5f-455b-8053-2665378cdb71",
+  "bl7": "db6abed1-0c5f-455b-8053-2665378cdb71",
+  "element": {
+    "BL1": "BPMSoft.Core.Process.ProcessSchemaUserTask",
+    "UId": "<UId элемента>",
+    "A2": "AddDataUserTask1",
+    "A3": "<UId процесса>",
+    "A4": "<UId процесса>",
+    "A5": "<UId пакета>",
+    "IL2": "<UId дорожки>",
+    "BL3": "200;172",
+    "BL7": "db6abed1-0c5f-455b-8053-2665378cdb71",
+    "BL8": "<UId процесса>",
+    "BN2": "69;55",
+    "BO2": true,
+    "BO3": true,
+    "BP2": [
+      {
+          "BL1": "BPMSoft.Core.Process.ProcessSchemaParameter",
+          "UId": "a2752c34-db3d-40ff-815d-7dbc43c7acf0",
+          "A2": "EntitySchemaId",
+          "A3": "db6abed1-0c5f-455b-8053-2665378cdb71",
+          "A4": "db6abed1-0c5f-455b-8053-2665378cdb71",
+          "IL2": "<UId элемента>",
+          "L1": "b295071f-7ea9-4e62-8d1a-919bf3732ff2",
+          "L8": {
+            "GS1": 1,
+            "GS2": "c4848520-8352-4bb4-bab1-c4be07daf0c5",
+            "GS5": "<UId процесса>"
+        }
+      },
+      {
+        "BL1": "BPMSoft.Core.Process.ProcessSchemaParameter",
+        "UId": "c6c65f6a-240f-4885-9e6e-a451b1467f82",
+        "A2": "DataSourceFilters",
+        "A3": "db6abed1-0c5f-455b-8053-2665378cdb71",
+        "A4": "db6abed1-0c5f-455b-8053-2665378cdb71",
+        "IL2": "<UId элемента>",
+        "L1": "394e160f-c8e0-46fa-9c0d-75d97e9e9169",
+        "L8": {}
+      },
+      {
+        "BL1": "BPMSoft.Core.Process.ProcessSchemaParameter",
+        "UId": "b759df6b-3fd7-407f-8438-d0471eefc72c",
+        "A2": "RecordAddMode",
+        "A3": "db6abed1-0c5f-455b-8053-2665378cdb71",
+        "A4": "db6abed1-0c5f-455b-8053-2665378cdb71",
+        "IL2": "<UId элемента>",
+        "L1": "394e160f-c8e0-46fa-9c0d-75d97e9e9169",
+        "L8": {
+          "GS1": 1,
+          "GS2": "0",
+          "GS5": "<UId процесса>"
+        }
+      },
+      {
+        "BL1": "BPMSoft.Core.Process.ProcessSchemaParameter",
+        "UId": "b41d68bf-463a-4f27-81aa-14dd3ea6fbd9",
+        "A2": "FilterEntitySchemaId",
+        "A3": "db6abed1-0c5f-455b-8053-2665378cdb71",
+        "A4": "db6abed1-0c5f-455b-8053-2665378cdb71",
+        "IL2": "<UId элемента>",
+        "L1": "b295071f-7ea9-4e62-8d1a-919bf3732ff2",
+        "L8": {},
+        "L9": "2e155463-3ff1-4ccf-8584-4ec8d7233111"
+      },
+      {
+        "BL1": "BPMSoft.Core.Process.ProcessSchemaParameter",
+        "UId": "772e6fd6-090c-4195-8bad-0dce372306a0",
+        "A2": "RecordDefValues",
+        "A3": "db6abed1-0c5f-455b-8053-2665378cdb71",
+        "A4": "db6abed1-0c5f-455b-8053-2665378cdb71",
+        "IL2": "<UId элемента>",
+        "L1": "b53eaa2a-4bb7-4a6b-9f4f-58ccab293e31",
+        "L8": {
+          "GS1": 1,
+          "GS2": "{\"$type\":\"BPMSoft.Core.Process.LocalizableParameterValuesList, BPMSoft.Core\",\"$values\":[{\"ItemUId\":\"605dd760-52b6-4969-ae2a-4ba97df7b182\",\"columnMetaPath\":{\"value\":\"736c30a7-c0ec-4fa9-b034-2552b319b633\"},\"schemaUId\":{\"value\":\"c4848520-8352-4bb4-bab1-c4be07daf0c5\"},\"value\":{\"isLczValue\":true},\"displayValue\":{\"isLczValue\":true},\"parameterValue\":{\"value\":\"{\\\"$type\\\":\\\"BPMSoft.Core.Process.ProcessSchemaParameterValue, BPMSoft.Core\\\",\\\"Source\\\":1,\\\"DisplayValue\\\":\\\"\\\",\\\"Value\\\":\\\"\\\",\\\"MetaPath\\\":null,\\\"MetaDataValue\\\":null,\\\"ModifiedInSchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"SchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"SchemaManagerName\\\":\\\"\\\",\\\"DataValueTypeUId\\\":\\\"ddb3a1ee-07e8-4d62-b7a9-d0e618b00fbd\\\",\\\"ReferenceSchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"ResourceItemName\\\":null}\"}},{\"ItemUId\":\"3004bd25-a197-4963-bd4f-45b5539e65b2\",\"columnMetaPath\":{\"value\":\"7e97fca4-e510-4363-9c3e-a3393421fc3e\"},\"schemaUId\":{\"value\":\"c4848520-8352-4bb4-bab1-c4be07daf0c5\"},\"value\":{\"value\":\"600\"},\"displayValue\":{\"value\":\"600\"},\"parameterValue\":{\"value\":\"{\\\"$type\\\":\\\"BPMSoft.Core.Process.ProcessSchemaParameterValue, BPMSoft.Core\\\",\\\"Source\\\":1,\\\"DisplayValue\\\":\\\"\\\",\\\"Value\\\":\\\"\\\",\\\"MetaPath\\\":null,\\\"MetaDataValue\\\":null,\\\"ModifiedInSchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"SchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"SchemaManagerName\\\":\\\"\\\",\\\"DataValueTypeUId\\\":\\\"6b6b74e2-820d-490e-a017-2b73d4ccf2b0\\\",\\\"ReferenceSchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"ResourceItemName\\\":null}\"}},{\"ItemUId\":\"7cbc40db-81e3-4185-98e1-044c0cef9dc0\",\"columnMetaPath\":{\"value\":\"d7745f5d-cc3c-4484-af5a-9662893dccbc\"},\"schemaUId\":{\"value\":\"c4848520-8352-4bb4-bab1-c4be07daf0c5\"},\"value\":{\"value\":\"6.5\"},\"displayValue\":{\"value\":\"6.5\"},\"parameterValue\":{\"value\":\"{\\\"$type\\\":\\\"BPMSoft.Core.Process.ProcessSchemaParameterValue, BPMSoft.Core\\\",\\\"Source\\\":1,\\\"DisplayValue\\\":\\\"\\\",\\\"Value\\\":\\\"\\\",\\\"MetaPath\\\":null,\\\"MetaDataValue\\\":null,\\\"ModifiedInSchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"SchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"SchemaManagerName\\\":\\\"\\\",\\\"DataValueTypeUId\\\":\\\"969093e2-2b4e-463b-883a-3d3b8c61f0cd\\\",\\\"ReferenceSchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"ResourceItemName\\\":null}\"}},{\"ItemUId\":\"cdcc3b7f-d8e5-4dea-8192-1e85096dee76\",\"columnMetaPath\":{\"value\":\"7b80423e-5bec-4234-a1c0-3dc5d593ef7e\"},\"schemaUId\":{\"value\":\"c4848520-8352-4bb4-bab1-c4be07daf0c5\"},\"value\":{\"value\":\"[#SysVariable.CurrentDateTime#]\"},\"displayValue\":{\"value\":\"[#Системная переменная.Текущее значение даты и времени#]\"},\"parameterValue\":{\"value\":\"{\\\"$type\\\":\\\"BPMSoft.Core.Process.ProcessSchemaParameterValue, BPMSoft.Core\\\",\\\"Source\\\":3,\\\"DisplayValue\\\":\\\"\\\",\\\"Value\\\":\\\"\\\",\\\"MetaPath\\\":null,\\\"MetaDataValue\\\":null,\\\"ModifiedInSchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"SchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"SchemaManagerName\\\":\\\"\\\",\\\"DataValueTypeUId\\\":\\\"d21e9ef4-c064-4012-b286-fa1a8171da44\\\",\\\"ReferenceSchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"ResourceItemName\\\":null}\"}},{\"ItemUId\":\"7a5c43ed-6671-47eb-b012-6bae5f4339b4\",\"columnMetaPath\":{\"value\":\"c6b54c23-0778-41ad-9c46-006ddc2186cb\"},\"schemaUId\":{\"value\":\"c4848520-8352-4bb4-bab1-c4be07daf0c5\"},\"value\":{\"value\":\"[#BooleanValue.True#]\"},\"displayValue\":{\"value\":\"[#Логическое значение.Да#]\"},\"parameterValue\":{\"value\":\"{\\\"$type\\\":\\\"BPMSoft.Core.Process.ProcessSchemaParameterValue, BPMSoft.Core\\\",\\\"Source\\\":3,\\\"DisplayValue\\\":\\\"\\\",\\\"Value\\\":\\\"\\\",\\\"MetaPath\\\":null,\\\"MetaDataValue\\\":null,\\\"ModifiedInSchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"SchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"SchemaManagerName\\\":\\\"\\\",\\\"DataValueTypeUId\\\":\\\"90b65bf8-0ffc-4141-8779-2420877af907\\\",\\\"ReferenceSchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"ResourceItemName\\\":null}\"}},{\"ItemUId\":\"bc704611-7bae-419b-94b3-b96c5836ea71\",\"columnMetaPath\":{\"value\":\"3d67b146-feec-4e80-8bb7-2af095534891\"},\"schemaUId\":{\"value\":\"c4848520-8352-4bb4-bab1-c4be07daf0c5\"},\"value\":{\"value\":\"[#SysVariable.CurrentUserContact#]\"},\"displayValue\":{\"value\":\"[#Системная переменная.Контакт текущего пользователя#]\"},\"parameterValue\":{\"value\":\"{\\\"$type\\\":\\\"BPMSoft.Core.Process.ProcessSchemaParameterValue, BPMSoft.Core\\\",\\\"Source\\\":3,\\\"DisplayValue\\\":\\\"\\\",\\\"Value\\\":\\\"\\\",\\\"MetaPath\\\":null,\\\"MetaDataValue\\\":null,\\\"ModifiedInSchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"SchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"SchemaManagerName\\\":\\\"\\\",\\\"DataValueTypeUId\\\":\\\"b295071f-7ea9-4e62-8d1a-919bf3732ff2\\\",\\\"ReferenceSchemaUId\\\":\\\"16be3651-8fe2-4159-8dd0-a803d4683dd3\\\",\\\"ResourceItemName\\\":null}\"}},{\"ItemUId\":\"d284ddbd-07b1-49e9-8379-af8993b03456\",\"columnMetaPath\":{\"value\":\"740d155d-180b-4f73-88c4-70ffa5c1b25f\"},\"schemaUId\":{\"value\":\"c4848520-8352-4bb4-bab1-c4be07daf0c5\"},\"value\":{\"value\":\"\\\"Журнал шага 6, время: \\\" + [#SysVariable.CurrentDateTime#]\"},\"displayValue\":{\"value\":\"\\\"Журнал шага 6, время: \\\" + [#Системная переменная.Текущее значение даты и времени#]\"},\"parameterValue\":{\"value\":\"{\\\"$type\\\":\\\"BPMSoft.Core.Process.ProcessSchemaParameterValue, BPMSoft.Core\\\",\\\"Source\\\":3,\\\"DisplayValue\\\":\\\"\\\",\\\"Value\\\":\\\"\\\",\\\"MetaPath\\\":null,\\\"MetaDataValue\\\":null,\\\"ModifiedInSchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"SchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"SchemaManagerName\\\":\\\"\\\",\\\"DataValueTypeUId\\\":\\\"c0f04627-4620-4bc0-84e5-9419dc8516b1\\\",\\\"ReferenceSchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"ResourceItemName\\\":null}\"}}]}",
+          "GS5": "<UId процесса>"
+        }
+      },
+      {
+        "BL1": "BPMSoft.Core.Process.ProcessSchemaParameter",
+        "UId": "a2101ef8-bc8c-4ee2-b0fb-243eef186a25",
+        "A2": "RecordId",
+        "A3": "db6abed1-0c5f-455b-8053-2665378cdb71",
+        "A4": "db6abed1-0c5f-455b-8053-2665378cdb71",
+        "IL2": "<UId элемента>",
+        "L1": "23018567-a13c-4320-8687-fd6f9e3699bd",
+        "L8": {}
+      },
+      {
+        "BL1": "BPMSoft.Core.Process.ProcessSchemaParameter",
+        "UId": "4f618813-e1e3-40bf-a64f-482875edda2f",
+        "A2": "ConsiderTimeInFilter",
+        "A3": "db6abed1-0c5f-455b-8053-2665378cdb71",
+        "A4": "db6abed1-0c5f-455b-8053-2665378cdb71",
+        "IL2": "<UId элемента>",
+        "L1": "90b65bf8-0ffc-4141-8779-2420877af907",
+        "L8": {
+          "GS1": 3,
+          "GS2": "true",
+          "GS5": "db6abed1-0c5f-455b-8053-2665378cdb71",
+          "GS8": "false"
+        }
+      }
+    ],
+    "CL2": "FFFFFFFF",
+    "J6": "db6abed1-0c5f-455b-8053-2665378cdb71"
+  },
+  "mappings": [
+    {
+      "BL1": "BPMSoft.Core.Process.ProcessSchemaMapping",
+      "UId": "0a3318e4-2782-4e66-8928-110774899286",
+      "A2": "AddDataUserTask1",
+      "A3": "<UId процесса>",
+      "A4": "<UId процесса>",
+      "GT2": "[Element:{<UId элемента>}].[Parameter:{a2752c34-db3d-40ff-815d-7dbc43c7acf0}]",
+      "GT3": "a2752c34-db3d-40ff-815d-7dbc43c7acf0",
+      "GT5": "4573b9c8-b4d4-442e-a499-682e7b31ab10",
+      "GT4": "db6abed1-0c5f-455b-8053-2665378cdb71",
+      "GT1": {
+        "GS1": 1,
+        "GS2": "c4848520-8352-4bb4-bab1-c4be07daf0c5"
+      }
+    },
+    {
+      "BL1": "BPMSoft.Core.Process.ProcessSchemaMapping",
+      "UId": "53958f8a-5e63-4954-8469-d71420887898",
+      "A2": "AddDataUserTask1",
+      "A3": "<UId процесса>",
+      "A4": "<UId процесса>",
+      "GT2": "[Element:{<UId элемента>}].[Parameter:{c6c65f6a-240f-4885-9e6e-a451b1467f82}]",
+      "GT3": "c6c65f6a-240f-4885-9e6e-a451b1467f82",
+      "GT5": "24151caf-0cf3-48bb-862c-ba9a0ddc4b29",
+      "GT4": "db6abed1-0c5f-455b-8053-2665378cdb71",
+      "GT1": {}
+    },
+    {
+      "BL1": "BPMSoft.Core.Process.ProcessSchemaMapping",
+      "UId": "eb24d4ce-653e-4ac5-a165-c0c5e58e1d38",
+      "A2": "AddDataUserTask1",
+      "A3": "<UId процесса>",
+      "A4": "<UId процесса>",
+      "GT2": "[Element:{<UId элемента>}].[Parameter:{b759df6b-3fd7-407f-8438-d0471eefc72c}]",
+      "GT3": "b759df6b-3fd7-407f-8438-d0471eefc72c",
+      "GT5": "06ad8e3f-90fc-4aa2-922d-3fa9c386f7fc",
+      "GT4": "db6abed1-0c5f-455b-8053-2665378cdb71",
+      "GT1": {
+        "GS1": 1,
+        "GS2": "0"
+      }
+    },
+    {
+      "BL1": "BPMSoft.Core.Process.ProcessSchemaMapping",
+      "UId": "cbee4093-2036-4701-ac67-235b7939e3fd",
+      "A2": "AddDataUserTask1",
+      "A3": "<UId процесса>",
+      "A4": "<UId процесса>",
+      "GT2": "[Element:{<UId элемента>}].[Parameter:{b41d68bf-463a-4f27-81aa-14dd3ea6fbd9}]",
+      "GT3": "b41d68bf-463a-4f27-81aa-14dd3ea6fbd9",
+      "GT5": "cb4a4921-dd8e-4b41-b4f9-539408697296",
+      "GT4": "db6abed1-0c5f-455b-8053-2665378cdb71",
+      "GT1": {}
+    },
+    {
+      "BL1": "BPMSoft.Core.Process.ProcessSchemaMapping",
+      "UId": "b1b7164a-2b83-45f7-aff9-e791f676a455",
+      "A2": "AddDataUserTask1",
+      "A3": "<UId процесса>",
+      "A4": "<UId процесса>",
+      "GT2": "[Element:{<UId элемента>}].[Parameter:{772e6fd6-090c-4195-8bad-0dce372306a0}]",
+      "GT3": "772e6fd6-090c-4195-8bad-0dce372306a0",
+      "GT5": "f1b0cf15-8edd-4df1-948f-7dd046622d22",
+      "GT4": "db6abed1-0c5f-455b-8053-2665378cdb71",
+      "GT1": {
+        "GS1": 1,
+        "GS2": "{\"$type\":\"BPMSoft.Core.Process.LocalizableParameterValuesList, BPMSoft.Core\",\"$values\":[{\"ItemUId\":\"605dd760-52b6-4969-ae2a-4ba97df7b182\",\"columnMetaPath\":{\"value\":\"736c30a7-c0ec-4fa9-b034-2552b319b633\"},\"schemaUId\":{\"value\":\"c4848520-8352-4bb4-bab1-c4be07daf0c5\"},\"value\":{\"isLczValue\":true,\"value\":\"Шаг 6: добавлено элементом «Добавить данные»\"},\"displayValue\":{\"isLczValue\":true,\"value\":\"Шаг 6: добавлено элементом «Добавить данные»\"},\"parameterValue\":{\"value\":\"{\\\"$type\\\":\\\"BPMSoft.Core.Process.ProcessSchemaParameterValue, BPMSoft.Core\\\",\\\"Source\\\":1,\\\"DisplayValue\\\":\\\"\\\",\\\"Value\\\":\\\"\\\",\\\"MetaPath\\\":null,\\\"MetaDataValue\\\":null,\\\"ModifiedInSchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"SchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"SchemaManagerName\\\":\\\"\\\",\\\"DataValueTypeUId\\\":\\\"ddb3a1ee-07e8-4d62-b7a9-d0e618b00fbd\\\",\\\"ReferenceSchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"ResourceItemName\\\":null}\"}},{\"ItemUId\":\"3004bd25-a197-4963-bd4f-45b5539e65b2\",\"columnMetaPath\":{\"value\":\"7e97fca4-e510-4363-9c3e-a3393421fc3e\"},\"schemaUId\":{\"value\":\"c4848520-8352-4bb4-bab1-c4be07daf0c5\"},\"value\":{\"value\":\"600\"},\"displayValue\":{\"value\":\"600\"},\"parameterValue\":{\"value\":\"{\\\"$type\\\":\\\"BPMSoft.Core.Process.ProcessSchemaParameterValue, BPMSoft.Core\\\",\\\"Source\\\":1,\\\"DisplayValue\\\":\\\"\\\",\\\"Value\\\":\\\"\\\",\\\"MetaPath\\\":null,\\\"MetaDataValue\\\":null,\\\"ModifiedInSchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"SchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"SchemaManagerName\\\":\\\"\\\",\\\"DataValueTypeUId\\\":\\\"6b6b74e2-820d-490e-a017-2b73d4ccf2b0\\\",\\\"ReferenceSchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"ResourceItemName\\\":null}\"}},{\"ItemUId\":\"7cbc40db-81e3-4185-98e1-044c0cef9dc0\",\"columnMetaPath\":{\"value\":\"d7745f5d-cc3c-4484-af5a-9662893dccbc\"},\"schemaUId\":{\"value\":\"c4848520-8352-4bb4-bab1-c4be07daf0c5\"},\"value\":{\"value\":\"6.5\"},\"displayValue\":{\"value\":\"6.5\"},\"parameterValue\":{\"value\":\"{\\\"$type\\\":\\\"BPMSoft.Core.Process.ProcessSchemaParameterValue, BPMSoft.Core\\\",\\\"Source\\\":1,\\\"DisplayValue\\\":\\\"\\\",\\\"Value\\\":\\\"\\\",\\\"MetaPath\\\":null,\\\"MetaDataValue\\\":null,\\\"ModifiedInSchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"SchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"SchemaManagerName\\\":\\\"\\\",\\\"DataValueTypeUId\\\":\\\"969093e2-2b4e-463b-883a-3d3b8c61f0cd\\\",\\\"ReferenceSchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"ResourceItemName\\\":null}\"}},{\"ItemUId\":\"cdcc3b7f-d8e5-4dea-8192-1e85096dee76\",\"columnMetaPath\":{\"value\":\"7b80423e-5bec-4234-a1c0-3dc5d593ef7e\"},\"schemaUId\":{\"value\":\"c4848520-8352-4bb4-bab1-c4be07daf0c5\"},\"value\":{\"value\":\"[#SysVariable.CurrentDateTime#]\"},\"displayValue\":{\"value\":\"[#Системная переменная.Текущее значение даты и времени#]\"},\"parameterValue\":{\"value\":\"{\\\"$type\\\":\\\"BPMSoft.Core.Process.ProcessSchemaParameterValue, BPMSoft.Core\\\",\\\"Source\\\":3,\\\"DisplayValue\\\":\\\"\\\",\\\"Value\\\":\\\"\\\",\\\"MetaPath\\\":null,\\\"MetaDataValue\\\":null,\\\"ModifiedInSchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"SchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"SchemaManagerName\\\":\\\"\\\",\\\"DataValueTypeUId\\\":\\\"d21e9ef4-c064-4012-b286-fa1a8171da44\\\",\\\"ReferenceSchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"ResourceItemName\\\":null}\"}},{\"ItemUId\":\"7a5c43ed-6671-47eb-b012-6bae5f4339b4\",\"columnMetaPath\":{\"value\":\"c6b54c23-0778-41ad-9c46-006ddc2186cb\"},\"schemaUId\":{\"value\":\"c4848520-8352-4bb4-bab1-c4be07daf0c5\"},\"value\":{\"value\":\"[#BooleanValue.True#]\"},\"displayValue\":{\"value\":\"[#Логическое значение.Да#]\"},\"parameterValue\":{\"value\":\"{\\\"$type\\\":\\\"BPMSoft.Core.Process.ProcessSchemaParameterValue, BPMSoft.Core\\\",\\\"Source\\\":3,\\\"DisplayValue\\\":\\\"\\\",\\\"Value\\\":\\\"\\\",\\\"MetaPath\\\":null,\\\"MetaDataValue\\\":null,\\\"ModifiedInSchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"SchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"SchemaManagerName\\\":\\\"\\\",\\\"DataValueTypeUId\\\":\\\"90b65bf8-0ffc-4141-8779-2420877af907\\\",\\\"ReferenceSchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"ResourceItemName\\\":null}\"}},{\"ItemUId\":\"bc704611-7bae-419b-94b3-b96c5836ea71\",\"columnMetaPath\":{\"value\":\"3d67b146-feec-4e80-8bb7-2af095534891\"},\"schemaUId\":{\"value\":\"c4848520-8352-4bb4-bab1-c4be07daf0c5\"},\"value\":{\"value\":\"[#SysVariable.CurrentUserContact#]\"},\"displayValue\":{\"value\":\"[#Системная переменная.Контакт текущего пользователя#]\"},\"parameterValue\":{\"value\":\"{\\\"$type\\\":\\\"BPMSoft.Core.Process.ProcessSchemaParameterValue, BPMSoft.Core\\\",\\\"Source\\\":3,\\\"DisplayValue\\\":\\\"\\\",\\\"Value\\\":\\\"\\\",\\\"MetaPath\\\":null,\\\"MetaDataValue\\\":null,\\\"ModifiedInSchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"SchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"SchemaManagerName\\\":\\\"\\\",\\\"DataValueTypeUId\\\":\\\"b295071f-7ea9-4e62-8d1a-919bf3732ff2\\\",\\\"ReferenceSchemaUId\\\":\\\"16be3651-8fe2-4159-8dd0-a803d4683dd3\\\",\\\"ResourceItemName\\\":null}\"}},{\"ItemUId\":\"d284ddbd-07b1-49e9-8379-af8993b03456\",\"columnMetaPath\":{\"value\":\"740d155d-180b-4f73-88c4-70ffa5c1b25f\"},\"schemaUId\":{\"value\":\"c4848520-8352-4bb4-bab1-c4be07daf0c5\"},\"value\":{\"value\":\"\\\"Журнал шага 6, время: \\\" + [#SysVariable.CurrentDateTime#]\"},\"displayValue\":{\"value\":\"\\\"Журнал шага 6, время: \\\" + [#Системная переменная.Текущее значение даты и времени#]\"},\"parameterValue\":{\"value\":\"{\\\"$type\\\":\\\"BPMSoft.Core.Process.ProcessSchemaParameterValue, BPMSoft.Core\\\",\\\"Source\\\":3,\\\"DisplayValue\\\":\\\"\\\",\\\"Value\\\":\\\"\\\",\\\"MetaPath\\\":null,\\\"MetaDataValue\\\":null,\\\"ModifiedInSchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"SchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"SchemaManagerName\\\":\\\"\\\",\\\"DataValueTypeUId\\\":\\\"c0f04627-4620-4bc0-84e5-9419dc8516b1\\\",\\\"ReferenceSchemaUId\\\":\\\"00000000-0000-0000-0000-000000000000\\\",\\\"ResourceItemName\\\":null}\"}}]}"
+      }
+    },
+    {
+      "BL1": "BPMSoft.Core.Process.ProcessSchemaMapping",
+      "UId": "65935aea-e9b3-4f88-8942-4bd7b955840a",
+      "A2": "AddDataUserTask1",
+      "A3": "<UId процесса>",
+      "A4": "<UId процесса>",
+      "GT2": "[Element:{<UId элемента>}].[Parameter:{a2101ef8-bc8c-4ee2-b0fb-243eef186a25}]",
+      "GT3": "a2101ef8-bc8c-4ee2-b0fb-243eef186a25",
+      "GT5": "01b58ce0-aa7f-40c5-a5c6-b4ddffb5d0c7",
+      "GT4": "db6abed1-0c5f-455b-8053-2665378cdb71",
+      "GT1": {}
+    },
+    {
+      "BL1": "BPMSoft.Core.Process.ProcessSchemaMapping",
+      "UId": "bccd2d1a-c85d-43d1-af02-9d9a45e41918",
+      "A2": "AddDataUserTask1",
+      "A3": "<UId процесса>",
+      "A4": "<UId процесса>",
+      "GT2": "[Element:{<UId элемента>}].[Parameter:{4f618813-e1e3-40bf-a64f-482875edda2f}]",
+      "GT3": "4f618813-e1e3-40bf-a64f-482875edda2f",
+      "GT5": "01eaeba6-132f-7d0d-4ecc-67b990f6bd5a",
+      "GT4": "db6abed1-0c5f-455b-8053-2665378cdb71",
+      "GT1": {
+        "GS1": 3,
+        "GS2": "true",
+        "GS5": "db6abed1-0c5f-455b-8053-2665378cdb71",
+        "GS8": "false"
+      }
+    }
+  ],
+  "resources": {
+    "ru-RU": [
+      "<Item Name=\"BaseElements.AddDataUserTask1.Caption\" Value=\"Добавить запись шага 6\" />",
+      "<Item Name=\"BaseElements.AddDataUserTask1.Parameters.ConsiderTimeInFilter.Caption\" Value=\"Учитывать время в фильтре\" />",
+      "<Item Name=\"BaseElements.AddDataUserTask1.Parameters.ConsiderTimeInFilter.DisplayValue\" Value=\"true\" />",
+      "<Item Name=\"BaseElements.AddDataUserTask1.Parameters.DataSourceFilters.Caption\" Value=\"Фильтры источника данных\" />",
+      "<Item Name=\"BaseElements.AddDataUserTask1.Parameters.EntitySchemaId.Caption\" Value=\"Объект\" />",
+      "<Item Name=\"BaseElements.AddDataUserTask1.Parameters.FilterEntitySchemaId.Caption\" Value=\"Объект выборки\" />",
+      "<Item Name=\"BaseElements.AddDataUserTask1.Parameters.RecordAddMode.Caption\" Value=\"Режим добавления записей\" />",
+      "<Item Name=\"BaseElements.AddDataUserTask1.Parameters.RecordDefValues.Caption\" Value=\"Значения полей\" />",
+      "<Item Name=\"BaseElements.AddDataUserTask1.Parameters.RecordDefValues.Value.605dd760-52b6-4969-ae2a-4ba97df7b182.displayValue\" Value=\"Шаг 6: добавлено элементом «Добавить данные»\" />",
+      "<Item Name=\"BaseElements.AddDataUserTask1.Parameters.RecordDefValues.Value.605dd760-52b6-4969-ae2a-4ba97df7b182.value\" Value=\"Шаг 6: добавлено элементом «Добавить данные»\" />",
+      "<Item Name=\"BaseElements.AddDataUserTask1.Parameters.RecordId.Caption\" Value=\"Id созданной записи\" />"
+    ],
+    "en-US": [
+      "<Item Name=\"BaseElements.AddDataUserTask1.Caption\" Value=\"Add step 6 record\" />",
+      "<Item Name=\"BaseElements.AddDataUserTask1.Parameters.ConsiderTimeInFilter.Caption\" Value=\"Consider time in the filter\" />",
+      "<Item Name=\"BaseElements.AddDataUserTask1.Parameters.DataSourceFilters.Caption\" Value=\"Data source filters\" />",
+      "<Item Name=\"BaseElements.AddDataUserTask1.Parameters.EntitySchemaId.Caption\" Value=\"Object\" />",
+      "<Item Name=\"BaseElements.AddDataUserTask1.Parameters.FilterEntitySchemaId.Caption\" Value=\"Object\" />",
+      "<Item Name=\"BaseElements.AddDataUserTask1.Parameters.RecordAddMode.Caption\" Value=\"Record adding mode\" />",
+      "<Item Name=\"BaseElements.AddDataUserTask1.Parameters.RecordDefValues.Caption\" Value=\"Set column values\" />",
+      "<Item Name=\"BaseElements.AddDataUserTask1.Parameters.RecordDefValues.Value.605dd760-52b6-4969-ae2a-4ba97df7b182.displayValue\" Value=\"Step 6: added by the Add data element\" />",
+      "<Item Name=\"BaseElements.AddDataUserTask1.Parameters.RecordDefValues.Value.605dd760-52b6-4969-ae2a-4ba97df7b182.value\" Value=\"Step 6: added by the Add data element\" />",
+      "<Item Name=\"BaseElements.AddDataUserTask1.Parameters.RecordId.Caption\" Value=\"Created record Id\" />"
+    ]
+  }
+}

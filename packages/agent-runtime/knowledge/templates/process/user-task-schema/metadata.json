@@ -1,0 +1,60 @@
+{
+  "MetaData": {
+    "Schema": {
+      "ManagerName": "ProcessUserTaskSchemaManager",
+      "UId": "<UId схемы действия>",
+      "A2": "TestUserTask",
+      "A5": "f6ef2a1b-c8a8-4ab7-81fc-dfa94f7604af",
+      "B1": [],
+      "B2": [],
+      "B3": [],
+      "B6": "<UId пакета>",
+      "B8": "1.9.0.17103",
+      "FJ1": [
+        {
+          "BL1": "BPMSoft.Core.Process.ProcessSchemaParameter",
+          "UId": "390ff932-a96a-4ce3-9811-b19a9ad9d018",
+          "A2": "TestText",
+          "A3": "<UId схемы действия>",
+          "A4": "<UId схемы действия>",
+          "L1": "ddb3a1ee-07e8-4d62-b7a9-d0e618b00fbd",
+          "L8": {},
+          "L6": true,
+          "L12": 0
+        },
+        {
+          "BL1": "BPMSoft.Core.Process.ProcessSchemaParameter",
+          "UId": "ffe58cb1-beee-4ae5-9667-b130b5db4533",
+          "A2": "TestNumber",
+          "A3": "<UId схемы действия>",
+          "A4": "<UId схемы действия>",
+          "L1": "6b6b74e2-820d-490e-a017-2b73d4ccf2b0",
+          "L8": {},
+          "L12": 0
+        },
+        {
+          "BL1": "BPMSoft.Core.Process.ProcessSchemaParameter",
+          "UId": "7e8ccd79-66ed-4228-bd67-38b42cf2e850",
+          "A2": "TestResult",
+          "A3": "<UId схемы действия>",
+          "A4": "<UId схемы действия>",
+          "L1": "ddb3a1ee-07e8-4d62-b7a9-d0e618b00fbd",
+          "L8": {},
+          "L12": 1
+        },
+        {
+          "BL1": "BPMSoft.Core.Process.ProcessSchemaParameter",
+          "UId": "3f33f47e-5ae4-4395-a3f2-6ed706d0a74a",
+          "A2": "TestExtra",
+          "A3": "<UId схемы действия>",
+          "A4": "<UId схемы действия>",
+          "L1": "ddb3a1ee-07e8-4d62-b7a9-d0e618b00fbd",
+          "L8": {},
+          "L12": 0
+        }
+      ],
+      "FK12": "#839DC3",
+      "FK16": true
+    }
+  }
+}
