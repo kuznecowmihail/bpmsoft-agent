@@ -81,7 +81,7 @@ export function shortPath(rawPath: unknown): string {
   if (knowledgeIndex !== -1) {
     return `знания: ${normalized.slice(knowledgeIndex + '/knowledge/'.length)}`
   }
-  const appMarkers = ['/BPMSoft.Configuration/', '/Logs/', '/ResourcesCore/', '/Resources/', '/conf/']
+  const appMarkers = ['/BPMSoft.Configuration/', '/Logs/', '/Resources/', '/conf/']
   for (const marker of appMarkers) {
     const index = normalized.indexOf(marker)
     if (index !== -1) {
@@ -291,4 +291,169 @@ export function buildBlocks(entries: ChatEntry[]): ChatBlock[] {
 /** Whether an entry is shown in the feed. */
 export function isEntryVisible(entry: ChatEntry, showDebug: boolean): boolean {
   return showDebug || entry.role !== 'agent-other'
+}
+
+export interface ChoiceQuestion {
+  text: string
+  multi: boolean
+  options: { text: string; preselected: boolean }[]
+}
+
+/** Default confirm question shown when a plan arrives without a <choices> block. */
+export const PLAN_CONFIRM_QUESTIONS: ChoiceQuestion[] = [
+  { text: 'Подтверждаете план?', multi: false, options: [{ text: 'Делай', preselected: false }, { text: 'Нужны правки', preselected: false }] }
+]
+
+/** A plan message: acceptance criteria in «Дано … То» form (AC-n and DoD-n), no <choices> block, not a final report with knowledge notes. */
+export function isPlanWithoutChoices(text: string): boolean {
+  if (/<choices>/.test(text) || /наблюдения для базы знаний/i.test(text)) {
+    return false
+  }
+  const lines = text.split('\n')
+  const hasAc = lines.some((line) => /\bAC-\d+/.test(line) && /Дано/.test(line))
+  const hasDod = lines.some((line) => /\bDoD-\d+/.test(line))
+  return hasAc && hasDod
+}
+
+export interface ParsedChoices {
+  before: string
+  questions: ChoiceQuestion[]
+  after: string
+}
+
+/**
+ * Finds the LAST <choices>…</choices> block; returns null if none or if it has no questions.
+ * before/after = text outside the block, trimmed.
+ */
+export function parseChoices(text: string): ParsedChoices | null {
+  const regex = /<choices>\s*([\s\S]*?)\s*<\/choices>/g
+  let lastMatch: RegExpExecArray | null = null
+
+  while (true) {
+    const match = regex.exec(text)
+    if (!match) break
+    lastMatch = match
+  }
+
+  if (!lastMatch) return null
+
+  const blockStart = lastMatch.index
+  const blockEnd = lastMatch.index + lastMatch[0].length
+  const blockContent = lastMatch[1]
+
+  const before = text.slice(0, blockStart).trim()
+  const after = text.slice(blockEnd).trim()
+
+  const lines = blockContent.split('\n')
+  const questions: ChoiceQuestion[] = []
+  let currentQuestion: ChoiceQuestion | null = null
+
+  for (const line of lines) {
+    const trimmed = line.trim()
+
+    if (!trimmed) {
+      continue
+    }
+
+    if (trimmed.startsWith('? ')) {
+      if (currentQuestion) {
+        questions.push(currentQuestion)
+      }
+      currentQuestion = {
+        text: trimmed.slice(2),
+        multi: false,
+        options: []
+      }
+    } else if (trimmed.startsWith('?* ')) {
+      if (currentQuestion) {
+        questions.push(currentQuestion)
+      }
+      currentQuestion = {
+        text: trimmed.slice(3),
+        multi: true,
+        options: []
+      }
+    } else if (trimmed.startsWith('- ')) {
+      if (currentQuestion) {
+        currentQuestion.options.push({
+          text: trimmed.slice(2),
+          preselected: false
+        })
+      }
+    } else if (trimmed.startsWith('* ')) {
+      if (currentQuestion) {
+        currentQuestion.options.push({
+          text: trimmed.slice(2),
+          preselected: true
+        })
+      }
+    } else {
+      if (currentQuestion) {
+        currentQuestion.text += ' ' + trimmed
+      }
+    }
+  }
+
+  if (currentQuestion) {
+    questions.push(currentQuestion)
+  }
+
+  if (questions.length === 0) {
+    return null
+  }
+
+  return { before, questions, after }
+}
+
+export interface ChoiceAnswer {
+  selected: string[]
+  custom: string
+}
+
+/**
+ * One question → just the answer text; several → numbered lines "N. <вопрос> — <ответ>".
+ * Answer = selected options joined with "; ", plus "свой ответ: <custom>" (joined with "; ") when custom is non-empty.
+ * Unanswered questions are written as "— без ответа".
+ * Single question with exactly one selected option and empty custom → return exactly the option text.
+ * Single question with only custom → the custom text.
+ */
+export function formatChoiceAnswers(questions: ChoiceQuestion[], answers: ChoiceAnswer[]): string {
+  if (questions.length === 1 && answers.length > 0) {
+    const answer = answers[0]
+    const selected = answer.selected
+    const custom = answer.custom
+
+    if (selected.length === 1 && !custom) {
+      return selected[0]
+    }
+
+    if (selected.length === 0 && custom) {
+      return custom
+    }
+  }
+
+  const lines: string[] = []
+  for (let i = 0; i < questions.length; i++) {
+    const question = questions[i]
+    const answer = answers[i]
+    const number = i + 1
+
+    let answerText = ''
+    if (answer) {
+      const parts: string[] = []
+      if (answer.selected.length > 0) {
+        parts.push(answer.selected.join('; '))
+      }
+      if (answer.custom) {
+        parts.push('свой ответ: ' + answer.custom)
+      }
+      answerText = parts.length > 0 ? parts.join('; ') : '— без ответа'
+    } else {
+      answerText = '— без ответа'
+    }
+
+    lines.push(`${number}. ${question.text} — ${answerText}`)
+  }
+
+  return lines.join('\n')
 }

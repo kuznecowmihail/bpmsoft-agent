@@ -117,8 +117,8 @@ const validateProcess = (processFolder) => {
   descriptor = desc.data;
 
   // Check 1: descriptor.json format
-  if (!/"ModifiedOnUtc":\s*"\\\/Date\(\d{13}\)\\\/"/m.test(descriptorRaw)) {
-    errors.push('descriptor.json: ModifiedOnUtc в неверном формате (нужно "\\/Date(<мс>)\\/")')
+  if (!/"ModifiedOnUtc":\s*"\\?\/Date\(\d{13}\)\\?\/"/m.test(descriptorRaw)) {
+    errors.push('descriptor.json: ModifiedOnUtc в неверном формате (нужно "\\/Date(<мс>)\\/" — один обратный слеш или без него)')
   }
 
   // Parse metadata

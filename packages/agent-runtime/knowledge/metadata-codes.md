@@ -1,19 +1,19 @@
 # Коды полей metadata.json → свойства классов платформы
 
-**Источник**: методы `WriteMetaData(DataWriter writer)` в декомпилированных классах платформы (`[app]/ResourcesCore/BPMSoft.Core/...`). Каждая строка `writer.WriteValue("<код>", <свойство>, <значение по умолчанию>)` — это ровно то, как платформа пишет поле в `metadata.json`. Файл сгенерирован скриптом, не вручную.
+**Источник**: методы `WriteMetaData(DataWriter writer)` в классах платформы (сборки `BPMSoft.Core`). Каждая строка `writer.WriteValue("<код>", <свойство>, <значение по умолчанию>)` — это ровно то, как платформа пишет поле в `metadata.json`. Файл сгенерирован скриптом, не вручную.
 
 **Как пользоваться:**
 - Ищи код поля (`IJ3`, `L12`, `E6`...) поиском по этому файлу. Если у кода есть свойство — смысл поля известен, угадывать по примерам не нужно.
 - **Значение по умолчанию платформа в файл не пишет.** Отсутствие поля = значение из колонки «По умолчанию». Например `IJ3` (IsLogging) по умолчанию `true`, поэтому в файле встречается только `"IJ3": false`.
 - Поле класса-наследника дополняет поля базового класса (указан после двоеточия). Пример для элемента процесса: `MetaItem` (`A2`–`A5`) → `BaseProcessSchemaItem` (`BL1`) → `ProcessSchemaBaseElement` (`BL3`, `BL7`...) → ... → `ProcessSchemaScriptTask` (`CH1`, `CH2`).
-- Значения enum (например `ProcessSchemaParameterDirection`: `In`=0, `Out`=1, `Variable`=2) смотри в одноимённом файле `.cs` в той же папке `ResourcesCore`.
-- `ResourcesCore` — учебный источник, не часть проекта. Словарь говорит, ЧТО означает поле; КАК правильно писать его в файл — проверяй по реальным схемам `Pkg` и рецептам `*-edit.md`.
+- Значения enum (например `ProcessSchemaParameterDirection`: `In`=0, `Out`=1, `Variable`=2) смотри в XML-документации `[app]/BPMSoft.*.xml` (`platform-api.md`).
+- Словарь говорит, ЧТО означает поле; КАК правильно писать его в файл — проверяй по реальным схемам `Pkg` и рецептам `*-edit.md`.
 - Сверено с уже подтверждёнными записью фактами: `E2`=RequirementType, `E5`=IsValueCloneable (по умолчанию true), `E6`=IsIndexed, `D1`=IsVirtual, `B7`=ExtendParent, `HD1`=ParentSchemaUId, `IJ1`/`IJ2`/`IJ9`/`IJ10`, `IJ3`=IsLogging — все совпали.
 
 ## Общие для всех схем (схема, элемент metadata) и клиентские схемы / исходный код
 
 ### AngularParameter : BaseProcessSchemaItem
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core/AngularParameter.cs`
+`BPMSoft.Core.AngularParameter`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -23,7 +23,7 @@
 | `RX4` | AngularDataValueTypeUId | `Guid.Empty` |
 
 ### AngularParametersValue : BaseProcessSchemaItem
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core/AngularParametersValue.cs`
+`BPMSoft.Core.AngularParametersValue`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -31,7 +31,7 @@
 | `ES2` | AngularParameterValue | `string.Empty` |
 
 ### AngularWrapperData : BaseProcessSchemaItem
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core/AngularWrapperData.cs`
+`BPMSoft.Core.AngularWrapperData`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -42,7 +42,7 @@
 | `LX5` | AngularParametersValues (список) |  |
 
 ### ClientUnitSchema : Schema
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core/ClientUnitSchema.cs`
+`BPMSoft.Core.ClientUnitSchema`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -67,7 +67,7 @@
 | `HD21` | AngularWrappersData (список) |  |
 
 ### ClientUnitSchemaDependency : MetaItem
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core/ClientUnitSchemaDependency.cs`
+`BPMSoft.Core.ClientUnitSchemaDependency`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -75,7 +75,7 @@
 | `HW2` | ManagerName | `string.Empty` |
 
 ### ClientUnitSchemaMessage : MetaItem
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core/ClientUnitSchemaMessage.cs`
+`BPMSoft.Core.ClientUnitSchemaMessage`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -83,14 +83,14 @@
 | `HX2` | Mode | `MessageMode.Broadcast` |
 
 ### ImageListSchema : Schema
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core/ImageListSchema.cs`
+`BPMSoft.Core.ImageListSchema`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
 | `FU1` | Items (список) |  |
 
 ### MetaItem : IMetaItem
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core/MetaItem.cs`
+`BPMSoft.Core.MetaItem`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -101,7 +101,7 @@
 | `A2` | Name | `null` |
 
 ### Schema : MetaSchema
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core/Schema.cs`
+`BPMSoft.Core.Schema`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -114,7 +114,7 @@
 | `B9` | DenyExtending | `false` |
 
 ### SchemaMethod : MetaItem
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core/SchemaMethod.cs`
+`BPMSoft.Core.SchemaMethod`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -127,7 +127,7 @@
 | `C7` | Arguments (список) |  |
 
 ### SchemaMethodArgument : MetaItem
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core/SchemaMethodArgument.cs`
+`BPMSoft.Core.SchemaMethodArgument`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -136,7 +136,7 @@
 | `AA3` | IsParams | `false` |
 
 ### SchemaProperty : MetaItem
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core/SchemaProperty.cs`
+`BPMSoft.Core.SchemaProperty`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -145,14 +145,14 @@
 | `S5` | ReferenceValueListSchemaUId | `Guid.Empty` |
 
 ### SchemaUsing : MetaItem
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core/SchemaUsing.cs`
+`BPMSoft.Core.SchemaUsing`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
 | `GF1` | Alias | `string.Empty` |
 
 ### SourceCodeSchema : Schema
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core/SourceCodeSchema.cs`
+`BPMSoft.Core.SourceCodeSchema`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -160,7 +160,7 @@
 | `HD2` | _body | `string.Empty` |
 
 ### ValueListSchema : Schema
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core/ValueListSchema.cs`
+`BPMSoft.Core.ValueListSchema`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -169,7 +169,7 @@
 | `HE2` | Items (список) |  |
 
 ### ValueListSchemaItem : SchemaProperty
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core/ValueListSchemaItem.cs`
+`BPMSoft.Core.ValueListSchemaItem`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -178,7 +178,7 @@
 ## Объекты (EntitySchema)
 
 ### EntitySchema : ProcessBasedSchema
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Entities/EntitySchema.cs`
+`BPMSoft.Core.Entities.EntitySchema`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -213,7 +213,7 @@
 | `D20` | _events (объект) |  |
 
 ### EntitySchemaAggregationQueryFunction : EntitySchemaQueryFunction
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Entities/EntitySchemaAggregationQueryFunction.cs`
+`BPMSoft.Core.Entities.EntitySchemaAggregationQueryFunction`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -222,7 +222,7 @@
 | `Q3` | Expression (объект) |  |
 
 ### EntitySchemaCaseNotNullQueryFunction : EntitySchemaQueryFunction
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Entities/EntitySchemaCaseNotNullQueryFunction.cs`
+`BPMSoft.Core.Entities.EntitySchemaCaseNotNullQueryFunction`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -230,7 +230,7 @@
 | `FQ2` | ElseExpression (объект) |  |
 
 ### EntitySchemaCaseNotNullQueryFunctionWhenItem : MetaItem
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Entities/EntitySchemaCaseNotNullQueryFunctionWhenItem.cs`
+`BPMSoft.Core.Entities.EntitySchemaCaseNotNullQueryFunctionWhenItem`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -238,7 +238,7 @@
 | `FR2` | ThenExpression (объект) |  |
 
 ### EntitySchemaCastQueryFunction : EntitySchemaQueryFunction
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Entities/EntitySchemaCastQueryFunction.cs`
+`BPMSoft.Core.Entities.EntitySchemaCastQueryFunction`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -246,14 +246,14 @@
 | `HB2` | Expression (объект) |  |
 
 ### EntitySchemaCoalesceQueryFunction : EntitySchemaQueryFunction
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Entities/EntitySchemaCoalesceQueryFunction.cs`
+`BPMSoft.Core.Entities.EntitySchemaCoalesceQueryFunction`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
 | `FG1` | Expressions (объект) |  |
 
 ### EntitySchemaColumn : SchemaProperty
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Entities/EntitySchemaColumn.cs`
+`BPMSoft.Core.Entities.EntitySchemaColumn`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -274,7 +274,7 @@
 | `E18` | DisplayColumnValueName | `Name` |
 
 ### EntitySchemaColumnDef : IMetaDataSerializable
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Entities/EntitySchemaColumnDef.cs`
+`BPMSoft.Core.Entities.EntitySchemaColumnDef`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -283,28 +283,28 @@
 | `FB2` | value | `string.Empty` |
 
 ### EntitySchemaColumnReferenceSchema : MetaItem
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Entities/EntitySchemaColumnReferenceSchema.cs`
+`BPMSoft.Core.Entities.EntitySchemaColumnReferenceSchema`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
 | `FS1` | ReferenceSchemaUId | `Guid.Empty` |
 
 ### EntitySchemaConcatQueryFunction : EntitySchemaQueryFunction
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Entities/EntitySchemaConcatQueryFunction.cs`
+`BPMSoft.Core.Entities.EntitySchemaConcatQueryFunction`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
 | `HV3` | Expressions (объект) |  |
 
 ### EntitySchemaDatePartQueryFunction : EntitySchemaQueryFunction
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Entities/EntitySchemaDatePartQueryFunction.cs`
+`BPMSoft.Core.Entities.EntitySchemaDatePartQueryFunction`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
 | `GR1` | Expression (объект) |  |
 
 ### EntitySchemaEvents : MetaItem
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Entities/EntitySchemaEvents.cs`
+`BPMSoft.Core.Entities.EntitySchemaEvents`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -327,7 +327,7 @@
 | `FA17` | DefColumnValuesSet.IsProcessEventHandler | `false` |
 
 ### EntitySchemaIndex : MetaItem
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Entities/EntitySchemaIndex.cs`
+`BPMSoft.Core.Entities.EntitySchemaIndex`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -337,7 +337,7 @@
 | `F4` | Columns (список) |  |
 
 ### EntitySchemaIndexColumn : MetaItem
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Entities/EntitySchemaIndexColumn.cs`
+`BPMSoft.Core.Entities.EntitySchemaIndexColumn`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -345,7 +345,7 @@
 | `G2` | OrderDirection | `OrderDirectionStrict.Ascending` |
 
 ### EntitySchemaIsNullQueryFunction : EntitySchemaQueryFunction
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Entities/EntitySchemaIsNullQueryFunction.cs`
+`BPMSoft.Core.Entities.EntitySchemaIsNullQueryFunction`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -353,14 +353,14 @@
 | `R2` | ReplacementExpression (объект) |  |
 
 ### EntitySchemaLengthQueryFunction : EntitySchemaQueryFunction
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Entities/EntitySchemaLengthQueryFunction.cs`
+`BPMSoft.Core.Entities.EntitySchemaLengthQueryFunction`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
 | `HV2` | Expression (объект) |  |
 
 ### EntitySchemaQueryColumn : MetaItem
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Entities/EntitySchemaQueryColumn.cs`
+`BPMSoft.Core.Entities.EntitySchemaQueryColumn`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -376,7 +376,7 @@
 | `I11` | SourceSchemaUIdExpression (объект) |  |
 
 ### EntitySchemaQueryExpression : MetaItem
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Entities/EntitySchemaQueryExpression.cs`
+`BPMSoft.Core.Entities.EntitySchemaQueryExpression`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -398,7 +398,7 @@
 | `O14` | RightArithmeticOperand (объект) |  |
 
 ### EntitySchemaQueryFilter : MetaItem
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Entities/EntitySchemaQueryFilter.cs`
+`BPMSoft.Core.Entities.EntitySchemaQueryFilter`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -408,7 +408,7 @@
 | `M2` | RightExpressions (объект) |  |
 
 ### EntitySchemaQueryFilterCollection : Collection<IEntitySchemaQueryFilterItem>
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Entities/EntitySchemaQueryFilterCollection.cs`
+`BPMSoft.Core.Entities.EntitySchemaQueryFilterCollection`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -418,14 +418,14 @@
 | `N4` | LogicalOperation | `LogicalOperationStrict.And` |
 
 ### EntitySchemaTrimQueryFunction : EntitySchemaQueryFunction
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Entities/EntitySchemaTrimQueryFunction.cs`
+`BPMSoft.Core.Entities.EntitySchemaTrimQueryFunction`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
 | `HV1` | Expression (объект) |  |
 
 ### EntitySchemaUpperQueryFunction : EntitySchemaQueryFunction
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Entities/EntitySchemaUpperQueryFunction.cs`
+`BPMSoft.Core.Entities.EntitySchemaUpperQueryFunction`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -434,7 +434,7 @@
 ## Процессы и действия процесса (ProcessSchema, ProcessUserTaskSchema)
 
 ### BaseProcessSchema : BaseProcessUserTaskSchema
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Process/BaseProcessSchema.cs`
+`BPMSoft.Core.Process.BaseProcessSchema`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -453,7 +453,7 @@
 | `BK37` | NotificationCaption (объект) |  |
 
 ### BaseProcessSchemaElement : BaseProcessSchemaItem
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Process/BaseProcessSchemaElement.cs`
+`BPMSoft.Core.Process.BaseProcessSchemaElement`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -461,7 +461,7 @@
 | `IL3` | UseBackgroundMode | `false` |
 
 ### BaseProcessSchemaItem : MetaItem
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Process/BaseProcessSchemaItem.cs`
+`BPMSoft.Core.Process.BaseProcessSchemaItem`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -469,14 +469,14 @@
 | `BL11` | IsValid | `true` |
 
 ### BaseProcessUserTaskSchema : Schema
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Process/BaseProcessUserTaskSchema.cs`
+`BPMSoft.Core.Process.BaseProcessUserTaskSchema`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
 | `FJ1` | Parameters (список) |  |
 
 ### EmbeddedProcessSchema : ProcessSchema
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Process/EmbeddedProcessSchema.cs`
+`BPMSoft.Core.Process.EmbeddedProcessSchema`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -484,14 +484,14 @@
 | `JC1` | ConvertedMethodsSchemaUIdList (список) |  |
 
 ### ProcessBasedSchema : Schema
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Process/ProcessBasedSchema.cs`
+`BPMSoft.Core.Process.ProcessBasedSchema`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
 | `EG1` | EventsProcessSchema (объект) |  |
 
 ### ProcessSchema : BaseProcessSchema
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Process/ProcessSchema.cs`
+`BPMSoft.Core.Process.ProcessSchema`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -517,7 +517,7 @@
 | `BK36` | Enabled | `true` |
 
 ### ProcessSchemaActivity : ProcessSchemaParametrizedFlowNode
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Process/ProcessSchemaActivity.cs`
+`BPMSoft.Core.Process.ProcessSchemaActivity`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -528,7 +528,7 @@
 | `BP2` | Parameters (список) |  |
 
 ### ProcessSchemaAssociation : ProcessSchemaArtifact
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Process/ProcessSchemaAssociation.cs`
+`BPMSoft.Core.Process.ProcessSchemaAssociation`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -542,7 +542,7 @@
 | `DV8` | ? (объект) |  |
 
 ### ProcessSchemaBaseElement : BaseProcessSchemaElement
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Process/ProcessSchemaBaseElement.cs`
+`BPMSoft.Core.Process.ProcessSchemaBaseElement`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -554,14 +554,14 @@
 | `BL9` | OwnerSchemaManagerName | `null` |
 
 ### ProcessSchemaBoundaryEvent : ProcessSchemaUnsupportedElement
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Process/ProcessSchemaBoundaryEvent.cs`
+`BPMSoft.Core.Process.ProcessSchemaBoundaryEvent`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
 | `AT1` | AttachedToElementUId | `Guid.Empty` |
 
 ### ProcessSchemaConditionalFlow : ProcessSchemaSequenceFlow
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Process/ProcessSchemaConditionalFlow.cs`
+`BPMSoft.Core.Process.ProcessSchemaConditionalFlow`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -569,7 +569,7 @@
 | `GV3` | _matchBranchingDecisions (список) |  |
 
 ### ProcessSchemaDataObject : ProcessSchemaFlowNode
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Process/ProcessSchemaDataObject.cs`
+`BPMSoft.Core.Process.ProcessSchemaDataObject`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -578,7 +578,7 @@
 | `BS4` | Parameters (список) |  |
 
 ### ProcessSchemaDecisionalGateway : ProcessSchemaGateway
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Process/ProcessSchemaDecisionalGateway.cs`
+`BPMSoft.Core.Process.ProcessSchemaDecisionalGateway`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -588,7 +588,7 @@
 | `HH5` | IsDecisionRequired | `false` |
 
 ### ProcessSchemaEvent : ProcessSchemaParametrizedFlowNode
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Process/ProcessSchemaEvent.cs`
+`BPMSoft.Core.Process.ProcessSchemaEvent`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -596,7 +596,7 @@
 | `FC2` | EntitySchemaUId | `Guid.Empty` |
 
 ### ProcessSchemaEventBasedGateway : ProcessSchemaGateway
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Process/ProcessSchemaEventBasedGateway.cs`
+`BPMSoft.Core.Process.ProcessSchemaEventBasedGateway`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -604,14 +604,14 @@
 | `BU2` | EventGatewayType | `ProcessSchemaEventBasedGatewayType.Default` |
 
 ### ProcessSchemaExclusiveGateway : ProcessSchemaDecisionalGateway
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Process/ProcessSchemaExclusiveGateway.cs`
+`BPMSoft.Core.Process.ProcessSchemaExclusiveGateway`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
 | `BX1` | base.DefaultUId | `Guid.Empty` |
 
 ### ProcessSchemaFlowElement : ProcessSchemaBaseElement
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Process/ProcessSchemaFlowElement.cs`
+`BPMSoft.Core.Process.ProcessSchemaFlowElement`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -619,7 +619,7 @@
 | `BN2` | Size | `Size.Empty` |
 
 ### ProcessSchemaFlowNode : ProcessSchemaFlowElement
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Process/ProcessSchemaFlowNode.cs`
+`BPMSoft.Core.Process.ProcessSchemaFlowNode`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -627,14 +627,14 @@
 | `BO3` | IsLogging | `false` |
 
 ### ProcessSchemaFormulaTask : ProcessSchemaScriptTask
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Process/ProcessSchemaFormulaTask.cs`
+`BPMSoft.Core.Process.ProcessSchemaFormulaTask`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
 | `HS1` | ResultParameterMetaPath | `string.Empty` |
 
 ### ProcessSchemaGroup : ProcessSchemaArtifact
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Process/ProcessSchemaGroup.cs`
+`BPMSoft.Core.Process.ProcessSchemaGroup`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -643,14 +643,14 @@
 | `BV3` | CategorizedFlowElementsUIds | `null` |
 
 ### ProcessSchemaInclusiveGateway : ProcessSchemaDecisionalGateway
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Process/ProcessSchemaInclusiveGateway.cs`
+`BPMSoft.Core.Process.ProcessSchemaInclusiveGateway`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
 | `BW1` | base.DefaultUId | `Guid.Empty` |
 
 ### ProcessSchemaIntermediateCatchEvent : ProcessSchemaCatchEvent
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Process/ProcessSchemaIntermediateCatchEvent.cs`
+`BPMSoft.Core.Process.ProcessSchemaIntermediateCatchEvent`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -659,14 +659,14 @@
 | `BY3` | BoundaryItemAlignment | `ProcessSchemaEditItemAlignment.Bottom` |
 
 ### ProcessSchemaIntermediateCatchMessageEvent : ProcessSchemaIntermediateCatchEvent
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Process/ProcessSchemaIntermediateCatchMessageEvent.cs`
+`BPMSoft.Core.Process.ProcessSchemaIntermediateCatchMessageEvent`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
 | `BZ1` | Message | `string.Empty` |
 
 ### ProcessSchemaIntermediateCatchSignalEvent : ProcessSchemaIntermediateCatchEvent
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Process/ProcessSchemaIntermediateCatchSignalEvent.cs`
+`BPMSoft.Core.Process.ProcessSchemaIntermediateCatchSignalEvent`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -681,21 +681,21 @@
 | `CA13` | EntityFilters | `string.Empty` |
 
 ### ProcessSchemaIntermediateThrowMessageEvent : ProcessSchemaIntermediateThrowEvent
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Process/ProcessSchemaIntermediateThrowMessageEvent.cs`
+`BPMSoft.Core.Process.ProcessSchemaIntermediateThrowMessageEvent`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
 | `CB1` | Message | `string.Empty` |
 
 ### ProcessSchemaIntermediateThrowSignalEvent : ProcessSchemaIntermediateThrowEvent
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Process/ProcessSchemaIntermediateThrowSignalEvent.cs`
+`BPMSoft.Core.Process.ProcessSchemaIntermediateThrowSignalEvent`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
 | `CC1` | Message | `string.Empty` |
 
 ### ProcessSchemaLane : ProcessSchemaBaseElement
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Process/ProcessSchemaLane.cs`
+`BPMSoft.Core.Process.ProcessSchemaLane`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -709,7 +709,7 @@
 | `CD7` | UserContexts (список) |  |
 
 ### ProcessSchemaLaneSet : ProcessSchemaBaseElement
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Process/ProcessSchemaLaneSet.cs`
+`BPMSoft.Core.Process.ProcessSchemaLaneSet`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -719,7 +719,7 @@
 | `BM4` | Lanes (список) |  |
 
 ### ProcessSchemaMapping : ProcessSchemaBaseElement
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Process/ProcessSchemaMapping.cs`
+`BPMSoft.Core.Process.ProcessSchemaMapping`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -730,7 +730,7 @@
 | `GT1` | Source (объект) |  |
 
 ### ProcessSchemaMultiInstanceOptions : MetaItem
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Process/ProcessSchemaMultiInstanceOptions.cs`
+`BPMSoft.Core.Process.ProcessSchemaMultiInstanceOptions`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -738,14 +738,14 @@
 | `JE4` | ExecutionMode | `MultiInstanceExecutionMode.Sequential` |
 
 ### ProcessSchemaParallelGateway : ProcessSchemaGateway
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Process/ProcessSchemaParallelGateway.cs`
+`BPMSoft.Core.Process.ProcessSchemaParallelGateway`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
 | `CG1` | ? (объект) |  |
 
 ### ProcessSchemaParameter : ProcessSchemaBaseElement
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Process/ProcessSchemaParameter.cs`
+`BPMSoft.Core.Process.ProcessSchemaParameter`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -767,7 +767,7 @@
 | `L18` | ItemProperties (список) |  |
 
 ### ProcessSchemaParameterValue : ICloneable
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Process/ProcessSchemaParameterValue.cs`
+`BPMSoft.Core.Process.ProcessSchemaParameterValue`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -779,14 +779,14 @@
 | `GS9` | DefValueForDcm | `null` |
 
 ### ProcessSchemaPerformerAssignmentOptions : MetaItem
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Process/ProcessSchemaPerformerAssignmentOptions.cs`
+`BPMSoft.Core.Process.ProcessSchemaPerformerAssignmentOptions`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
 | `JH3` | AssignmentType | `AssignmentType.None` |
 
 ### ProcessSchemaScriptTask : ProcessSchemaTask
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Process/ProcessSchemaScriptTask.cs`
+`BPMSoft.Core.Process.ProcessSchemaScriptTask`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -794,7 +794,7 @@
 | `CH2` | UseFlowEngineScriptVersion | `false` |
 
 ### ProcessSchemaSequenceFlow : ProcessSchemaFlowElement
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Process/ProcessSchemaSequenceFlow.cs`
+`BPMSoft.Core.Process.ProcessSchemaSequenceFlow`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -812,21 +812,21 @@
 | `CI10` | ? (объект) |  |
 
 ### ProcessSchemaStartEvent : ProcessSchemaCatchEvent
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Process/ProcessSchemaStartEvent.cs`
+`BPMSoft.Core.Process.ProcessSchemaStartEvent`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
 | `ED1` | IsInterrupting | `true` |
 
 ### ProcessSchemaStartMessageEvent : ProcessSchemaStartEvent
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Process/ProcessSchemaStartMessageEvent.cs`
+`BPMSoft.Core.Process.ProcessSchemaStartMessageEvent`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
 | `CJ1` | Message | `string.Empty` |
 
 ### ProcessSchemaStartSignalEvent : ProcessSchemaStartEvent
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Process/ProcessSchemaStartSignalEvent.cs`
+`BPMSoft.Core.Process.ProcessSchemaStartSignalEvent`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -840,7 +840,7 @@
 | `DZ13` | EntityFilters | `string.Empty` |
 
 ### ProcessSchemaStartTimerEvent : ProcessSchemaStartEvent
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Process/ProcessSchemaStartTimerEvent.cs`
+`BPMSoft.Core.Process.ProcessSchemaStartTimerEvent`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -852,7 +852,7 @@
 | `PS6` | TimeZoneOffset | `null` |
 
 ### ProcessSchemaSubProcess : ProcessSchemaActivity
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Process/ProcessSchemaSubProcess.cs`
+`BPMSoft.Core.Process.ProcessSchemaSubProcess`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -863,42 +863,42 @@
 | `CK3` | Artifacts (список) |  |
 
 ### ProcessSchemaTask : ProcessSchemaActivity
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Process/ProcessSchemaTask.cs`
+`BPMSoft.Core.Process.ProcessSchemaTask`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
 | `CL2` | FillColor | `Color.FromArgb(255, 255, 255, 255)` |
 
 ### ProcessSchemaTextAnnotation : ProcessSchemaArtifact
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Process/ProcessSchemaTextAnnotation.cs`
+`BPMSoft.Core.Process.ProcessSchemaTextAnnotation`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
 | `EC1` | Width | `0` |
 
 ### ProcessSchemaThrowEvent : ProcessSchemaEvent
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Process/ProcessSchemaThrowEvent.cs`
+`BPMSoft.Core.Process.ProcessSchemaThrowEvent`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
 | `FY1` | ThrowToBase | `false` |
 
 ### ProcessSchemaUnsupportedElement : ProcessSchemaFlowNode
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Process/ProcessSchemaUnsupportedElement.cs`
+`BPMSoft.Core.Process.ProcessSchemaUnsupportedElement`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
 | `UE1` | UnsupportedType | `string.Empty` |
 
 ### ProcessSchemaUnsupportedTerminateEvent : ProcessSchemaFlowNode
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Process/ProcessSchemaUnsupportedTerminateEvent.cs`
+`BPMSoft.Core.Process.ProcessSchemaUnsupportedTerminateEvent`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
 | `UTE1` | UnsupportedType | `string.Empty` |
 
 ### ProcessSchemaUserContext : MetaItem
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Process/ProcessSchemaUserContext.cs`
+`BPMSoft.Core.Process.ProcessSchemaUserContext`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -906,7 +906,7 @@
 | `IA2` | Parameters (список) |  |
 
 ### ProcessSchemaUserTask : ProcessSchemaTask
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Process/ProcessSchemaUserTask.cs`
+`BPMSoft.Core.Process.ProcessSchemaUserTask`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -914,7 +914,7 @@
 | `J7` | AfterActivitySaveScript | `string.Empty` |
 
 ### ProcessSchemaWebService : ProcessSchemaActivity
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Process/ProcessSchemaWebService.cs`
+`BPMSoft.Core.Process.ProcessSchemaWebService`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -923,7 +923,7 @@
 | `IX3` | Timeout | `0` |
 
 ### ProcessUserTaskSchema : BaseProcessUserTaskSchema
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.Process/ProcessUserTaskSchema.cs`
+`BPMSoft.Core.Process.ProcessUserTaskSchema`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
@@ -944,14 +944,14 @@
 ## Кейсы (DCM)
 
 ### AfterDcmSchemaElementTransition : DcmSchemaElementTransition
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.DcmProcess/AfterDcmSchemaElementTransition.cs`
+`BPMSoft.Core.DcmProcess.AfterDcmSchemaElementTransition`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|
 | `IP1` | SourceElementUId | `Guid.Empty` |
 
 ### DcmSchemaElementTransition : BaseProcessSchemaItem
-`ResourcesCore/BPMSoft.Core/BPMSoft.Core.DcmProcess/DcmSchemaElementTransition.cs`
+`BPMSoft.Core.DcmProcess.DcmSchemaElementTransition`
 
 | Код | Свойство | По умолчанию |
 |---|---|---|

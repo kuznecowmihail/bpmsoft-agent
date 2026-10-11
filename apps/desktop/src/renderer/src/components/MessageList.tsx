@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { buildBlocks, describeToolCall, permissionSubject } from '../chatFormat'
+import { buildBlocks, describeToolCall, permissionSubject, parseChoices, isPlanWithoutChoices, PLAN_CONFIRM_QUESTIONS } from '../chatFormat'
 import type { ChatEntry } from '../chatFormat'
+import { ChoicesCard } from './ChoicesCard'
 import { Markdown } from './Markdown'
 import { IconAlert, IconCheck, IconChevronRight, IconLogo } from './icons'
 
@@ -92,18 +93,34 @@ interface MessageListProps {
   isRunning: boolean
   permissionRequests: PermissionRequestEntry[]
   onPermissionResponse: (id: string, approved: boolean) => void
+  onChoiceSubmit?: (text: string) => void
 }
 
 export function MessageList({
   entries,
   isRunning,
   permissionRequests,
-  onPermissionResponse
+  onPermissionResponse,
+  onChoiceSubmit
 }: MessageListProps): React.JSX.Element {
   const blocks = buildBlocks(entries)
   const lastBlock = blocks[blocks.length - 1]
   const showThinking =
     isRunning && permissionRequests.length === 0 && (!lastBlock || (lastBlock.kind !== 'activity' && lastBlock.kind !== 'result'))
+
+  // Find the index of the last text block
+  let lastTextIndex = -1
+  for (let i = blocks.length - 1; i >= 0; i--) {
+    if (blocks[i].kind === 'text') {
+      lastTextIndex = i
+      break
+    }
+  }
+
+  // Check if there's a user block after the current index
+  const hasUserBlockAfter = (index: number): boolean => {
+    return blocks.slice(index + 1).some((block) => block.kind === 'user')
+  }
 
   return (
     <div className="feed-inner">
@@ -116,6 +133,9 @@ export function MessageList({
           )
         }
         if (block.kind === 'text') {
+          const parsed = parseChoices(block.entry.content)
+          const interactive = !isRunning && onChoiceSubmit != null && index === lastTextIndex && !hasUserBlockAfter(index)
+
           return (
             <div key={block.entry.id} className="msg msg-agent">
               {block.showAvatar ? (
@@ -126,7 +146,28 @@ export function MessageList({
                 <div className="avatar-spacer" />
               )}
               <div className="msg-agent-body">
-                <Markdown text={block.entry.content} />
+                {parsed ? (
+                  <>
+                    {parsed.before && <Markdown text={parsed.before} />}
+                    <ChoicesCard
+                      questions={parsed.questions}
+                      interactive={interactive}
+                      onSubmit={onChoiceSubmit || (() => {})}
+                    />
+                    {parsed.after && <Markdown text={parsed.after} />}
+                  </>
+                ) : (
+                  <>
+                    <Markdown text={block.entry.content} />
+                    {interactive && isPlanWithoutChoices(block.entry.content) && (
+                      <ChoicesCard
+                        questions={PLAN_CONFIRM_QUESTIONS}
+                        interactive
+                        onSubmit={onChoiceSubmit || (() => {})}
+                      />
+                    )}
+                  </>
+                )}
               </div>
             </div>
           )

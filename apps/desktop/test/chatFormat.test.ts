@@ -10,7 +10,12 @@ import {
   agentEventToLog,
   buildBlocks,
   shellExitCode,
-  type ChatEntry
+  parseChoices,
+  formatChoiceAnswers,
+  isPlanWithoutChoices,
+  type ChatEntry,
+  type ChoiceQuestion,
+  type ChoiceAnswer
 } from '../src/renderer/src/chatFormat'
 
 describe('chatFormat', () => {
@@ -58,8 +63,8 @@ describe('chatFormat', () => {
     })
 
     it('describes Grep tool', () => {
-      const result = describeToolCall('Grep', { pattern: 'GetValue', path: '/app/ResourcesCore' })
-      expect(result).toBe('Ищет «GetValue» в ResourcesCore')
+      const result = describeToolCall('Grep', { pattern: 'GetValue', path: '/app/Resources' })
+      expect(result).toBe('Ищет «GetValue» в Resources')
     })
 
     it('describes unknown tool', () => {
@@ -381,6 +386,287 @@ describe('chatFormat', () => {
       const toolEntry = { id: '2', role: 'agent-tool' as const, content: 'test' }
       expect(isEntryVisible(userEntry, false)).toBe(true)
       expect(isEntryVisible(toolEntry, false)).toBe(true)
+    })
+  })
+
+  describe('isPlanWithoutChoices', () => {
+    it('returns true for text with AC and DoD in Дано-То format without colon', () => {
+      const text = `## План
+
+- **AC-1.** Дано начальное состояние. Когда пользователь нажимает. То конечное состояние
+
+- **DoD-1.** Дано та же компиляция. Когда ... То результат`
+      expect(isPlanWithoutChoices(text)).toBe(true)
+    })
+
+    it('returns true for real plan with Дано without colon and risk note', () => {
+      const text = `### Критерии приёмки
+- **AC-1.** Дано обращение в реестре выбрано. Когда пользователь нажимает «Проверить». То показывается итог проверки.
+- **DoD-1.** Дано пакет обновлён из файловой системы и скомпилирован. Когда открыт процесс. То сборка итога — метод процесса.
+**Риск:** чтение параметров через Get.`
+      expect(isPlanWithoutChoices(text)).toBe(true)
+    })
+
+    it('returns false when text contains <choices> block', () => {
+      const text = `## План
+
+- **AC-1.** Дано: test, То: test
+
+- **DoD-1.** Дано: test, То: test
+
+<choices>
+? Question
+- Option
+</choices>`
+      expect(isPlanWithoutChoices(text)).toBe(false)
+    })
+
+    it('returns false for final report without Дано in AC', () => {
+      const text = `## Результаты
+
+**AC-1, AC-2.** Сохраните изменения в CRM
+
+- **DoD-1.** Дано: проверка, То: сохранено`
+      expect(isPlanWithoutChoices(text)).toBe(false)
+    })
+
+    it('returns false when text contains knowledge notes header', () => {
+      const text = `## План
+
+- **AC-1.** Дано: test, То: test
+
+- **DoD-1.** Дано: test, То: test
+
+**Наблюдения для базы знаний**`
+      expect(isPlanWithoutChoices(text)).toBe(false)
+    })
+
+    it('returns false when AC or DoD are missing', () => {
+      const text = `## План
+
+- **AC-1.** Дано: test, То: test`
+      expect(isPlanWithoutChoices(text)).toBe(false)
+    })
+
+    it('returns false when only AC-n format without Дано', () => {
+      const text = `## План
+
+- **AC-1.** Something without any acceptance criteria marker
+
+- **DoD-1.** Дано: test, То: test`
+      expect(isPlanWithoutChoices(text)).toBe(false)
+    })
+
+    it('returns true for plan with multiple AC and DoD criteria', () => {
+      const text = `## План
+
+- **AC-1.** Дано: состояние A, То: состояние B
+- **AC-2.** Дано: состояние C, То: состояние D
+
+- **DoD-1.** Дано: проверка 1, То: результат 1
+- **DoD-2.** Дано: проверка 2, То: результат 2`
+      expect(isPlanWithoutChoices(text)).toBe(true)
+    })
+
+    it('returns false for knowledge notes case-insensitive', () => {
+      const text = `## План
+
+- **AC-1.** Дано: test, То: test
+
+- **DoD-1.** Дано: test, То: test
+
+НАБЛЮДЕНИЯ ДЛЯ БАЗЫ ЗНАНИЙ`
+      expect(isPlanWithoutChoices(text)).toBe(false)
+    })
+  })
+
+  describe('parseChoices and formatChoiceAnswers', () => {
+    it('parseChoices returns null without block', () => {
+      const result = parseChoices('Some text without choices')
+      expect(result).toBeNull()
+    })
+
+    it('parseChoices returns null with empty block', () => {
+      const result = parseChoices('<choices>\n\n</choices>')
+      expect(result).toBeNull()
+    })
+
+    it('parseChoices parses single ? question with mixed options', () => {
+      const text = `<choices>
+? Which option?
+- First option
+* Second option (preselected)
+- Third option
+</choices>`
+      const result = parseChoices(text)
+      expect(result).not.toBeNull()
+      expect(result!.questions).toHaveLength(1)
+      const q = result!.questions[0]
+      expect(q.text).toBe('Which option?')
+      expect(q.multi).toBe(false)
+      expect(q.options).toHaveLength(3)
+      expect(q.options[0]).toEqual({ text: 'First option', preselected: false })
+      expect(q.options[1]).toEqual({ text: 'Second option (preselected)', preselected: true })
+      expect(q.options[2]).toEqual({ text: 'Third option', preselected: false })
+    })
+
+    it('parseChoices parses ?* multi-select question', () => {
+      const text = `<choices>
+?* Select multiple options:
+- Option A
+- Option B
+* Option C (preselected)
+</choices>`
+      const result = parseChoices(text)
+      expect(result).not.toBeNull()
+      expect(result!.questions).toHaveLength(1)
+      const q = result!.questions[0]
+      expect(q.text).toBe('Select multiple options:')
+      expect(q.multi).toBe(true)
+      expect(q.options).toHaveLength(3)
+    })
+
+    it('parseChoices handles continuation lines in question text', () => {
+      const text = `<choices>
+? This is a question
+that spans multiple lines
+and continues here
+- Option 1
+- Option 2
+</choices>`
+      const result = parseChoices(text)
+      expect(result).not.toBeNull()
+      expect(result!.questions).toHaveLength(1)
+      const q = result!.questions[0]
+      expect(q.text).toBe('This is a question that spans multiple lines and continues here')
+      expect(q.options).toHaveLength(2)
+    })
+
+    it('parseChoices uses LAST block when multiple exist', () => {
+      const text = `<choices>
+? First block question
+- Option 1
+</choices>
+Some text between blocks
+<choices>
+? Second block question
+- Option A
+- Option B
+</choices>`
+      const result = parseChoices(text)
+      expect(result).not.toBeNull()
+      expect(result!.questions).toHaveLength(1)
+      expect(result!.questions[0].text).toBe('Second block question')
+      expect(result!.questions[0].options).toHaveLength(2)
+    })
+
+    it('parseChoices returns before and after text trimmed', () => {
+      const text = `  Some text before
+<choices>
+? A question
+- An option
+</choices>
+  Some text after  `
+      const result = parseChoices(text)
+      expect(result).not.toBeNull()
+      expect(result!.before).toBe('Some text before')
+      expect(result!.after).toBe('Some text after')
+    })
+
+    it('formatChoiceAnswers: single question with single option returns option text', () => {
+      const questions: ChoiceQuestion[] = [
+        {
+          text: 'Pick one',
+          multi: false,
+          options: [
+            { text: 'Option A', preselected: false },
+            { text: 'Option B', preselected: false }
+          ]
+        }
+      ]
+      const answers: ChoiceAnswer[] = [
+        {
+          selected: ['Option A'],
+          custom: ''
+        }
+      ]
+      const result = formatChoiceAnswers(questions, answers)
+      expect(result).toBe('Option A')
+    })
+
+    it('formatChoiceAnswers: single question with only custom text', () => {
+      const questions: ChoiceQuestion[] = [
+        {
+          text: 'What is your answer?',
+          multi: false,
+          options: [
+            { text: 'Predefined A', preselected: false },
+            { text: 'Predefined B', preselected: false }
+          ]
+        }
+      ]
+      const answers: ChoiceAnswer[] = [
+        {
+          selected: [],
+          custom: 'My custom answer'
+        }
+      ]
+      const result = formatChoiceAnswers(questions, answers)
+      expect(result).toBe('My custom answer')
+    })
+
+    it('formatChoiceAnswers: multiple questions with formatted output', () => {
+      const questions: ChoiceQuestion[] = [
+        {
+          text: 'First question?',
+          multi: false,
+          options: [
+            { text: 'Yes', preselected: false },
+            { text: 'No', preselected: false }
+          ]
+        },
+        {
+          text: 'Second question?',
+          multi: true,
+          options: [
+            { text: 'Option 1', preselected: false },
+            { text: 'Option 2', preselected: false }
+          ]
+        }
+      ]
+      const answers: ChoiceAnswer[] = [
+        {
+          selected: ['Yes'],
+          custom: ''
+        },
+        {
+          selected: ['Option 1', 'Option 2'],
+          custom: 'extra info'
+        }
+      ]
+      const result = formatChoiceAnswers(questions, answers)
+      expect(result).toBe('1. First question? — Yes\n2. Second question? — Option 1; Option 2; свой ответ: extra info')
+    })
+
+    it('formatChoiceAnswers: unanswered question shows "без ответа"', () => {
+      const questions: ChoiceQuestion[] = [
+        {
+          text: 'Question?',
+          multi: false,
+          options: [
+            { text: 'Option A', preselected: false },
+            { text: 'Option B', preselected: false }
+          ]
+        }
+      ]
+      const answers: ChoiceAnswer[] = [
+        {
+          selected: [],
+          custom: ''
+        }
+      ]
+      const result = formatChoiceAnswers(questions, answers)
+      expect(result).toBe('1. Question? — — без ответа')
     })
   })
 })

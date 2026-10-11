@@ -7,3 +7,5 @@ out/
 .env.*
 .claude/settings.local.json
 tasks_for_test.md
+tasks_for_test_2.md
+tasks_for_test_3.md

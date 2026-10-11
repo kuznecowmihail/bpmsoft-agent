@@ -118,7 +118,7 @@ namespace BPMSoft.Configuration
 }
 ```
 - Пространство имён — `BPMSoft.Configuration` (так у образцов проекта); классы одного пространства видят друг друга без `using`.
-- `LocalizableString` — в `BPMSoft.Common` (не в `BPMSoft.Core`): без `using BPMSoft.Common;` компиляция падает с CS0246 (проверено). При ошибке «тип не найден» ищи класс в `[app]/ResourcesCore/**/<Тип>.cs` и смотри его `namespace`.
+- `LocalizableString` — в `BPMSoft.Common` (не в `BPMSoft.Core`): без `using BPMSoft.Common;` компиляция падает с CS0246 (проверено). При ошибке «тип не найден» ищи тип в `[app]/BPMSoft.*.xml` (`platform-api.md`) и бери пространство имён оттуда.
 - Логгер проекта — `LogManager.GetLogger("Common")` из `global::Common.Logging`; строки видны в `[app]/Logs/<ГГГГ-ММ-ДД>/Common.log`.
 - Вызов сервиса с клиента: `ServiceHelper.callService("<Сервис>", "<Метод>", function (r) { ... }, {<параметры>})` — ответ приходит как `{<Метод>Result: <значение>}`. Проверка из консоли браузера: `require(["ServiceHelper"], function (sh) { sh.callService("TestSrcService", "Greet", function (r) { console.log(r); }, { name: "тест" }); });`.
 - ✅ `ServiceHelper.callService` всегда шлёт `POST` с телом `{}` (подтверждено в CRM, 09.10.2026): метод, который вызывают так, объявляй с `Method = "POST"` и `BodyStyle = WebMessageBodyStyle.Wrapped` — ответ придёт как `{<Метод>Result: …}`. Метод с `Method = "GET"` и `BodyStyle = WebMessageBodyStyle.Bare` открывается из адресной строки (`<адрес CRM>/0/rest/<Сервис>/<Метод>`, на части стендов без `/0`; ✅ 08.10.2026), но через `ServiceHelper` даёт 400 Bad Request. Исключение внутри метода тоже возвращается страницей «Request Error» — причину смотри в `Error.log`.
@@ -142,6 +142,11 @@ namespace BPMSoft.Configuration
 - `properties.json` без обёртки `"Properties"` — неверно, у всех схем проекта есть обёртка.
 - «`HD1` — фиксированная константа» — неверно: это UId родителя; `50e3acc0-...` почти у всех схем, у единичных — свои значения или поля нет.
 - Пример `.cs` с `namespace BPMSoft.Configuration.<Пакет>` и `using BPMSoft.Web` — не из реального файла; у образцов `BaseService` из `BPMSoft.Web.Common`.
+
+## Где писать серверную логику объекта
+- Новую серверную логику объекта (проверки и запреты при сохранении и удалении, заполнение колонок, создание связанных записей, журналы изменений) пиши в слушателе событий объекта — разделы ниже. Это решение по умолчанию: слушатель проще читать, ревьюить и отлаживать.
+- Процесс событий объекта (вкладка «События», `EG1` в `metadata.json` объекта, `entity-edit.md`) умей читать: в проекте там может быть существующая логика, учитывай её, чтобы не задвоить поведение. Новую логику туда не добавляй, даже если пользователь пишет «при сохранении» или «события объекта». Делай процесс событий, только если пользователь прямо просит именно его.
+- Тексты для пользователя (сообщения об ошибках, значения по умолчанию вроде «Без темы», названия создаваемых записей) — только локализуемые строки схемы на ru-RU и en-US (рецепт ниже: `LocalizableString`). Константы в коде допустимы лишь для технических имён: колонки, коды системных настроек, имена схем.
 
 ## ✅ Слушатель событий объекта (`EntityEventListener`)
 **Подтверждено 05.10.2026** на `TestSrcEntityEventListener` (объект `TestSrcEntity`): запись, созданная из кода, сохранилась с заметкой, которую заполнил слушатель перед сохранением; строка слушателя попала в `Common.log`.
@@ -169,7 +174,9 @@ namespace BPMSoft.Configuration
 }
 ```
 - Файлы схемы — как у любой схемы исходного кода (выше), `B2: []`, если строк нет.
-- `BaseEntityEventListener` и атрибут `EntityEventListener` — пространство имён `BPMSoft.Core.Entities.Events` (`[app]/ResourcesCore/BPMSoft.Core/BPMSoft.Core.Entities.Events/`). Переопределяемые методы: `OnSaving`, `OnSaved`, `OnInserting`, `OnInserted`, `OnUpdating`, `OnUpdated`, `OnDeleting`, `OnDeleted` (до события — `EntityBeforeEventArgs`, после — `EntityAfterEventArgs`); всегда вызывай `base.<Метод>(sender, e)`.
+- `BaseEntityEventListener` и атрибут `EntityEventListener` — пространство имён `BPMSoft.Core.Entities.Events`. Переопределяемые методы: `OnSaving`, `OnSaved`, `OnInserting`, `OnInserted`, `OnUpdating`, `OnUpdated`, `OnDeleting`, `OnDeleted` (до события — `EntityBeforeEventArgs`, после — `EntityAfterEventArgs`); всегда вызывай `base.<Метод>(sender, e)`.
+- ✅ **Порядок событий** (подтверждено пользователем, 11.10.2026; одинаков для слушателя и процесса событий объекта): изменение — `OnSaving` → `OnUpdating` → `OnUpdated` → `OnSaved`; добавление — `OnSaving` → `OnInserting` → `OnInserted` → `OnSaved`.
+- ✅ **Где запрещать.** Запрет — исключение в событии «до»: в `OnSaving`, если проверка нужна при любом сохранении (и добавлении, и изменении); в `OnUpdating` — только при изменении; в `OnInserting` — только при добавлении. Исключение отменяет сохранение. Журнал изменений пиши в событиях «после» (`OnUpdated`, `OnInserted`, `OnSaved`), чтобы при отменённом сохранении он не появлялся.
 - Изменение колонки в `OnSaving`/`OnInserting` попадает в ту же запись без отдельного `Save()`.
 - В `OnSaved`/`OnInserted`/`OnUpdated` запись уже записана: `SetColumnValue` в БД не попадёт (по опыту пользователя; для скрипта события объекта ✅ проверено 05.10.2026). Дообновить — запросом `Update` по `Id` или заново получить запись и вызвать `Save()` (повторно запустит события — не допускай рекурсии).
 - Слушатель срабатывает на сохранение через приложение (`Entity.Save()`, карточка, процесс), не на прямой SQL.
@@ -266,7 +273,7 @@ namespace BPMSoft.Configuration
 
 ## ✅ Подменить платформенный класс своим наследником (`ClassFactory.ReBind`)
 **Подтверждено 05.10.2026** на `TestOrderAmountHelper`: после компиляции `OnAppStart` выполнил `ReBind`, и `ClassFactory.Get<OrderAmountHelper>(...)` стал выдавать `BPMSoft.Configuration.TestOrderAmountHelper` (строки в `Common.log`: подмена при старте и создание наследника).
-1. Найди класс, который платформа получает через `ClassFactory.Get<Класс>(...)` (поиск `ClassFactory.Get<` в `[app]/BPMSoft.Configuration/Autogenerated/Src` и `ResourcesCore`), и проверь по всему `Pkg`, что его ещё никто не подменяет (`ReBind<Класс,`) — иначе подмены конфликтуют.
+1. Найди класс, который платформа получает через `ClassFactory.Get<Класс>(...)` (поиск `ClassFactory.Get<` в `[app]/BPMSoft.Configuration/Autogenerated/Src`), и проверь по всему `Pkg`, что его ещё никто не подменяет (`ReBind<Класс,`) — иначе подмены конфликтуют.
 2. Наследник — отдельная схема исходного кода; конструктор с теми же параметрами, что у базового (имена параметров важны: `ClassFactory.Get` передаёт их через `new ConstructorArgument("<имя>", значение)`):
 ```csharp
 namespace BPMSoft.Configuration

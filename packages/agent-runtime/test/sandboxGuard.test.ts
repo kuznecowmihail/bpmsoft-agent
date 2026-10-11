@@ -24,7 +24,7 @@ describe("sandboxGuard", () => {
 		fs.mkdirSync(knowledge, { recursive: true });
 		fs.mkdirSync(outside, { recursive: true });
 
-		policy = { readRoots: [app, knowledge], writeRoots: [pkg] };
+		policy = { readRoots: [app, knowledge], writeRoots: [pkg], sourceRoots: [knowledge] };
 	});
 
 	afterAll(() => {
@@ -593,6 +593,63 @@ describe("sandboxGuard", () => {
 		it("returns false for unknown tool with empty input", () => {
 			const result = isAutoApprovedToolCall("Task", {});
 			expect(result).toBe(false);
+		});
+
+		it("returns true when source in quotes does not trigger risky pattern", () => {
+			const result = isAutoApprovedToolCall("Bash", { command: "node -e 'const source = 1; require(\"fs\").writeFileSync(\"a.json\", \"x\")'" });
+			expect(result).toBe(true);
+		});
+
+		it("returns false for bash -c which is risky", () => {
+			const result = isAutoApprovedToolCall("Bash", { command: "bash -c 'echo 1'" });
+			expect(result).toBe(false);
+		});
+	});
+
+	describe("sourceRoots and knowledge directory reads", () => {
+		it("allows heredoc node generator reading knowledge and writing to Pkg", () => {
+			const readDataPath = path.join(knowledge, "templates", "process", "read-data.json");
+			const command = `node <<'EOF'\nconst data = require('fs').readFileSync('${readDataPath}', 'utf8');\nrequire('fs').writeFileSync('Schemas/X/metadata.json', data);\nEOF`;
+			const decision = checkBashCommand(command, pkg, policy);
+			expect(decision.allowed).toBe(true);
+		});
+
+		it("allows perl -i on Pkg file and node script reading knowledge", () => {
+			const scriptPath = path.join(knowledge, "scripts", "check-process.js");
+			const pkgFile = path.join(pkg, "P", "file.json");
+			const command = `perl -i -pe 's/a/b/' ${pkgFile}; node ${scriptPath} ${pkg}/P`;
+			const decision = checkBashCommand(command, pkg, policy);
+			expect(decision.allowed).toBe(true);
+		});
+
+		it("denies cp from Pkg to knowledge", () => {
+			const srcFile = path.join(pkg, "a.json");
+			const dstFile = path.join(knowledge, "templates", "x.json");
+			const command = `cp ${srcFile} ${dstFile}`;
+			const decision = checkBashCommand(command, pkg, policy);
+			expect(decision.allowed).toBe(false);
+		});
+
+		it("denies echo redirection to knowledge", () => {
+			const dstFile = path.join(knowledge, "a.md");
+			const command = `echo x > ${dstFile}`;
+			const decision = checkBashCommand(command, pkg, policy);
+			expect(decision.allowed).toBe(false);
+		});
+
+		it("denies node writeFileSync to knowledge", () => {
+			const dstFile = path.join(knowledge, "a.md");
+			const command = `node -e 'require("fs").writeFileSync("${dstFile}","x")'`;
+			const decision = checkBashCommand(command, pkg, policy);
+			expect(decision.allowed).toBe(false);
+		});
+
+		it("denies heredoc node generator reading knowledge and writing to Pkg without sourceRoots", () => {
+			const policyNoSourceRoots: SandboxPolicy = { readRoots: [app, knowledge], writeRoots: [pkg] };
+			const readDataPath = path.join(knowledge, "templates", "process", "read-data.json");
+			const command = `node <<'EOF'\nconst data = require('fs').readFileSync('${readDataPath}', 'utf8');\nrequire('fs').writeFileSync('Schemas/X/metadata.json', data);\nEOF`;
+			const decision = checkBashCommand(command, pkg, policyNoSourceRoots);
+			expect(decision.allowed).toBe(false);
 		});
 	});
 });

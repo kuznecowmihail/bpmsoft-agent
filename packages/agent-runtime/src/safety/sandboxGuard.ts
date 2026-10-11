@@ -12,6 +12,12 @@ import * as path from "path";
 export interface SandboxPolicy {
 	readRoots: string[];
 	writeRoots: string[];
+	/**
+	 * Directories that may be read even inside a command that writes (e.g. the
+	 * knowledge directory). These paths are never write targets and are always
+	 * read-only.
+	 */
+	sourceRoots?: string[];
 }
 
 export interface SandboxDecision {
@@ -78,6 +84,56 @@ function bashMayWrite(command: string): boolean {
 	return BASH_SHELL_WRITE_PATTERN.test(stripForShellWriteCheck(command)) || SCRIPT_WRITE_PATTERN.test(command);
 }
 
+/**
+ * Checks if a given token (path) is a write target in the command: either it is
+ * redirected to, or it is passed as an argument to a file-writing function or command.
+ */
+export function isWriteTarget(command: string, token: string): boolean {
+	const esc = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+	// Check for redirection: > or >> to this path
+	if (new RegExp(">>?\\s*['\"]?" + esc).test(command)) {
+		return true;
+	}
+
+	// Check for file-writing APIs with this path as an argument
+	if (
+		new RegExp(
+			"(writeFileSync|writeFile|appendFileSync|appendFile|copyFileSync|cpSync|" +
+			"renameSync|rmSync|rmdirSync|unlinkSync|mkdirSync|createWriteStream)\\s*\\(\\s*['\"\\x60][^'\"\\x60]*" + esc
+		).test(command)
+	) {
+		return true;
+	}
+
+	// Split by command separators and check each segment for shell write commands
+	const stripped = stripHeredocBodies(command);
+	const segments = stripped.split(/\n|;|&&|\|\||\|/);
+
+	for (const segment of segments) {
+		if (!segment.includes(token)) {
+			continue;
+		}
+
+		// Check for shell commands that write
+		if (/(^|\s)(cp|mv|rm|rmdir|ln|tee|touch|truncate|install|rsync|mkdir|chmod|chown|patch|dd|tar|unzip)(\s|$)/.test(segment)) {
+			return true;
+		}
+
+		// Check for sed -i (in-place edit)
+		if (/\bsed\s+(-[a-zA-Z]+\s+)*-i/.test(segment)) {
+			return true;
+		}
+
+		// Check for perl -i (in-place edit)
+		if (/\bperl\s+-[a-zA-Z]*i/.test(segment)) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
 /** Shell-level deletions, overwriting moves and git state changes; tested like writes (quotes and heredoc bodies removed). */
 const BASH_SHELL_DESTRUCTIVE_PATTERN =
 	/(^|[\s;&|(`])(rm|rmdir|unlink|mv|truncate|shred|dd|rsync)(\s|$)|\bfind\b[^\n;|&]*\s-delete\b|\bgit\s+(checkout|clean|reset|restore|stash|commit|push|pull|rm|mv|add|merge|rebase|apply|cherry-pick|revert|switch|branch|tag)\b/;
@@ -103,7 +159,8 @@ export function isAutoApprovedToolCall(toolName: string, input: Record<string, u
 	// isReadOnlyToolCall, which doesn't know about -delete or git state changes.
 	if (toolName === "Bash") {
 		const command = String(input.command ?? "");
-		return command.trim() !== "" && !bashMayDestroy(command) && !BASH_RISKY_PATTERN.test(command);
+		const strippedCommand = stripForShellWriteCheck(stripHeredocBodies(command));
+		return command.trim() !== "" && !bashMayDestroy(command) && !BASH_RISKY_PATTERN.test(strippedCommand);
 	}
 	if (isReadOnlyToolCall(toolName, input)) {
 		return true;
@@ -279,6 +336,10 @@ export function checkBashCommand(command: string, cwd: string, policy: SandboxPo
 			return deny(`Команда обращается к пути вне проекта: ${token}`);
 		}
 		if (writes && !isInsideRoots(resolved, policy.writeRoots)) {
+			// Allow reading from sourceRoots if it's not a write target
+			if (isInsideRoots(resolved, policy.sourceRoots ?? []) && !isWriteTarget(command, token)) {
+				continue;
+			}
 			return deny(`Команда с записью затрагивает путь вне Pkg: ${token} — изменять можно только файлы в Pkg. Если этот путь только читается, выполни чтение отдельной командой, без записи в той же команде`);
 		}
 	}
@@ -339,7 +400,8 @@ export function isReadOnlyToolCall(toolName: string, input: Record<string, unkno
 	}
 	if (toolName === "Bash") {
 		const command = String(input.command ?? "");
-		return command.trim() !== "" && !bashMayWrite(command) && !bashMayDestroy(command) && !BASH_RISKY_PATTERN.test(command);
+		const strippedCommand = stripForShellWriteCheck(stripHeredocBodies(command));
+		return command.trim() !== "" && !bashMayWrite(command) && !bashMayDestroy(command) && !BASH_RISKY_PATTERN.test(strippedCommand);
 	}
 	return false;
 }

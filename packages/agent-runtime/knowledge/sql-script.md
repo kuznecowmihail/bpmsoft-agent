@@ -2,7 +2,7 @@
 
 ## ✅ ПОДТВЕРЖДЕНО: структура и формат descriptor.json и .sql-файла для SqlScript-схем
 
-Собрано на сотнях реальных SQL-скриптов проекта и подтверждено декомпилированными исходниками платформы BPMSoft (ResourcesCore: `DBEngineType.cs`, `SysPackageSqlScriptInstallType.cs`). Структура одна из самых простых среди всех типов схем.
+Собрано на сотнях реальных SQL-скриптов проекта и подтверждено перечислениями платформы BPMSoft (`DBEngineType`, `SysPackageSqlScriptInstallType`). Структура одна из самых простых среди всех типов схем.
 
 ## Общее
 
@@ -32,14 +32,14 @@
 
 - `UId` — уникальный идентификатор SQL-скрипта (GUID).
 - `Name` — техническое имя скрипта (совпадает с именем папки `SqlScripts/<Name>/`), никогда не должно содержать пробелы, только латиница/цифры/подчёркивание.
-- `DBEngineType` — **ПОЛНОСТЬЮ ПОДТВЕРЖДЕНО из декомпилированных исходников платформы** (`ResourcesCore/BPMSoft.Common/BPMSoft.Common/DBEngineType.cs` — реальный enum платформы):
+- `DBEngineType` — **ПОЛНОСТЬЮ ПОДТВЕРЖДЕНО** (enum платформы `BPMSoft.Common.DBEngineType`):
   - `0` = `MSSql` (Microsoft SQL Server)
   - `1` = `Oracle` (Oracle Database)
   - `2` = `PostgreSql` (PostgreSQL) — **самый частый случай на PostgreSQL-стендах**
   
   В большинстве проектов используется PostgreSql (`2`); `0` встречается редко (5 файлов — вероятно старые MSSql-скрипты, оставленные для совместимости).
 
-- `InstallType` — **ПОЛНОСТЬЮ ПОДТВЕРЖДЕНО из декомпилированных исходников платформы** (`ResourcesCore/BPMSoft.Core.Packages/BPMSoft.Core.Packages/SysPackageSqlScriptInstallType.cs` — реальный enum платформы):
+- `InstallType` — **ПОЛНОСТЬЮ ПОДТВЕРЖДЕНО** (enum платформы `BPMSoft.Core.Packages.SysPackageSqlScriptInstallType`):
   - `0` = `BeforePackage` — выполняется ДО установки пакета (редко, встречается в менее 1% случаев)
   - `1` = `AfterPackage` — выполняется ПОСЛЕ установки пакета (самый частый случай, ~80%)
   - `2` = `AfterSchemaData` — выполняется после установки данных схемы пакета (~8%)
