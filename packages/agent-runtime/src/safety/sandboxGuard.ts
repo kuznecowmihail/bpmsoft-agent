@@ -25,6 +25,33 @@ export interface SandboxDecision {
 	reason?: string;
 }
 
+/** Files with credentials (DB connection strings, certificates, private keys) — never readable by the agent. */
+const SECRET_FILE_PATTERN = /(^|[\\/])connectionstrings\.config$|\.(pfx|p12|pem|key)$/i;
+
+const SECRET_DENY_REASON = "Файл с секретами (пароли, сертификаты, ключи) читать нельзя. Тип СУБД и параметры подключения спроси у пользователя.";
+
+/** True when file path contains secrets (credentials, certificates, private keys). */
+export function isSecretFile(p: string): boolean {
+	return SECRET_FILE_PATTERN.test(p.trim());
+}
+
+/** Converts Git Bash / forward-slash drive paths to native Windows form on win32 ("/c/Users/x" or "C:/Users/x" → "C:\\Users\\x"); other platforms unchanged. */
+export function toNativePath(token: string, platform: NodeJS.Platform = process.platform): string {
+	if (platform !== "win32") return token;
+	const gitBash = /^\/([a-zA-Z])(\/|$)(.*)$/.exec(token);
+	if (gitBash) return `${gitBash[1].toUpperCase()}:\\${gitBash[3].replace(/\//g, "\\")}`;
+	if (/^[a-zA-Z]:[\\/]/.test(token)) return token[0].toUpperCase() + token.slice(1).replace(/\//g, "\\");
+	return token;
+}
+
+/** True when `child` equals `root` or lies inside it; case-insensitive and backslash-aware on win32. */
+export function isPathInside(child: string, root: string, platform: NodeJS.Platform = process.platform): boolean {
+	const p = platform === "win32" ? path.win32 : path.posix;
+	const norm = (s: string) => { const r = p.resolve(s); return platform === "win32" ? r.toLowerCase() : r; };
+	const c = norm(child), r = norm(root);
+	return c === r || c.startsWith(r.endsWith(p.sep) ? r : r + p.sep);
+}
+
 const READ_PATH_KEYS: Record<string, string[]> = {
 	Read: ["file_path"],
 	Glob: ["path", "pattern"],
@@ -171,8 +198,8 @@ export function isAutoApprovedToolCall(toolName: string, input: Record<string, u
 	return false;
 }
 
-/** Path-like tokens in a shell command: absolute, home-relative or parent-relative. */
-const BASH_PATH_TOKEN = /(?:^|[\s'"`=:(,;|&<>])((?:~\/|\/|\.\.)[^\s'"`;|&<>(),]*)/g;
+/** Path-like tokens in a shell command: absolute, home-relative, parent-relative, or Windows drive paths. */
+const BASH_PATH_TOKEN = /(?:^|[\s'"`=:(,;|&<>])((?:~\/|\/|\.\.|[A-Za-z]:[\\/])[^\s'"`;|&<>(),]*)/g;
 
 /** Environment variables that expand to directories outside the project (PWD excluded: handled separately). */
 const BASH_ENV_PATH = /\$\{?(HOME|OLDPWD|TMPDIR|USER)\b/;
@@ -210,7 +237,7 @@ function realpathOfExistingPrefix(p: string): string {
 
 /** Resolves `~`, relative segments and symlinks of the existing part of the path. */
 export function resolveSandboxPath(rawPath: string, cwd: string): string {
-	let p = rawPath;
+	let p = toNativePath(rawPath);
 	if (p === "~" || p.startsWith("~/")) {
 		p = path.join(os.homedir(), p.slice(1));
 	}
@@ -221,7 +248,7 @@ export function isInsideRoots(absolutePath: string, roots: string[]): boolean {
 	const normalizedPath = realpathOfExistingPrefix(path.resolve(absolutePath));
 	return roots.some((root) => {
 		const r = realpathOfExistingPrefix(path.resolve(root));
-		return normalizedPath === r || normalizedPath.startsWith(r + path.sep);
+		return isPathInside(normalizedPath, r);
 	});
 }
 
@@ -270,6 +297,9 @@ function baseAt(bases: CdBase[], index: number, cwd: string): string {
 
 /** Checks a shell command heuristically: every path it mentions must be inside the project; writing commands may touch only Pkg. */
 export function checkBashCommand(command: string, cwd: string, policy: SandboxPolicy): SandboxDecision {
+	if (/connectionstrings\.config/i.test(command)) {
+		return deny(SECRET_DENY_REASON);
+	}
 	if (BASH_ENV_PATH.test(command)) {
 		return deny("Команда использует переменные окружения с путями ($HOME и т.п.) — укажи путь внутри проекта явно");
 	}
@@ -325,13 +355,17 @@ export function checkBashCommand(command: string, cwd: string, policy: SandboxPo
 		if (ALWAYS_ALLOWED.has(token)) {
 			continue;
 		}
-		if (token.startsWith("/")) {
-			const firstSegment = token.split("/")[1];
+		const native = toNativePath(token);
+		if (native.startsWith("/")) {
+			const firstSegment = native.split("/")[1];
 			if (!firstSegment || !fs.existsSync("/" + firstSegment)) {
 				continue; // not a filesystem path (regex, URL path and the like)
 			}
 		}
 		const resolved = resolveSandboxPath(token, baseAt(bases, match.index ?? 0, cwd));
+		if (isSecretFile(resolved)) {
+			return deny(SECRET_DENY_REASON);
+		}
 		if (!isInsideRoots(resolved, policy.readRoots)) {
 			return deny(`Команда обращается к пути вне проекта: ${token}`);
 		}
@@ -372,6 +406,9 @@ export function checkToolAccess(
 				}
 			}
 			const resolved = resolveSandboxPath(raw === "" ? "." : raw, cwd);
+			if (readKeys && isSecretFile(resolved)) {
+				return deny(SECRET_DENY_REASON + " " + value);
+			}
 			if (!isInsideRoots(resolved, roots)) {
 				return deny(
 					readKeys

@@ -70,7 +70,7 @@ const parseRawMetadata = (f) => {
 
 // Parse diff format metadata
 const parseDiffMetadata = (rawText) => {
-  const lines = rawText.split('\n');
+  const lines = rawText.split(/\r?\n/);
   const result = {};
   const blocks = {}; // Store multiple blocks per path
   let currentBlock = null;

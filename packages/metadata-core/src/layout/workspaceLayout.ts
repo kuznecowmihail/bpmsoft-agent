@@ -18,7 +18,7 @@ export interface BpmsoftAppLayout {
 	workspaceRoot: string;
 	/**
 	 * App root: contains conf/, Resources/, BPMSoft.Configuration/
-	 * (e.g. bpmsoftdevelopment)
+	 * (e.g. <stand folder>)
 	 */
 	appRoot?: string;
 	/** …/BPMSoft.Configuration */

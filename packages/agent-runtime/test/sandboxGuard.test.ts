@@ -2,7 +2,7 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { checkToolAccess, checkBashCommand, resolveSandboxPath, isInsideRoots, isReadOnlyToolCall, isAutoApprovedToolCall, SandboxPolicy } from "../src/safety/sandboxGuard";
+import { checkToolAccess, checkBashCommand, resolveSandboxPath, isInsideRoots, isReadOnlyToolCall, isAutoApprovedToolCall, isSecretFile, toNativePath, isPathInside, SandboxPolicy } from "../src/safety/sandboxGuard";
 
 describe("sandboxGuard", () => {
 	let tmpDir: string;
@@ -650,6 +650,129 @@ describe("sandboxGuard", () => {
 			const command = `node <<'EOF'\nconst data = require('fs').readFileSync('${readDataPath}', 'utf8');\nrequire('fs').writeFileSync('Schemas/X/metadata.json', data);\nEOF`;
 			const decision = checkBashCommand(command, pkg, policyNoSourceRoots);
 			expect(decision.allowed).toBe(false);
+		});
+	});
+
+	describe("Secret files (credentials and certificates)", () => {
+		describe("isSecretFile", () => {
+			it("returns true for ConnectionStrings.config", () => {
+				expect(isSecretFile("/app/ConnectionStrings.config")).toBe(true);
+			});
+
+			it("returns true for connectionstrings.config (case-insensitive)", () => {
+				expect(isSecretFile("C:\\app\\connectionstrings.config")).toBe(true);
+			});
+
+			it("returns true for cert.pfx", () => {
+				expect(isSecretFile("a/cert.pfx")).toBe(true);
+			});
+
+			it("returns true for key.pem", () => {
+				expect(isSecretFile("k.PEM")).toBe(true);
+			});
+
+			it("returns true for id.key", () => {
+				expect(isSecretFile("id.key")).toBe(true);
+			});
+
+			it("returns true for cert.p12", () => {
+				expect(isSecretFile("/app/cert.p12")).toBe(true);
+			});
+
+			it("returns false for Web.config", () => {
+				expect(isSecretFile("/app/BPMSoft.WebHost.dll.config")).toBe(false);
+			});
+
+			it("returns false for keys.json", () => {
+				expect(isSecretFile("a/keys.json")).toBe(false);
+			});
+		});
+
+		describe("Read tool with secret files", () => {
+			it("denies reading ConnectionStrings.config", () => {
+				const filePath = path.join(app, "ConnectionStrings.config");
+				const decision = checkToolAccess("Read", { file_path: filePath }, pkg, policy);
+				expect(decision.allowed).toBe(false);
+				expect(decision.reason).toContain("секретами");
+			});
+
+			it("allows reading normal Web.config file inside app", () => {
+				const filePath = path.join(app, "Web.config");
+				fs.writeFileSync(filePath, "test content");
+				const decision = checkToolAccess("Read", { file_path: filePath }, pkg, policy);
+				expect(decision.allowed).toBe(true);
+				fs.unlinkSync(filePath);
+			});
+		});
+
+		describe("Bash command with secret files", () => {
+			it("denies cat ConnectionStrings.config", () => {
+				const decision = checkBashCommand("cat ConnectionStrings.config", pkg, policy);
+				expect(decision.allowed).toBe(false);
+				expect(decision.reason).toContain("секретами");
+			});
+
+			it("denies grep with connectionstrings.config pattern", () => {
+				const decision = checkBashCommand("grep -o 'connectionString=\"[^\"]*' ../ConnectionStrings.config", pkg, policy);
+				expect(decision.allowed).toBe(false);
+				expect(decision.reason).toContain("секретами");
+			});
+		});
+	});
+
+	describe("Windows paths", () => {
+		describe("toNativePath", () => {
+			it("converts Git Bash /c/Users/a/b to C:\\Users\\a\\b on win32", () => {
+				const result = toNativePath("/c/Users/a/b", "win32");
+				expect(result).toBe("C:\\Users\\a\\b");
+			});
+
+			it("converts uppercase drive letter c:/Users/a to C:\\Users\\a on win32", () => {
+				const result = toNativePath("c:/Users/a", "win32");
+				expect(result).toBe("C:\\Users\\a");
+			});
+
+			it("keeps mixed case drive letter d: on win32", () => {
+				const result = toNativePath("D:\\app\\file", "win32");
+				expect(result).toBe("D:\\app\\file");
+			});
+
+			it("leaves /usr/bin unchanged on win32 (two-letter prefix not a drive)", () => {
+				const result = toNativePath("/usr/bin", "win32");
+				expect(result).toBe("/usr/bin");
+			});
+
+			it("leaves /c/Users unchanged on darwin (macOS)", () => {
+				const result = toNativePath("/c/Users", "darwin");
+				expect(result).toBe("/c/Users");
+			});
+		});
+
+		describe("isPathInside", () => {
+			it("returns true for C:\\App\\Pkg\\X inside c:\\app\\pkg on win32", () => {
+				const result = isPathInside("C:\\App\\Pkg\\X", "c:\\app\\pkg", "win32");
+				expect(result).toBe(true);
+			});
+
+			it("returns false for C:\\Apple inside C:\\App on win32", () => {
+				const result = isPathInside("C:\\Apple", "C:\\App", "win32");
+				expect(result).toBe(false);
+			});
+
+			it("returns true for /a/b inside /a on posix", () => {
+				const result = isPathInside("/a/b", "/a", "posix");
+				expect(result).toBe(true);
+			});
+
+			it("returns false for /A/b inside /a on posix (case-sensitive)", () => {
+				const result = isPathInside("/A/b", "/a", "posix");
+				expect(result).toBe(false);
+			});
+
+			it("returns true for exact path match", () => {
+				const result = isPathInside("C:\\App", "C:\\app", "win32");
+				expect(result).toBe(true);
+			});
 		});
 	});
 });

@@ -1,0 +1,5 @@
+# Knowledge, scripts and sources stay LF on every OS (the checker scripts and BPMSoft metadata parsing expect LF)
+* text=auto eol=lf
+*.png binary
+*.ico binary
+*.jpg binary
