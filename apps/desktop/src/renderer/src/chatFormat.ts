@@ -104,6 +104,9 @@ function field(input: unknown, key: string): unknown {
 /** Short human-readable description of a tool call, in Russian. */
 export function describeToolCall(name: string, input: unknown): string {
   const description = field(input, 'description')
+  if (name === 'crm_db_query' || name.endsWith('__crm_db_query')) {
+    return 'Запрос к БД CRM'
+  }
   switch (name) {
     case 'Read':
       return `Читает файл ${shortPath(field(input, 'file_path'))}`
@@ -144,6 +147,10 @@ export function describeToolCall(name: string, input: unknown): string {
 
 /** Command or file the user should see before approving a tool call. */
 export function permissionSubject(name: string, input: unknown): string | undefined {
+  if (name === 'crm_db_query' || name.endsWith('__crm_db_query')) {
+    const sql = field(input, 'sql')
+    return typeof sql === 'string' ? sql : undefined
+  }
   if (name === 'Bash') {
     const command = field(input, 'command')
     return typeof command === 'string' ? command : undefined

@@ -49,4 +49,19 @@ export interface AgentSettings {
 	claudeModelName: string
 	hasClaudeKey: boolean
 	hasCursorKey: boolean
+	/** Read-only CRM database access; empty host/port/user = values from ConnectionStrings.config. */
+	dbAccessEnabled: boolean
+	dbConfirmQueries: boolean
+	dbHost: string
+	dbPort: string
+	dbUser: string
+	hasDbPassword: boolean
+}
+
+export interface DbSettingsPatch {
+	dbAccessEnabled?: boolean
+	dbConfirmQueries?: boolean
+	dbHost?: string
+	dbPort?: string
+	dbUser?: string
 }

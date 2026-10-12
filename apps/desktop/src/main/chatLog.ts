@@ -170,6 +170,14 @@ function renderMarkdown(kind: string, data: Record<string, any>): string {
       return `- ❓ Запрос разрешения: ${data.toolName} ${short(JSON.stringify(data.input), 300)}\n`
     case 'permission_response':
       return `- ${data.approved ? '✅ Разрешено' : '⛔ Отклонено'} (запрос ${data.id})\n`
+    case 'db_query': {
+      const outcome = data.denied
+        ? 'отклонён пользователем'
+        : data.error
+          ? `⚠️ ${short(String(data.error), 200)}`
+          : `${data.rowCount} строк${data.truncated ? ' (обрезано)' : ''} · ${data.durationMs} мс`
+      return `- 🗄 Запрос к БД: ${short(String(data.sql ?? ''), 300)} → ${outcome}\n`
+    }
     case 'error':
       return `\n**Ошибка:** ${data.message}\n`
     case 'turn_end':

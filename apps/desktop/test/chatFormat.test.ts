@@ -91,9 +91,23 @@ describe('chatFormat', () => {
       const result = describeToolCall('Delete', { file_path: '/x/Pkg/ProjectCore/Schemas/A/metadata.json' })
       expect(result).toBe('Удаляет файл ProjectCore/Schemas/A/metadata.json')
     })
+
+    it('describes the CRM database tool under both names', () => {
+      expect(describeToolCall('crm_db_query', { sql: 'SELECT 1' })).toBe('Запрос к БД CRM')
+      expect(describeToolCall('mcp__bpmsoft__crm_db_query', { sql: 'SELECT 1' })).toBe('Запрос к БД CRM')
+    })
   })
 
   describe('permissionSubject', () => {
+    it('returns sql for the CRM database tool under both names', () => {
+      expect(permissionSubject('crm_db_query', { sql: 'SELECT 1' })).toBe('SELECT 1')
+      expect(permissionSubject('mcp__bpmsoft__crm_db_query', { sql: 'SELECT 2' })).toBe('SELECT 2')
+    })
+
+    it('returns undefined for the CRM database tool without sql', () => {
+      expect(permissionSubject('crm_db_query', {})).toBeUndefined()
+    })
+
     it('returns command for Bash tool', () => {
       const result = permissionSubject('Bash', { command: 'rm x' })
       expect(result).toBe('rm x')

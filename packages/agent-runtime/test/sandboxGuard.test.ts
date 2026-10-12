@@ -720,6 +720,20 @@ describe("sandboxGuard", () => {
 		});
 	});
 
+	describe("CRM database tool", () => {
+		it("isReadOnlyToolCall returns true for mcp__crm_db__crm_db_query", () => {
+			expect(isReadOnlyToolCall("mcp__crm_db__crm_db_query", { sql: "SELECT 1" })).toBe(true);
+		});
+
+		it("isAutoApprovedToolCall returns true for mcp__crm_db__crm_db_query", () => {
+			expect(isAutoApprovedToolCall("mcp__crm_db__crm_db_query", { sql: "SELECT 1" })).toBe(true);
+		});
+
+		it("isReadOnlyToolCall returns false for mcp__other__tool", () => {
+			expect(isReadOnlyToolCall("mcp__other__tool", { sql: "SELECT 1" })).toBe(false);
+		});
+	});
+
 	describe("Windows paths", () => {
 		describe("toNativePath", () => {
 			it("converts Git Bash /c/Users/a/b to C:\\Users\\a\\b on win32", () => {

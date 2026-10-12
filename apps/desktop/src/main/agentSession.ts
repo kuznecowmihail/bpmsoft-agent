@@ -1,6 +1,7 @@
 import type { BrowserWindow } from 'electron'
-import { runBpmsoftAgentQuery, runCursorAgentQuery } from '@bpmsoft-agent/agent-runtime'
-import type { AgentEvent, ToolPermissionRequest } from '@bpmsoft-agent/agent-runtime'
+import { runBpmsoftAgentQuery, runCursorAgentQuery, createCrmDbTool, testCrmDbConnection } from '@bpmsoft-agent/agent-runtime'
+import type { AgentEvent, ToolPermissionRequest, CrmDbToolOptions } from '@bpmsoft-agent/agent-runtime'
+import { join } from 'path'
 import { saveSecret, loadSecret, clearSecret } from './secureStore'
 import { startChatLogIfNeeded, endChatLog, logChatRecord } from './chatLog'
 import { getAppSettings } from './appSettings'
@@ -96,6 +97,49 @@ export function clearCursorApiKey(): void {
   clearSecret(CURSOR_API_KEY_SECRET)
 }
 
+const DB_PASSWORD_SECRET = 'dbPassword'
+
+/** Password of a separate read-only DB user (optional), kept in the OS keychain. */
+export function setDbPassword(password: string): void {
+  if (!password) {
+    throw new Error('Пароль пустой')
+  }
+  saveSecret(DB_PASSWORD_SECRET, password)
+}
+
+export function hasDbPassword(): boolean {
+  return Boolean(loadSecret(DB_PASSWORD_SECRET))
+}
+
+export function clearDbPassword(): void {
+  clearSecret(DB_PASSWORD_SECRET)
+}
+
+/**
+ * Connection options of the read-only CRM database tool: ConnectionStrings.config of the opened
+ * application folder, overridden by host/port/user from settings and the password from the keychain.
+ * The agent never sees these values — the tool reads them itself.
+ */
+export function dbConnectionOptions(readRoot: string): CrmDbToolOptions {
+  const { dbHost, dbPort, dbUser } = getAppSettings()
+  return {
+    connectionStringsPath: join(readRoot, 'ConnectionStrings.config'),
+    override: {
+      host: dbHost || undefined,
+      port: dbPort ? Number(dbPort) : undefined,
+      user: dbUser || undefined,
+      password: loadSecret(DB_PASSWORD_SECRET)
+    }
+  }
+}
+
+export async function testDbConnection(readRoot: string): Promise<string> {
+  if (!readRoot) {
+    throw new Error('Сначала откройте проект')
+  }
+  return testCrmDbConnection(dbConnectionOptions(readRoot))
+}
+
 /**
  * Conversation continuity: the SDK session id of the current chat and the
  * project AND provider it belongs to. Every turn resumes this session so the
@@ -174,7 +218,7 @@ export async function sendAgentMessage(
   additionalDirectories?: string[],
   readRoot?: string
 ): Promise<void> {
-  const { provider, cursorModel, cursorModelParams, claudeModel, claudeEffort } = getAppSettings()
+  const { provider, cursorModel, cursorModelParams, claudeModel, claudeEffort, dbAccessEnabled, dbConfirmQueries } = getAppSettings()
   if (provider === 'cursor' && !currentCursorApiKey) {
     throw new Error('Ключ Cursor не задан — укажите его в настройках')
   }
@@ -189,9 +233,6 @@ export async function sendAgentMessage(
     resetAgentSession()
   }
 
-  startChatLogIfNeeded({ projectPath, readRoot })
-  logChatRecord('user_message', { text: prompt, resume: currentSessionId ?? null, provider, model: provider === 'cursor' ? { id: cursorModel, params: cursorModelParams } : { id: claudeModel || null, effort: claudeEffort || null } })
-
   const requestToolPermission = (request: ToolPermissionRequest): Promise<boolean> => {
     const { id, wait } = createPendingPermissionRequest()
     logChatRecord('permission_request', { id, toolName: request.toolName, input: request.input })
@@ -201,6 +242,18 @@ export async function sendAgentMessage(
       return approved
     })
   }
+
+  const dbTool =
+    dbAccessEnabled && readRoot
+      ? createCrmDbTool({
+          ...dbConnectionOptions(readRoot),
+          confirm: dbConfirmQueries ? (sql) => requestToolPermission({ toolName: 'crm_db_query', input: { sql } }) : undefined,
+          onQuery: (record) => logChatRecord('db_query', { ...record })
+        })
+      : undefined
+
+  startChatLogIfNeeded({ projectPath, readRoot })
+  logChatRecord('user_message', { text: prompt, resume: currentSessionId ?? null, provider, model: provider === 'cursor' ? { id: cursorModel, params: cursorModelParams } : { id: claudeModel || null, effort: claudeEffort || null }, dbAccess: Boolean(dbTool) })
 
   const startedAt = Date.now()
   const events =
@@ -212,7 +265,8 @@ export async function sendAgentMessage(
           model: cursorModel,
           modelParams: cursorModelParams,
           resume: currentSessionId,
-          readRoot: readRoot ?? projectPath
+          readRoot: readRoot ?? projectPath,
+          dbTool
         })
       : runBpmsoftAgentQuery({
           apiKey: currentApiKey as string,
@@ -223,7 +277,8 @@ export async function sendAgentMessage(
           resume: currentSessionId,
           requestToolPermission,
           additionalDirectories,
-          sandbox: { readRoots: [readRoot ?? projectPath], writeRoots: [projectPath] }
+          sandbox: { readRoots: [readRoot ?? projectPath], writeRoots: [projectPath] },
+          dbTool
         })
 
   try {

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { AgentProvider, AgentSettings, CursorModelOption, ClaudeModelOption } from '../../../shared/types'
+import type { AgentProvider, AgentSettings, CursorModelOption, ClaudeModelOption, DbSettingsPatch } from '../../../shared/types'
 import { IconExternal, IconKey } from './icons'
 import { Toggle } from './Toggle'
 
@@ -12,6 +12,8 @@ interface SettingsMenuProps {
   onChangeClaudeKey: () => void
   onSettingsChanged: () => void
   onOpenLogsFolder: () => void
+  /** Opened application folder: the root for the CRM database connection check. */
+  appRoot?: string
   onClose: () => void
 }
 
@@ -30,6 +32,10 @@ function claudeKey(id: string, effort?: string): string {
   return effort ? `${id}?effort=${effort}` : id
 }
 
+function errorText(error: unknown): string {
+  return (error as Error).message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '')
+}
+
 export function SettingsMenu({
   settings,
   isRunning,
@@ -39,6 +45,7 @@ export function SettingsMenu({
   onChangeClaudeKey,
   onSettingsChanged,
   onOpenLogsFolder,
+  appRoot,
   onClose
 }: SettingsMenuProps): React.JSX.Element {
   const [cursorKeyInput, setCursorKeyInput] = useState('')
@@ -49,6 +56,20 @@ export function SettingsMenu({
   const [claudeModelsError, setClaudeModelsError] = useState<string | null>(null)
   const [keyError, setKeyError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
+  const [dbHost, setDbHost] = useState(settings?.dbHost ?? '')
+  const [dbPort, setDbPort] = useState(settings?.dbPort ?? '')
+  const [dbUser, setDbUser] = useState(settings?.dbUser ?? '')
+  const [dbPasswordInput, setDbPasswordInput] = useState('')
+  const [editingDbPassword, setEditingDbPassword] = useState(false)
+  const [dbTestResult, setDbTestResult] = useState<{ ok: boolean; text: string } | null>(null)
+  const [isTestingDb, setIsTestingDb] = useState(false)
+  const [dbError, setDbError] = useState<string | null>(null)
+
+  useEffect(() => {
+    setDbHost(settings?.dbHost ?? '')
+    setDbPort(settings?.dbPort ?? '')
+    setDbUser(settings?.dbUser ?? '')
+  }, [settings?.dbHost, settings?.dbPort, settings?.dbUser])
 
   const provider = settings?.provider ?? 'claude'
   const hasCursorKey = Boolean(settings?.hasCursorKey)
@@ -136,6 +157,60 @@ export function SettingsMenu({
       }
     }
     onSettingsChanged()
+  }
+
+  const saveDbSettings = async (patch: DbSettingsPatch): Promise<void> => {
+    setDbError(null)
+    try {
+      await window.api.setDbSettings(patch)
+      onSettingsChanged()
+    } catch (error) {
+      setDbError(errorText(error))
+    }
+  }
+
+  const handleSaveDbPassword = async (): Promise<void> => {
+    if (!dbPasswordInput) {
+      return
+    }
+    setIsSaving(true)
+    setDbError(null)
+    try {
+      await window.api.setDbPassword(dbPasswordInput)
+      setDbPasswordInput('')
+      setEditingDbPassword(false)
+      onSettingsChanged()
+    } catch (error) {
+      setDbError(errorText(error))
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleClearDbPassword = async (): Promise<void> => {
+    setDbError(null)
+    try {
+      await window.api.clearDbPassword()
+      onSettingsChanged()
+    } catch (error) {
+      setDbError(errorText(error))
+    }
+  }
+
+  const handleTestDb = async (): Promise<void> => {
+    if (!appRoot) {
+      return
+    }
+    setIsTestingDb(true)
+    setDbTestResult(null)
+    try {
+      const text = await window.api.testDbConnection(appRoot)
+      setDbTestResult({ ok: true, text })
+    } catch (error) {
+      setDbTestResult({ ok: false, text: errorText(error) })
+    } finally {
+      setIsTestingDb(false)
+    }
   }
 
   const currentKey = settings ? modelKey(settings.cursorModel, settings.cursorModelParams) : ''
@@ -307,6 +382,119 @@ export function SettingsMenu({
           </div>
         </div>
       )}
+      <div className="popover-divider" />
+      <div className="popover-section">
+        <div className="popover-row">
+          <div>
+            <div className="popover-row-title">Доступ агента к БД CRM</div>
+            <div className="popover-row-hint">Только чтение: один SELECT в транзакции только для чтения, до 200 строк</div>
+          </div>
+          <Toggle
+            checked={Boolean(settings?.dbAccessEnabled)}
+            onChange={(value) => saveDbSettings({ dbAccessEnabled: value })}
+            label="Доступ агента к БД CRM"
+          />
+        </div>
+        {dbError && <div className="popover-error">{dbError}</div>}
+        {settings?.dbAccessEnabled && (
+          <>
+            <div className="popover-field">
+              <div className="popover-row">
+                <div>
+                  <div className="popover-row-title">Спрашивать перед каждым запросом</div>
+                  <div className="popover-row-hint">Показывать SQL и ждать вашего разрешения</div>
+                </div>
+                <Toggle
+                  checked={Boolean(settings?.dbConfirmQueries)}
+                  onChange={(value) => saveDbSettings({ dbConfirmQueries: value })}
+                  label="Спрашивать перед каждым запросом"
+                />
+              </div>
+            </div>
+            <div className="popover-field">
+              <div className="popover-field-label">Подключение (пусто — из ConnectionStrings.config)</div>
+              <div className="popover-inline popover-inline-3">
+                <input
+                  className="input"
+                  placeholder="Хост"
+                  value={dbHost}
+                  onChange={(event) => setDbHost(event.target.value)}
+                  onBlur={() => saveDbSettings({ dbHost: dbHost.trim() })}
+                />
+                <input
+                  className="input"
+                  placeholder="Порт"
+                  inputMode="numeric"
+                  value={dbPort}
+                  onChange={(event) => setDbPort(event.target.value.replace(/\D/g, '').slice(0, 5))}
+                  onBlur={() => saveDbSettings({ dbPort })}
+                />
+                <input
+                  className="input"
+                  placeholder="Пользователь"
+                  value={dbUser}
+                  onChange={(event) => setDbUser(event.target.value)}
+                  onBlur={() => saveDbSettings({ dbUser: dbUser.trim() })}
+                />
+              </div>
+            </div>
+            <div className="popover-field">
+              {settings?.hasDbPassword && !editingDbPassword ? (
+                <div className="popover-row">
+                  <span className="key-status">Пароль в Keychain</span>
+                  <div className="popover-inline">
+                    <button type="button" className="btn btn-secondary btn-sm" onClick={() => setEditingDbPassword(true)}>
+                      Сменить
+                    </button>
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={handleClearDbPassword}>
+                      Сбросить
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="popover-inline">
+                  <input
+                    className="input"
+                    type="password"
+                    placeholder="Пароль (пусто — из ConnectionStrings.config)"
+                    value={dbPasswordInput}
+                    onChange={(event) => setDbPasswordInput(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        handleSaveDbPassword()
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    disabled={isSaving || !dbPasswordInput}
+                    onClick={handleSaveDbPassword}
+                  >
+                    Сохранить
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className="popover-field">
+              <button type="button" className="btn btn-secondary btn-sm" disabled={!appRoot || isTestingDb} onClick={handleTestDb}>
+                Проверить подключение
+              </button>
+              {!appRoot && <div className="popover-note">Откройте проект, чтобы проверить подключение</div>}
+              {dbTestResult &&
+                (dbTestResult.ok ? (
+                  <div className="popover-note">{dbTestResult.text}</div>
+                ) : (
+                  <div className="popover-error">{dbTestResult.text}</div>
+                ))}
+            </div>
+            <div className="popover-note">
+              Логин и пароль агенту не передаются — приложение подключается само. Надёжнее указать отдельного пользователя БД с
+              правами только на чтение. Изменения действуют со следующего сообщения.
+            </div>
+          </>
+        )}
+      </div>
       <div className="popover-divider" />
       <div className="popover-section">
         <div className="popover-row">

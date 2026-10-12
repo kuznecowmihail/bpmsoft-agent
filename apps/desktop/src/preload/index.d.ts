@@ -1,5 +1,5 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
-import type { ProjectValidationResult, AgentProvider, AgentSettings, CursorModelOption, ClaudeModelOption, CursorModelParam, ClaudeEffort } from '../shared/types'
+import type { ProjectValidationResult, AgentProvider, AgentSettings, CursorModelOption, ClaudeModelOption, CursorModelParam, ClaudeEffort, DbSettingsPatch } from '../shared/types'
 import type { AgentEvent } from '@bpmsoft-agent/agent-runtime'
 
 export interface AgentPermissionRequest {
@@ -27,6 +27,10 @@ export interface BpmsoftDesktopApi {
   clearCursorApiKey: () => Promise<void>
   listCursorModels: () => Promise<CursorModelOption[]>
   listClaudeModels: () => Promise<ClaudeModelOption[]>
+  setDbSettings: (patch: DbSettingsPatch) => Promise<void>
+  setDbPassword: (password: string) => Promise<void>
+  clearDbPassword: () => Promise<void>
+  testDbConnection: (readRoot: string) => Promise<string>
   openLogs: () => Promise<void>
 }
 

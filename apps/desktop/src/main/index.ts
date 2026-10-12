@@ -16,12 +16,16 @@ import {
   hasCursorApiKey,
   clearCursorApiKey,
   getCursorApiKey,
-  getClaudeApiKey
+  getClaudeApiKey,
+  setDbPassword,
+  hasDbPassword,
+  clearDbPassword,
+  testDbConnection
 } from './agentSession'
 import { initChatLog, getChatLogDir } from './chatLog'
 import { initAppSettings, getAppSettings, updateAppSettings } from './appSettings'
 import { listCursorModels, listClaudeModels } from '@bpmsoft-agent/agent-runtime'
-import type { AgentProvider, CursorModelParam, ClaudeEffort } from '../shared/types'
+import type { AgentProvider, CursorModelParam, ClaudeEffort, DbSettingsPatch } from '../shared/types'
 
 function resolveChatLogDir(): string {
   const override = process.env['BPMSOFT_AGENT_LOG_DIR']
@@ -134,7 +138,8 @@ app.whenReady().then(() => {
   ipcMain.handle('settings:get', () => ({
     ...getAppSettings(),
     hasClaudeKey: hasApiKey(),
-    hasCursorKey: hasCursorApiKey()
+    hasCursorKey: hasCursorApiKey(),
+    hasDbPassword: hasDbPassword()
   }))
 
   ipcMain.handle('settings:setProvider', (_event, provider: AgentProvider) => {
@@ -152,6 +157,26 @@ app.whenReady().then(() => {
   ipcMain.handle('settings:setClaudeModel', (_event, model: { id: string; effort?: ClaudeEffort; name?: string }) => {
     updateAppSettings({ claudeModel: model.id, claudeEffort: model.effort ?? '', claudeModelName: model.name ?? '' })
   })
+
+  ipcMain.handle('settings:setDb', (_event, patch: DbSettingsPatch) => {
+    const next: DbSettingsPatch = {}
+    if (typeof patch?.dbAccessEnabled === 'boolean') next.dbAccessEnabled = patch.dbAccessEnabled
+    if (typeof patch?.dbConfirmQueries === 'boolean') next.dbConfirmQueries = patch.dbConfirmQueries
+    if (typeof patch?.dbHost === 'string') next.dbHost = patch.dbHost
+    if (typeof patch?.dbPort === 'string') next.dbPort = patch.dbPort
+    if (typeof patch?.dbUser === 'string') next.dbUser = patch.dbUser
+    updateAppSettings(next)
+  })
+
+  ipcMain.handle('db:setPassword', (_event, password: string) => {
+    setDbPassword(password)
+  })
+
+  ipcMain.handle('db:clearPassword', () => {
+    clearDbPassword()
+  })
+
+  ipcMain.handle('db:test', (_event, readRoot: string) => testDbConnection(readRoot))
 
   ipcMain.handle('cursor:setApiKey', (_event, apiKey: string) => {
     setCursorApiKey(apiKey)

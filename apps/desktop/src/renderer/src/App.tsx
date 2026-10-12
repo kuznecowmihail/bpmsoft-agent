@@ -305,6 +305,7 @@ function App(): React.JSX.Element {
       <Header
         projectPath={selectedPath ?? ''}
         projectKind={validation?.kind}
+        appRoot={validation?.appRoot ?? validation?.pkgRoot}
         isRunning={isRunning}
         showDebug={showDebug}
         onToggleDebug={setShowDebug}

@@ -17,6 +17,67 @@ interface HeaderProps {
   settings: AgentSettings | null
   onProviderChange: (provider: AgentProvider) => void
   onSettingsChanged: () => void
+  /** Opened application folder: the root for the CRM database connection check. */
+  appRoot?: string
+}
+
+type DbStatus = { state: 'checking' | 'ok' | 'error'; text: string }
+
+/** Header badge: is the read-only CRM database reachable? Shown only when DB access is on and a project is open; click re-checks. */
+function DbBadge({ settings, appRoot }: { settings: AgentSettings; appRoot?: string }): React.JSX.Element {
+  const [status, setStatus] = useState<DbStatus>({ state: 'checking', text: '' })
+  const [attempt, setAttempt] = useState(0)
+  const enabled = settings.dbAccessEnabled && Boolean(appRoot)
+
+  useEffect(() => {
+    if (!enabled || !appRoot) {
+      return
+    }
+    let cancelled = false
+    setStatus({ state: 'checking', text: '' })
+    window.api
+      .testDbConnection(appRoot)
+      .then((text) => {
+        if (!cancelled) setStatus({ state: 'ok', text })
+      })
+      .catch((error: Error) => {
+        if (!cancelled) {
+          setStatus({ state: 'error', text: error.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '') })
+        }
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [enabled, appRoot, settings.dbHost, settings.dbPort, settings.dbUser, settings.hasDbPassword, attempt])
+
+  if (!enabled) {
+    return (
+      <span
+        className="db-badge is-off"
+        title={settings.dbAccessEnabled ? 'БД CRM: откройте проект, чтобы проверить подключение' : 'Доступ агента к БД CRM выключен — включается в настройках'}
+      >
+        БД выкл
+      </span>
+    )
+  }
+
+  const title =
+    status.state === 'checking'
+      ? 'Проверяю подключение к БД CRM…'
+      : status.state === 'ok'
+        ? `${status.text}. Нажмите, чтобы проверить снова`
+        : `Нет подключения к БД CRM: ${status.text}. Нажмите, чтобы проверить снова`
+  return (
+    <button
+      type="button"
+      className={`db-badge is-${status.state}`}
+      title={title}
+      disabled={status.state === 'checking'}
+      onClick={() => setAttempt((value) => value + 1)}
+    >
+      {status.state === 'error' ? 'БД недоступна' : 'БД'}
+    </button>
+  )
 }
 
 export function Header({
@@ -31,7 +92,8 @@ export function Header({
   onChangeApiKey,
   settings,
   onProviderChange,
-  onSettingsChanged
+  onSettingsChanged,
+  appRoot
 }: HeaderProps): React.JSX.Element {
   const [menuOpen, setMenuOpen] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -83,6 +145,7 @@ export function Header({
                 {settings.provider === 'cursor' ? `Cursor · ${settings.cursorModelName || settings.cursorModel}` : settings.claudeModelName ? `Claude · ${settings.claudeModelName}` : 'Claude'}
               </span>
             )}
+            {settings && <DbBadge settings={settings} appRoot={appRoot} />}
           </span>
           <button
             type="button"
@@ -141,6 +204,7 @@ export function Header({
                     onChangeClaudeKey={onChangeApiKey}
                     onSettingsChanged={onSettingsChanged}
                     onOpenLogsFolder={onOpenLogsFolder}
+                    appRoot={appRoot}
                     onClose={() => setMenuOpen(false)}
                   />
                 )}

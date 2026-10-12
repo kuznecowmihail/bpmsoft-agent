@@ -10,9 +10,14 @@ export interface StoredSettings {
   claudeModel: string
   claudeEffort: ClaudeEffort | ''
   claudeModelName: string
+  dbAccessEnabled: boolean
+  dbConfirmQueries: boolean
+  dbHost: string
+  dbPort: string
+  dbUser: string
 }
 
-export const DEFAULT_SETTINGS: StoredSettings = { provider: 'claude', cursorModel: 'composer-2.5', cursorModelParams: [], cursorModelName: '', claudeModel: '', claudeEffort: '', claudeModelName: '' }
+export const DEFAULT_SETTINGS: StoredSettings = { provider: 'claude', cursorModel: 'composer-2.5', cursorModelParams: [], cursorModelName: '', claudeModel: '', claudeEffort: '', claudeModelName: '', dbAccessEnabled: false, dbConfirmQueries: false, dbHost: '', dbPort: '', dbUser: '' }
 
 let settingsPath: string | undefined
 let cache: StoredSettings = { ...DEFAULT_SETTINGS }
@@ -34,7 +39,12 @@ function normalize(value: unknown): StoredSettings {
     cursorModelName: typeof raw.cursorModelName === 'string' ? raw.cursorModelName : '',
     claudeModel: typeof raw.claudeModel === 'string' ? raw.claudeModel.trim() : '',
     claudeEffort,
-    claudeModelName: typeof raw.claudeModelName === 'string' ? raw.claudeModelName : ''
+    claudeModelName: typeof raw.claudeModelName === 'string' ? raw.claudeModelName : '',
+    dbAccessEnabled: raw.dbAccessEnabled === true,
+    dbConfirmQueries: raw.dbConfirmQueries === true,
+    dbHost: typeof raw.dbHost === 'string' ? raw.dbHost.trim() : '',
+    dbPort: typeof raw.dbPort === 'string' && /^\d{1,5}$/.test(raw.dbPort.trim()) ? raw.dbPort.trim() : '',
+    dbUser: typeof raw.dbUser === 'string' ? raw.dbUser.trim() : ''
   }
 }
 

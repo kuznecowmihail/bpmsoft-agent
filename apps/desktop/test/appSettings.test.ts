@@ -29,11 +29,11 @@ describe('appSettings', () => {
 
     // Verify file was written
     const written = JSON.parse(fs.readFileSync(filePath, 'utf-8'))
-    expect(written).toEqual({ provider: 'cursor', cursorModel: 'composer-2.6', cursorModelParams: [{ id: 'thinking', value: 'on' }], cursorModelName: 'Composer with Thinking', claudeModel: '', claudeEffort: '', claudeModelName: '' })
+    expect(written).toEqual({ provider: 'cursor', cursorModel: 'composer-2.6', cursorModelParams: [{ id: 'thinking', value: 'on' }], cursorModelName: 'Composer with Thinking', claudeModel: '', claudeEffort: '', claudeModelName: '', dbAccessEnabled: false, dbConfirmQueries: false, dbHost: '', dbPort: '', dbUser: '' })
 
     // Verify reading the file again loads the same settings
     initAppSettings(filePath)
-    expect(getAppSettings()).toEqual({ provider: 'cursor', cursorModel: 'composer-2.6', cursorModelParams: [{ id: 'thinking', value: 'on' }], cursorModelName: 'Composer with Thinking', claudeModel: '', claudeEffort: '', claudeModelName: '' })
+    expect(getAppSettings()).toEqual({ provider: 'cursor', cursorModel: 'composer-2.6', cursorModelParams: [{ id: 'thinking', value: 'on' }], cursorModelName: 'Composer with Thinking', claudeModel: '', claudeEffort: '', claudeModelName: '', dbAccessEnabled: false, dbConfirmQueries: false, dbHost: '', dbPort: '', dbUser: '' })
   })
 
   it('broken JSON loads defaults', () => {
@@ -125,5 +125,53 @@ describe('appSettings', () => {
     initAppSettings(filePath)
     const settings = getAppSettings()
     expect(settings.claudeEffort).toBe('')
+  })
+
+  it('db settings default to disabled with empty connection overrides', () => {
+    const settings = getAppSettings()
+    expect(settings.dbAccessEnabled).toBe(false)
+    expect(settings.dbConfirmQueries).toBe(false)
+    expect(settings.dbHost).toBe('')
+    expect(settings.dbPort).toBe('')
+    expect(settings.dbUser).toBe('')
+  })
+
+  it('db flags are true only for boolean true', () => {
+    const filePath = path.join(tempDir, 'settings.json')
+    fs.writeFileSync(filePath, JSON.stringify({ dbAccessEnabled: 'true', dbConfirmQueries: 1 }))
+    initAppSettings(filePath)
+    expect(getAppSettings().dbAccessEnabled).toBe(false)
+    expect(getAppSettings().dbConfirmQueries).toBe(false)
+
+    fs.writeFileSync(filePath, JSON.stringify({ dbAccessEnabled: true, dbConfirmQueries: true }))
+    initAppSettings(filePath)
+    expect(getAppSettings().dbAccessEnabled).toBe(true)
+    expect(getAppSettings().dbConfirmQueries).toBe(true)
+  })
+
+  it('db host and user are trimmed, non-strings become empty', () => {
+    const filePath = path.join(tempDir, 'settings.json')
+    fs.writeFileSync(filePath, JSON.stringify({ dbHost: '  db.local  ', dbUser: ' reader ' }))
+    initAppSettings(filePath)
+    expect(getAppSettings().dbHost).toBe('db.local')
+    expect(getAppSettings().dbUser).toBe('reader')
+
+    fs.writeFileSync(filePath, JSON.stringify({ dbHost: 42, dbUser: null }))
+    initAppSettings(filePath)
+    expect(getAppSettings().dbHost).toBe('')
+    expect(getAppSettings().dbUser).toBe('')
+  })
+
+  it('db port keeps only 1 to 5 digits, invalid port becomes empty', () => {
+    const filePath = path.join(tempDir, 'settings.json')
+    fs.writeFileSync(filePath, JSON.stringify({ dbPort: ' 5432 ' }))
+    initAppSettings(filePath)
+    expect(getAppSettings().dbPort).toBe('5432')
+
+    for (const invalid of ['abc', '12a', '123456', '', 5432]) {
+      fs.writeFileSync(filePath, JSON.stringify({ dbPort: invalid }))
+      initAppSettings(filePath)
+      expect(getAppSettings().dbPort).toBe('')
+    }
   })
 })

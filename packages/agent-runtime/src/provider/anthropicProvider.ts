@@ -1,11 +1,13 @@
-import { query } from "@anthropic-ai/claude-agent-sdk";
+import { query, createSdkMcpServer, tool } from "@anthropic-ai/claude-agent-sdk";
 import type { Options, SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
+import { z } from "zod";
 import type { ClaudeEffort } from "./claudeModels";
 import * as path from "path";
 import * as os from "os";
 import { buildBpmsoftSystemPrompt } from "./systemPrompt";
 import { AgentEvent, mapSdkMessage } from "./messageMapper";
 import { checkToolAccess, isReadOnlyToolCall, isAutoApprovedToolCall } from "../safety/sandboxGuard";
+import type { CrmDbTool } from "../db/crmDbTool";
 
 export interface ToolPermissionRequest {
 	toolName: string;
@@ -51,6 +53,8 @@ export interface RunBpmsoftAgentQueryOptions {
 	 * `@anthropic-ai/claude-agent-sdk`'s `CanUseTool` docs).
 	 */
 	requestToolPermission?: (request: ToolPermissionRequest) => Promise<boolean>;
+	/** Read-only CRM database tool (see createCrmDbTool); omit when the user has not enabled database access. */
+	dbTool?: CrmDbTool;
 }
 
 /**
@@ -124,7 +128,7 @@ export async function* runBpmsoftAgentQuery(
 		effort: options.effort,
 		resume: options.resume,
 		env: { ...process.env, ANTHROPIC_API_KEY: options.apiKey },
-		systemPrompt: { type: "custom", prompt: buildBpmsoftSystemPrompt(knowledgeDir) },
+		systemPrompt: { type: "custom", prompt: buildBpmsoftSystemPrompt(knowledgeDir, { dbQuery: Boolean(options.dbTool) }) },
 		// Isolation from the developer's own Claude Code setup: without these the
 		// SDK loads ~/.claude settings (plugins, SessionStart hooks) and personal
 		// skills into the BPMSoft agent. Our behaviour comes only from the system
@@ -132,6 +136,26 @@ export async function* runBpmsoftAgentQuery(
 		settingSources: [],
 		skills: [],
 		additionalDirectories,
+		mcpServers: options.dbTool
+			? {
+					crm_db: createSdkMcpServer({
+						name: "crm_db",
+						version: "1.0.0",
+						tools: [
+							tool(
+								options.dbTool.name,
+								options.dbTool.description,
+								{ sql: z.string().describe("Один запрос SELECT или WITH") },
+								async (args) => {
+									const result = await options.dbTool!.execute(args.sql);
+									return { content: [{ type: "text", text: result.text }], isError: result.isError };
+								},
+								{ annotations: { readOnlyHint: true }, alwaysLoad: true }
+							)
+						]
+					})
+				}
+			: undefined,
 		hooks: sandboxPolicy
 			? {
 					PreToolUse: [

@@ -239,5 +239,16 @@ describe('chatLog', () => {
       expect(md).toContain('↩︎ Команда завершилась с кодом 1:')
       expect(md).not.toContain('⚠️ Ошибка инструмента')
     })
+
+    it('renders a database query record with row count', () => {
+      startChatLogIfNeeded({ projectPath: '/test/proj' })
+      logChatRecord('db_query', { sql: 'SELECT Id FROM Contact', rowCount: 3, truncated: false, durationMs: 12 })
+
+      const mdPath = getCurrentChatLogPath()!.replace('.jsonl', '.md')
+      const md = readFileSync(mdPath, 'utf-8')
+
+      expect(md).toContain('🗄 Запрос к БД')
+      expect(md).toContain('3 строк')
+    })
   })
 })

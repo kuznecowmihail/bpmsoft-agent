@@ -1,8 +1,9 @@
 import { Agent, Cursor } from "@cursor/sdk";
-import type { AgentOptions, SDKAgent, SDKMessage } from "@cursor/sdk";
+import type { AgentOptions, SDKAgent, SDKCustomTool, SDKMessage } from "@cursor/sdk";
 import * as path from "path";
 import type { AgentEvent } from "./messageMapper";
 import { buildBpmsoftSystemPrompt } from "./systemPrompt";
+import type { CrmDbTool } from "../db/crmDbTool";
 
 export interface CursorModelParam {
 	id: string;
@@ -32,6 +33,8 @@ export interface RunCursorAgentQueryOptions {
 	resume?: string;
 	/** Opened application folder: the agent is told to read only here and in the knowledge directory. */
 	readRoot?: string;
+	/** Read-only CRM database tool, exposed to Cursor as a custom tool; omit when database access is off. */
+	dbTool?: CrmDbTool;
 }
 
 /** Tools never offered to the Cursor agent: network, MCP, image generation. */
@@ -85,8 +88,24 @@ export function buildCursorFollowUpMessage(userPrompt: string): string {
 	return `${CURSOR_FOLLOW_UP_REMINDER}\n\n${userPrompt}`;
 }
 
+/** The CRM database tool in Cursor's custom-tool shape. */
+function cursorDbTool(dbTool: CrmDbTool): SDKCustomTool {
+	return {
+		description: dbTool.description,
+		inputSchema: { type: "object", properties: { sql: { type: "string", description: "Один запрос SELECT или WITH" } }, required: ["sql"] },
+		annotations: { readOnlyHint: true },
+		execute: async (args) => {
+			const result = await dbTool.execute(typeof args.sql === "string" ? args.sql : "");
+			return { content: [{ type: "text", text: result.text }], isError: result.isError };
+		}
+	};
+}
+
 /** Maps a Cursor tool call to the Claude-style name and input the desktop UI already understands. */
 export function normalizeCursorToolCall(name: string, args: unknown): { name: string; input: Record<string, unknown> } {
+	if (name === "crm_db_query" || (/mcp/i.test(name) && JSON.stringify(args ?? null).includes("crm_db_query"))) {
+		return { name: "crm_db_query", input: { sql: findSqlArgument(args) } };
+	}
 	const a = record(args);
 	switch (name) {
 		case "read":
@@ -118,6 +137,35 @@ export function normalizeCursorToolCall(name: string, args: unknown): { name: st
 		default:
 			return { name, input: a };
 	}
+}
+
+/** Finds the `sql` argument of a CRM database tool call, also when it is nested or passed as a JSON string. */
+function findSqlArgument(value: unknown, depth = 0): string | undefined {
+	const r = record(value);
+	if (typeof r.sql === "string") {
+		return r.sql;
+	}
+	if (depth >= 3) {
+		return undefined;
+	}
+	for (const [key, nested] of Object.entries(r)) {
+		if (typeof nested === "string" && ["args", "arguments", "input", "toolArgs"].includes(key)) {
+			try {
+				const found = findSqlArgument(JSON.parse(nested), depth + 1);
+				if (found !== undefined) {
+					return found;
+				}
+			} catch {
+				// not JSON — keep looking
+			}
+		} else if (nested && typeof nested === "object") {
+			const found = findSqlArgument(nested, depth + 1);
+			if (found !== undefined) {
+				return found;
+			}
+		}
+	}
+	return undefined;
 }
 
 function resultText(result: unknown): string {
@@ -332,12 +380,14 @@ async function* runCursorAgentQueryUnsafe(options: RunCursorAgentQueryOptions): 
 	const agentOptions: AgentOptions = {
 		apiKey: options.apiKey,
 		model: options.modelParams?.length ? { id: options.model, params: options.modelParams } : { id: options.model },
-		disallowedTools: DISALLOWED_TOOLS,
+		disallowedTools: options.dbTool ? DISALLOWED_TOOLS.filter((tool) => tool !== "mcp") : DISALLOWED_TOOLS,
 		local: {
 			cwd: options.cwd,
 			// Isolation from the developer's own Cursor setup (rules, hooks, plugins).
 			settingSources: [] as never[],
-			sandboxOptions: { enabled: true }
+			sandboxOptions: { enabled: true },
+			// Custom tools run in this process (not in Cursor's sandbox); settingSources: [] keeps the user's own MCP servers out.
+			customTools: options.dbTool ? { [options.dbTool.name]: cursorDbTool(options.dbTool) } : undefined
 		}
 	};
 	const startedAt = Date.now();
@@ -349,7 +399,7 @@ async function* runCursorAgentQueryUnsafe(options: RunCursorAgentQueryOptions): 
 		const message = options.resume
 			? buildCursorFollowUpMessage(options.prompt)
 			: buildCursorFirstMessage(
-					buildBpmsoftSystemPrompt(knowledgeDir),
+					buildBpmsoftSystemPrompt(knowledgeDir, { dbQuery: Boolean(options.dbTool) }),
 					buildCursorSafetyRules(options.readRoot ?? options.cwd, options.cwd, knowledgeDir),
 					options.prompt
 				);

@@ -30,6 +30,9 @@ const SECRET_FILE_PATTERN = /(^|[\\/])connectionstrings\.config$|\.(pfx|p12|pem|
 
 const SECRET_DENY_REASON = "Файл с секретами (пароли, сертификаты, ключи) читать нельзя. Тип СУБД и параметры подключения спроси у пользователя.";
 
+/** The read-only CRM database tool: Claude sees it as an in-process MCP tool, Cursor as a custom tool. It confirms queries itself when the user asked for that. */
+export const CRM_DB_QUERY_TOOL_NAMES = new Set(["mcp__crm_db__crm_db_query", "crm_db_query"]);
+
 /** True when file path contains secrets (credentials, certificates, private keys). */
 export function isSecretFile(p: string): boolean {
 	return SECRET_FILE_PATTERN.test(p.trim());
@@ -432,6 +435,7 @@ export function checkToolAccess(
  * user's approval.
  */
 export function isReadOnlyToolCall(toolName: string, input: Record<string, unknown>): boolean {
+	if (CRM_DB_QUERY_TOOL_NAMES.has(toolName)) { return true; }
 	if (READ_PATH_KEYS[toolName]) {
 		return true;
 	}

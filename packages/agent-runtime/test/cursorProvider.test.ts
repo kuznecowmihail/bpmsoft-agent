@@ -168,6 +168,27 @@ describe("cursorProvider", () => {
 		});
 	});
 
+	describe("normalizeCursorToolCall (CRM database tool)", () => {
+		it("maps a direct crm_db_query custom tool call", () => {
+			expect(normalizeCursorToolCall("crm_db_query", { sql: "SELECT 1" })).toEqual({
+				name: "crm_db_query",
+				input: { sql: "SELECT 1" }
+			});
+		});
+
+		it("maps an MCP-wrapped call with nested args", () => {
+			const result = normalizeCursorToolCall("mcp", { toolName: "crm_db_query", args: { sql: "SELECT 2" } });
+			expect(result.name).toBe("crm_db_query");
+			expect(result.input.sql).toBe("SELECT 2");
+		});
+
+		it("maps an MCP-wrapped call with arguments passed as a JSON string", () => {
+			const result = normalizeCursorToolCall("mcp", { toolName: "crm_db_query", arguments: "{\"sql\":\"SELECT 3\"}" });
+			expect(result.name).toBe("crm_db_query");
+			expect(result.input.sql).toBe("SELECT 3");
+		});
+	});
+
 	describe("mapCursorMessage", () => {
 		const seenCalls = new Set<string>();
 
