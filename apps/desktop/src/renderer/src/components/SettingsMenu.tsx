@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { AgentProvider, AgentSettings, CursorModelOption, ClaudeModelOption, DbSettingsPatch, CrmSettingsPatch } from '../../../shared/types'
-import { IconExternal, IconKey } from './icons'
+import { IconExternal, IconTrash } from './icons'
 import { Toggle } from './Toggle'
 
 interface SettingsMenuProps {
@@ -170,6 +170,32 @@ export function SettingsMenu({
       setKeyError((error as Error).message.replace(/^Error invoking remote method '[^']+': (Error: )?/, ''))
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  const handleClearClaudeKey = async (): Promise<void> => {
+    setKeyError(null)
+    try {
+      await window.api.clearApiKey()
+      setEditingClaudeKey(false)
+      setClaudeModels(null)
+      setClaudeModelsError(null)
+      onSettingsChanged()
+    } catch (error) {
+      setKeyError(errorText(error))
+    }
+  }
+
+  const handleClearCursorKey = async (): Promise<void> => {
+    setKeyError(null)
+    try {
+      await window.api.clearCursorApiKey()
+      setEditingCursorKey(false)
+      setModels(null)
+      setModelsError(null)
+      onSettingsChanged()
+    } catch (error) {
+      setKeyError(errorText(error))
     }
   }
 
@@ -348,13 +374,27 @@ export function SettingsMenu({
         <div className="popover-section">
           <div className="popover-label">Claude</div>
           {settings?.hasClaudeKey && !editingClaudeKey ? (
-            <div className="popover-row">
-              <span className="key-status">Ключ сохранён в Keychain</span>
-              <button type="button" className="btn btn-secondary btn-sm" disabled={isRunning} onClick={() => setEditingClaudeKey(true)}>
-                <IconKey size={13} />
-                Сменить
-              </button>
-            </div>
+            <>
+              <div className="popover-row">
+                <span className="key-status">Ключ в Keychain</span>
+                <div className="popover-inline">
+                  <button type="button" className="btn btn-secondary btn-sm" disabled={isRunning} onClick={() => setEditingClaudeKey(true)}>
+                    Сменить
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm btn-icon"
+                    disabled={isRunning}
+                    onClick={handleClearClaudeKey}
+                    title="Удалить ключ"
+                    aria-label="Удалить ключ"
+                  >
+                    <IconTrash size={15} />
+                  </button>
+                </div>
+              </div>
+              {keyError && <div className="popover-error">{keyError}</div>}
+            </>
           ) : (
             <div>
               <div className="popover-field-label">API-ключ Anthropic (console.anthropic.com → API Keys)</div>
@@ -420,13 +460,27 @@ export function SettingsMenu({
         <div className="popover-section">
           <div className="popover-label">Cursor</div>
           {hasCursorKey && !editingCursorKey ? (
-            <div className="popover-row">
-              <span className="key-status">Ключ сохранён в Keychain</span>
-              <button type="button" className="btn btn-secondary btn-sm" disabled={isRunning} onClick={() => setEditingCursorKey(true)}>
-                <IconKey size={13} />
-                Сменить
-              </button>
-            </div>
+            <>
+              <div className="popover-row">
+                <span className="key-status">Ключ в Keychain</span>
+                <div className="popover-inline">
+                  <button type="button" className="btn btn-secondary btn-sm" disabled={isRunning} onClick={() => setEditingCursorKey(true)}>
+                    Сменить
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm btn-icon"
+                    disabled={isRunning}
+                    onClick={handleClearCursorKey}
+                    title="Удалить ключ"
+                    aria-label="Удалить ключ"
+                  >
+                    <IconTrash size={15} />
+                  </button>
+                </div>
+              </div>
+              {keyError && <div className="popover-error">{keyError}</div>}
+            </>
           ) : (
             <div>
               <div className="popover-field-label">API-ключ Cursor (Dashboard → API Keys)</div>
@@ -573,11 +627,18 @@ export function SettingsMenu({
                 <div className="popover-row">
                   <span className="key-status">Пароль в Keychain</span>
                   <div className="popover-inline">
-                    <button type="button" className="btn btn-secondary btn-sm" onClick={() => setEditingDbPassword(true)}>
+                    <button type="button" className="btn btn-secondary btn-sm" disabled={isRunning} onClick={() => setEditingDbPassword(true)}>
                       Сменить
                     </button>
-                    <button type="button" className="btn btn-ghost btn-sm" onClick={handleClearDbPassword}>
-                      Сбросить
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm btn-icon"
+                      disabled={isRunning}
+                      onClick={handleClearDbPassword}
+                      title="Удалить пароль"
+                      aria-label="Удалить пароль"
+                    >
+                      <IconTrash size={15} />
                     </button>
                   </div>
                 </div>
@@ -691,11 +752,18 @@ export function SettingsMenu({
                 <div className="popover-row">
                   <span className="key-status">Пароль в Keychain</span>
                   <div className="popover-inline">
-                    <button type="button" className="btn btn-secondary btn-sm" onClick={() => setEditingCrmPassword(true)}>
+                    <button type="button" className="btn btn-secondary btn-sm" disabled={isRunning} onClick={() => setEditingCrmPassword(true)}>
                       Сменить
                     </button>
-                    <button type="button" className="btn btn-ghost btn-sm" onClick={handleClearCrmPassword}>
-                      Сбросить
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm btn-icon"
+                      disabled={isRunning}
+                      onClick={handleClearCrmPassword}
+                      title="Удалить пароль"
+                      aria-label="Удалить пароль"
+                    >
+                      <IconTrash size={15} />
                     </button>
                   </div>
                 </div>

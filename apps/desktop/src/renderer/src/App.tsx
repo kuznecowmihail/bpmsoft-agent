@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import type { ProjectValidationResult, AgentProvider, AgentSettings } from '../../shared/types'
+import type { ProjectValidationResult, AgentProvider, AgentSettings, RecentProject } from '../../shared/types'
 import {
   agentEventToLog,
   describeToolCall,
@@ -18,7 +18,7 @@ import { Header } from './components/Header'
 import { LogsDrawer } from './components/LogsDrawer'
 import { MessageList } from './components/MessageList'
 import type { PermissionRequestEntry } from './components/MessageList'
-import { IconAlert, IconFolder, IconLogo } from './components/icons'
+import { IconAlert, IconFolder, IconLogo, IconX } from './components/icons'
 
 type Screen = 'picker' | 'chat'
 
@@ -27,6 +27,7 @@ function App(): React.JSX.Element {
   const [selectedPath, setSelectedPath] = useState<string | null>(null)
   const [validation, setValidation] = useState<ProjectValidationResult | null>(null)
   const [isChecking, setIsChecking] = useState(false)
+  const [recentProjects, setRecentProjects] = useState<RecentProject[]>([])
 
   const [agentSettings, setAgentSettings] = useState<AgentSettings | null>(null)
 
@@ -89,11 +90,11 @@ function App(): React.JSX.Element {
     }
   }
 
-  const handleSelectFolder = async (): Promise<void> => {
-    const projectPath = await window.api.selectProjectFolder()
-    if (!projectPath) {
-      return
-    }
+  const loadRecentProjects = async (): Promise<void> => {
+    setRecentProjects(await window.api.listRecentProjects())
+  }
+
+  const openProject = async (projectPath: string): Promise<void> => {
     setSelectedPath(projectPath)
     setValidation(null)
     setEntries([])
@@ -105,10 +106,25 @@ function App(): React.JSX.Element {
         await refreshSettings()
         subscribeToAgent()
         setScreen('chat')
+      } else {
+        await loadRecentProjects()
       }
     } finally {
       setIsChecking(false)
     }
+  }
+
+  const handleSelectFolder = async (): Promise<void> => {
+    const projectPath = await window.api.selectProjectFolder()
+    if (!projectPath) {
+      return
+    }
+    await openProject(projectPath)
+  }
+
+  const handleRemoveRecent = async (projectPath: string): Promise<void> => {
+    await window.api.removeRecentProject(projectPath)
+    await loadRecentProjects()
   }
 
   const handlePermissionResponse = async (id: string, approved: boolean): Promise<void> => {
@@ -213,6 +229,13 @@ function App(): React.JSX.Element {
   // the agent uses the CRM browser: open its panel
   useEffect(() => window.api.onCrmBrowserActivity(() => setBrowserOpen(true)), [])
 
+  // start screen: refresh the recent projects list
+  useEffect(() => {
+    if (screen === 'picker') {
+      void loadRecentProjects()
+    }
+  }, [screen])
+
   // the panel is shown only with the CRM browser enabled; otherwise the native view must stay hidden
   const browserPanelShown = browserOpen && Boolean(agentSettings?.crmBrowserEnabled)
   useEffect(() => {
@@ -226,7 +249,7 @@ function App(): React.JSX.Element {
       <div className="screen">
         <div className="screen-drag" />
         <div className="screen-body">
-          <div className="card">
+          <div className="card card-wide">
             <div className="logo-lg">
               <IconLogo size={24} />
             </div>
@@ -234,12 +257,40 @@ function App(): React.JSX.Element {
             <p>Откройте папку приложения BPMSoft — агент будет работать с пакетами в BPMSoft.Configuration/Pkg.</p>
             <button type="button" className="btn btn-primary btn-lg btn-block" onClick={handleSelectFolder} disabled={isChecking}>
               {isChecking ? <span className="spinner" /> : <IconFolder size={16} />}
-              {isChecking ? 'Проверяю проект…' : 'Выбрать папку проекта'}
+              {isChecking ? 'Проверяю проект…' : 'Открыть проект'}
             </button>
             {selectedPath && validation && !validation.isValid && (
               <div className="form-error">
                 <IconAlert size={14} />
                 <span>{validation.reason}</span>
+              </div>
+            )}
+            {recentProjects.length > 0 && (
+              <div className="recent">
+                <div className="recent-head">Недавние проекты</div>
+                {recentProjects.map((project) => (
+                  <div key={project.path} className="recent-row">
+                    <button
+                      type="button"
+                      className="recent-item"
+                      disabled={isChecking}
+                      onClick={() => openProject(project.path)}
+                      title={project.path}
+                    >
+                      <span className="recent-name">{project.name}</span>
+                      <span className="recent-path">{project.location}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm btn-icon recent-remove"
+                      onClick={() => handleRemoveRecent(project.path)}
+                      title="Убрать из списка"
+                      aria-label="Убрать из списка"
+                    >
+                      <IconX size={13} />
+                    </button>
+                  </div>
+                ))}
               </div>
             )}
           </div>

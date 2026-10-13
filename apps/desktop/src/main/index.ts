@@ -1,6 +1,7 @@
 import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
-import { join } from 'path'
-import { mkdirSync } from 'fs'
+import { basename, dirname, join } from 'path'
+import { existsSync, mkdirSync } from 'fs'
+import { homedir } from 'os'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { validateBpmsoftProject } from './projectValidation'
 import { trustSystemCertificates } from './systemCertificates'
@@ -36,10 +37,10 @@ import {
   setCrmBrowserBounds,
   setCrmBrowserVisible
 } from './crmBrowser'
-import { initAppSettings, getAppSettings, updateAppSettings } from './appSettings'
+import { initAppSettings, getAppSettings, updateAppSettings, addRecentProject, removeRecentProject } from './appSettings'
 import { loadLoginShellPath } from './shellPath'
 import { listCursorModels, listClaudeModels } from '@bpmsoft-agent/agent-runtime'
-import type { AgentProvider, CursorModelParam, ClaudeEffort, DbSettingsPatch, CrmSettingsPatch } from '../shared/types'
+import type { AgentProvider, CursorModelParam, ClaudeEffort, DbSettingsPatch, CrmSettingsPatch, RecentProject } from '../shared/types'
 
 if (app.isPackaged) loadLoginShellPath()
 
@@ -125,7 +126,25 @@ app.whenReady().then(() => {
     return result.filePaths[0]
   })
 
-  ipcMain.handle('project:validate', (_event, projectPath: string) => validateBpmsoftProject(projectPath))
+  ipcMain.handle('project:validate', async (_event, projectPath: string) => {
+    const result = await validateBpmsoftProject(projectPath)
+    if (result.isValid) addRecentProject(projectPath)
+    return result
+  })
+
+  ipcMain.handle('project:recent', (): RecentProject[] => {
+    const home = homedir()
+    return getAppSettings()
+      .recentProjects.filter((projectPath) => existsSync(projectPath))
+      .map((projectPath) => {
+        const parent = dirname(projectPath)
+        return { path: projectPath, name: basename(projectPath), location: parent.startsWith(home) ? `~${parent.slice(home.length)}` : parent }
+      })
+  })
+
+  ipcMain.handle('project:removeRecent', (_event, projectPath: string) => {
+    if (typeof projectPath === 'string') removeRecentProject(projectPath)
+  })
 
   // Milestone 9, slice 3: chat screen wired to agent-runtime's runBpmsoftAgentQuery.
   ipcMain.handle('agent:setApiKey', (_event, apiKey: string) => {

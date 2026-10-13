@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { IpcRendererEvent } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
-import type { ProjectValidationResult, AgentProvider, AgentSettings, CursorModelOption, ClaudeModelOption, CursorModelParam, ClaudeEffort, DbSettingsPatch, CrmSettingsPatch, CrmBrowserState } from '../shared/types'
+import type { ProjectValidationResult, AgentProvider, AgentSettings, CursorModelOption, ClaudeModelOption, CursorModelParam, ClaudeEffort, DbSettingsPatch, CrmSettingsPatch, CrmBrowserState, RecentProject } from '../shared/types'
 import type { AgentEvent } from '@bpmsoft-agent/agent-runtime'
 
 export interface AgentPermissionRequest {
@@ -14,6 +14,8 @@ const api = {
   selectProjectFolder: (): Promise<string | null> => ipcRenderer.invoke('project:selectFolder'),
   validateProject: (projectPath: string): Promise<ProjectValidationResult> =>
     ipcRenderer.invoke('project:validate', projectPath),
+  listRecentProjects: (): Promise<RecentProject[]> => ipcRenderer.invoke('project:recent'),
+  removeRecentProject: (projectPath: string): Promise<void> => ipcRenderer.invoke('project:removeRecent', projectPath),
   setApiKey: (apiKey: string): Promise<void> => ipcRenderer.invoke('agent:setApiKey', apiKey),
   hasStoredApiKey: (): Promise<boolean> => ipcRenderer.invoke('agent:hasApiKey'),
   clearApiKey: (): Promise<void> => ipcRenderer.invoke('agent:clearApiKey'),

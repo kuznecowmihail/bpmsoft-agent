@@ -12,6 +12,15 @@ export interface ProjectValidationResult {
 	reason?: string
 }
 
+/** A project opened earlier, shown on the start screen. */
+export interface RecentProject {
+	path: string
+	/** Folder name. */
+	name: string
+	/** Parent folder, home directory shown as ~. */
+	location: string
+}
+
 export type AgentProvider = 'claude' | 'cursor'
 
 export type ClaudeEffort = 'low' | 'medium' | 'high' | 'xhigh' | 'max'

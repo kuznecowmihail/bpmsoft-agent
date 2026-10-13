@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import * as fs from 'fs'
 import * as path from 'path'
 import * as os from 'os'
-import { initAppSettings, getAppSettings, updateAppSettings, DEFAULT_SETTINGS } from '../src/main/appSettings'
+import { initAppSettings, getAppSettings, updateAppSettings, addRecentProject, removeRecentProject, DEFAULT_SETTINGS } from '../src/main/appSettings'
 
 describe('appSettings', () => {
   let tempDir: string
@@ -29,11 +29,11 @@ describe('appSettings', () => {
 
     // Verify file was written
     const written = JSON.parse(fs.readFileSync(filePath, 'utf-8'))
-    expect(written).toEqual({ provider: 'cursor', cursorModel: 'composer-2.6', cursorModelParams: [{ id: 'thinking', value: 'on' }], cursorModelName: 'Composer with Thinking', cursorUnsandboxed: false, claudeModel: '', claudeEffort: '', claudeModelName: '', dbAccessEnabled: false, dbConfirmQueries: false, dbHost: '', dbPort: '', dbUser: '', crmActionsEnabled: false, crmConfirmActions: false, crmBrowserEnabled: false, crmUrl: '', crmUser: '' })
+    expect(written).toEqual({ provider: 'cursor', cursorModel: 'composer-2.6', cursorModelParams: [{ id: 'thinking', value: 'on' }], cursorModelName: 'Composer with Thinking', cursorUnsandboxed: false, claudeModel: '', claudeEffort: '', claudeModelName: '', dbAccessEnabled: false, dbConfirmQueries: false, dbHost: '', dbPort: '', dbUser: '', crmActionsEnabled: false, crmConfirmActions: false, crmBrowserEnabled: false, crmUrl: '', crmUser: '', recentProjects: [] })
 
     // Verify reading the file again loads the same settings
     initAppSettings(filePath)
-    expect(getAppSettings()).toEqual({ provider: 'cursor', cursorModel: 'composer-2.6', cursorModelParams: [{ id: 'thinking', value: 'on' }], cursorModelName: 'Composer with Thinking', cursorUnsandboxed: false, claudeModel: '', claudeEffort: '', claudeModelName: '', dbAccessEnabled: false, dbConfirmQueries: false, dbHost: '', dbPort: '', dbUser: '', crmActionsEnabled: false, crmConfirmActions: false, crmBrowserEnabled: false, crmUrl: '', crmUser: '' })
+    expect(getAppSettings()).toEqual({ provider: 'cursor', cursorModel: 'composer-2.6', cursorModelParams: [{ id: 'thinking', value: 'on' }], cursorModelName: 'Composer with Thinking', cursorUnsandboxed: false, claudeModel: '', claudeEffort: '', claudeModelName: '', dbAccessEnabled: false, dbConfirmQueries: false, dbHost: '', dbPort: '', dbUser: '', crmActionsEnabled: false, crmConfirmActions: false, crmBrowserEnabled: false, crmUrl: '', crmUser: '', recentProjects: [] })
   })
 
   it('broken JSON loads defaults', () => {
@@ -255,5 +255,42 @@ describe('appSettings', () => {
     fs.writeFileSync(filePath, JSON.stringify({ crmUser: 7 }))
     initAppSettings(filePath)
     expect(getAppSettings().crmUser).toBe('')
+  })
+
+  it('addRecentProject moves an existing path to the top without duplicates', () => {
+    const filePath = path.join(tempDir, 'settings.json')
+    initAppSettings(filePath)
+    addRecentProject('/projects/a')
+    addRecentProject('/projects/b')
+    addRecentProject('/projects/a')
+    expect(getAppSettings().recentProjects).toEqual(['/projects/a', '/projects/b'])
+  })
+
+  it('recent projects list is capped at 10, newest first', () => {
+    const filePath = path.join(tempDir, 'settings.json')
+    initAppSettings(filePath)
+    for (let i = 0; i < 12; i++) {
+      addRecentProject(`/projects/${i}`)
+    }
+    const recent = getAppSettings().recentProjects
+    expect(recent).toHaveLength(10)
+    expect(recent[0]).toBe('/projects/11')
+    expect(recent[9]).toBe('/projects/2')
+  })
+
+  it('removeRecentProject removes the path from the list', () => {
+    const filePath = path.join(tempDir, 'settings.json')
+    initAppSettings(filePath)
+    addRecentProject('/projects/a')
+    addRecentProject('/projects/b')
+    removeRecentProject('/projects/a')
+    expect(getAppSettings().recentProjects).toEqual(['/projects/b'])
+  })
+
+  it('normalize drops non-string, blank and duplicate recent projects', () => {
+    const filePath = path.join(tempDir, 'settings.json')
+    fs.writeFileSync(filePath, JSON.stringify({ recentProjects: ['/projects/a', 42, null, '   ', '/projects/a', '/projects/b'] }))
+    initAppSettings(filePath)
+    expect(getAppSettings().recentProjects).toEqual(['/projects/a', '/projects/b'])
   })
 })

@@ -87,6 +87,7 @@ button, input, textarea { font: inherit; color: inherit; }
 .btn-ghost:hover:not(:disabled), .btn-ghost.is-active { background: rgba(0, 0, 0, 0.05); color: var(--text); }
 .btn-icon { width: 30px; padding: 0; justify-content: center; position: relative; }
 .btn-sm { height: 26px; padding: 0 10px; font-size: 12px; }
+.btn-sm.btn-icon { width: 26px; padding: 0; }
 .btn-lg { height: 38px; padding: 0 18px; font-size: 14px; }
 .btn-block { width: 100%; justify-content: center; }
 
@@ -627,6 +628,17 @@ button, input, textarea { font: inherit; color: inherit; }
 }
 .form-error svg { flex-shrink: 0; margin-top: 2px; }
 .card-note { margin-top: 14px; font-size: 12px; color: var(--text-tertiary); }
+.card-wide { max-width: 520px; }
+.recent { margin-top: 24px; text-align: left; }
+.recent-head { margin-bottom: 6px; padding: 0 8px; font-size: 12px; color: var(--text-tertiary); }
+.recent-row { display: flex; align-items: center; gap: 4px; }
+.recent-item { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 12px; padding: 7px 8px; border: 0; border-radius: 8px; background: transparent; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.recent-item:hover:not(:disabled) { background: var(--surface-muted); }
+.recent-item:disabled { cursor: default; opacity: 0.6; }
+.recent-name { flex-shrink: 0; max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 500; }
+.recent-path { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: rtl; text-align: right; font-size: 12px; color: var(--text-tertiary); }
+.recent-remove { opacity: 0; }
+.recent-row:hover .recent-remove, .recent-remove:focus-visible { opacity: 1; }
 
 @media (max-width: 760px) {
   .btn-label { display: none; }

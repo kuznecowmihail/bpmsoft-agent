@@ -1,5 +1,5 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
-import type { ProjectValidationResult, AgentProvider, AgentSettings, CursorModelOption, ClaudeModelOption, CursorModelParam, ClaudeEffort, DbSettingsPatch, CrmSettingsPatch, CrmBrowserState } from '../shared/types'
+import type { ProjectValidationResult, AgentProvider, AgentSettings, CursorModelOption, ClaudeModelOption, CursorModelParam, ClaudeEffort, DbSettingsPatch, CrmSettingsPatch, CrmBrowserState, RecentProject } from '../shared/types'
 import type { AgentEvent } from '@bpmsoft-agent/agent-runtime'
 
 export interface AgentPermissionRequest {
@@ -11,6 +11,8 @@ export interface AgentPermissionRequest {
 export interface BpmsoftDesktopApi {
   selectProjectFolder: () => Promise<string | null>
   validateProject: (projectPath: string) => Promise<ProjectValidationResult>
+  listRecentProjects: () => Promise<RecentProject[]>
+  removeRecentProject: (projectPath: string) => Promise<void>
   setApiKey: (apiKey: string) => Promise<void>
   hasStoredApiKey: () => Promise<boolean>
   clearApiKey: () => Promise<void>

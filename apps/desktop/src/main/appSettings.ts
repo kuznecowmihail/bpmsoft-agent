@@ -1,6 +1,8 @@
 import * as fs from 'fs'
 import type { AgentProvider, CursorModelParam, ClaudeEffort } from '../shared/types'
 
+const MAX_RECENT_PROJECTS = 10
+
 /** Non-secret app preferences persisted as JSON in userData (keys live in secureStore). */
 export interface StoredSettings {
   provider: AgentProvider
@@ -21,9 +23,10 @@ export interface StoredSettings {
   crmBrowserEnabled: boolean
   crmUrl: string
   crmUser: string
+  recentProjects: string[]
 }
 
-export const DEFAULT_SETTINGS: StoredSettings = { provider: 'claude', cursorModel: 'composer-2.5', cursorModelParams: [], cursorModelName: '', cursorUnsandboxed: false, claudeModel: '', claudeEffort: '', claudeModelName: '', dbAccessEnabled: false, dbConfirmQueries: false, dbHost: '', dbPort: '', dbUser: '', crmActionsEnabled: false, crmConfirmActions: false, crmBrowserEnabled: false, crmUrl: '', crmUser: '' }
+export const DEFAULT_SETTINGS: StoredSettings = { provider: 'claude', cursorModel: 'composer-2.5', cursorModelParams: [], cursorModelName: '', cursorUnsandboxed: false, claudeModel: '', claudeEffort: '', claudeModelName: '', dbAccessEnabled: false, dbConfirmQueries: false, dbHost: '', dbPort: '', dbUser: '', crmActionsEnabled: false, crmConfirmActions: false, crmBrowserEnabled: false, crmUrl: '', crmUser: '', recentProjects: [] }
 
 let settingsPath: string | undefined
 let cache: StoredSettings = { ...DEFAULT_SETTINGS }
@@ -58,7 +61,10 @@ function normalize(value: unknown): StoredSettings {
     crmConfirmActions: raw.crmConfirmActions === true,
     crmBrowserEnabled: raw.crmBrowserEnabled === true,
     crmUrl: /^https?:\/\/[^\s]+$/i.test(crmUrl) ? crmUrl : '',
-    crmUser: typeof raw.crmUser === 'string' ? raw.crmUser.trim() : ''
+    crmUser: typeof raw.crmUser === 'string' ? raw.crmUser.trim() : '',
+    recentProjects: Array.isArray(raw.recentProjects)
+      ? [...new Set(raw.recentProjects.filter((p): p is string => typeof p === 'string' && p.trim() !== ''))].slice(0, MAX_RECENT_PROJECTS)
+      : []
   }
 }
 
@@ -83,4 +89,13 @@ export function updateAppSettings(patch: Partial<StoredSettings>): StoredSetting
     fs.writeFileSync(settingsPath, JSON.stringify(cache, null, 2), 'utf-8')
   }
   return getAppSettings()
+}
+
+/** Moves `projectPath` to the top of the recent projects list (at most MAX_RECENT_PROJECTS). */
+export function addRecentProject(projectPath: string): void {
+  updateAppSettings({ recentProjects: [projectPath, ...cache.recentProjects.filter((p) => p !== projectPath)] })
+}
+
+export function removeRecentProject(projectPath: string): void {
+  updateAppSettings({ recentProjects: cache.recentProjects.filter((p) => p !== projectPath) })
 }
