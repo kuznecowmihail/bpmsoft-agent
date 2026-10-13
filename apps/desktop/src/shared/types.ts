@@ -62,9 +62,19 @@ export interface AgentSettings {
 	 */
 	crmActionsEnabled: boolean
 	crmConfirmActions: boolean
+	/** Built-in CRM browser: the agent reads CRM pages in a side panel of the main window; clicks need the user's approval. */
+	crmBrowserEnabled: boolean
 	crmUrl: string
 	crmUser: string
 	hasCrmPassword: boolean
+}
+
+/** State of the CRM page shown in the browser panel of the main window. */
+export interface CrmBrowserState {
+	url: string
+	title: string
+	loading: boolean
+	hasPage: boolean
 }
 
 export interface DbSettingsPatch {
@@ -78,6 +88,7 @@ export interface DbSettingsPatch {
 export interface CrmSettingsPatch {
 	crmActionsEnabled?: boolean
 	crmConfirmActions?: boolean
+	crmBrowserEnabled?: boolean
 	crmUrl?: string
 	crmUser?: string
 }

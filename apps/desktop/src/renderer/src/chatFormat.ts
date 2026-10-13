@@ -104,6 +104,7 @@ function field(input: unknown, key: string): unknown {
 /** Short human-readable description of a tool call, in Russian. */
 export function describeToolCall(name: string, input: unknown): string {
   const description = field(input, 'description')
+  const bare = name.startsWith('mcp__app__') ? name.slice('mcp__app__'.length) : name
   if (name === 'crm_db_query' || name.endsWith('__crm_db_query')) {
     return 'Запрос к БД CRM'
   }
@@ -116,7 +117,21 @@ export function describeToolCall(name: string, input: unknown): string {
   if (name === 'crm_action') {
     return 'Действие в CRM'
   }
-  switch (name) {
+  switch (bare) {
+    case 'crm_browser_open': {
+      const path = field(input, 'path')
+      return `Открывает страницу CRM${typeof path === 'string' && path ? ' ' + path : ''}`
+    }
+    case 'crm_browser_screenshot':
+      return 'Делает снимок страницы CRM'
+    case 'crm_browser_text':
+      return 'Читает текст страницы CRM'
+    case 'crm_browser_console':
+      return 'Смотрит консоль браузера CRM'
+    case 'crm_browser_network':
+      return 'Смотрит сетевые запросы CRM'
+    case 'crm_browser_click':
+      return `Нажимает в CRM ${String(field(input, 'selector') ?? field(input, 'text') ?? '')}`.trim()
     case 'Read':
       return `Читает файл ${shortPath(field(input, 'file_path'))}`
     case 'Write':
@@ -160,7 +175,7 @@ export function permissionSubject(name: string, input: unknown): string | undefi
     const sql = field(input, 'sql')
     return typeof sql === 'string' ? sql : undefined
   }
-  if (name === 'crm_action') {
+  if (name === 'crm_action' || name === 'crm_browser_click') {
     const action = field(input, 'action')
     return typeof action === 'string' ? action : undefined
   }

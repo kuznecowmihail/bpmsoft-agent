@@ -24,9 +24,18 @@ import {
   setCrmPassword,
   hasCrmPassword,
   clearCrmPassword,
-  testCrm
+  testCrm,
+  crmConnection
 } from './agentSession'
 import { initChatLog, getChatLogDir } from './chatLog'
+import {
+  attachCrmBrowserHost,
+  closeCrmBrowser,
+  openCrmBrowserHome,
+  reloadCrmBrowser,
+  setCrmBrowserBounds,
+  setCrmBrowserVisible
+} from './crmBrowser'
 import { initAppSettings, getAppSettings, updateAppSettings } from './appSettings'
 import { listCursorModels, listClaudeModels } from '@bpmsoft-agent/agent-runtime'
 import type { AgentProvider, CursorModelParam, ClaudeEffort, DbSettingsPatch, CrmSettingsPatch } from '../shared/types'
@@ -60,9 +69,13 @@ function createWindow(): void {
     }
   })
 
+  attachCrmBrowserHost(mainWindow)
+
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
   })
+
+  mainWindow.on('closed', () => closeCrmBrowser())
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
@@ -187,6 +200,7 @@ app.whenReady().then(() => {
     const next: CrmSettingsPatch = {}
     if (typeof patch?.crmActionsEnabled === 'boolean') next.crmActionsEnabled = patch.crmActionsEnabled
     if (typeof patch?.crmConfirmActions === 'boolean') next.crmConfirmActions = patch.crmConfirmActions
+    if (typeof patch?.crmBrowserEnabled === 'boolean') next.crmBrowserEnabled = patch.crmBrowserEnabled
     if (typeof patch?.crmUrl === 'string') next.crmUrl = patch.crmUrl
     if (typeof patch?.crmUser === 'string') next.crmUser = patch.crmUser
     updateAppSettings(next)
@@ -201,6 +215,33 @@ app.whenReady().then(() => {
   })
 
   ipcMain.handle('crm:test', () => testCrm())
+
+  // CRM browser panel: bounds of the placeholder in the renderer, visibility, the user's home button, reload.
+  ipcMain.handle('crmBrowser:setBounds', (_event, b: { x: number; y: number; width: number; height: number }) => {
+    const values = [b?.x, b?.y, b?.width, b?.height]
+    if (!values.every((value) => typeof value === 'number' && Number.isFinite(value))) {
+      return
+    }
+    setCrmBrowserBounds(b)
+  })
+
+  ipcMain.handle('crmBrowser:setVisible', (_event, visible: boolean) => {
+    setCrmBrowserVisible(visible === true)
+  })
+
+  ipcMain.handle('crmBrowser:openHome', async () => {
+    const connection = crmConnection()
+    if (!connection) {
+      throw new Error('Укажите адрес CRM, пользователя и пароль в настройках')
+    }
+    await openCrmBrowserHome(connection)
+  })
+
+  ipcMain.handle('crmBrowser:reload', () => {
+    reloadCrmBrowser()
+  })
+
+  ipcMain.handle('crmBrowser:close', () => closeCrmBrowser())
 
   ipcMain.handle('cursor:setApiKey', (_event, apiKey: string) => {
     setCursorApiKey(apiKey)

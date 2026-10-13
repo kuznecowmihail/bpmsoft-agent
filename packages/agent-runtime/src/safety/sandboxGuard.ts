@@ -36,6 +36,9 @@ export const CRM_DB_QUERY_TOOL_NAMES = new Set(["mcp__crm_db__crm_db_query", "cr
 /** CRM stand actions (update from the file system, compile + restart): change the stand, so they are not read-only; they ask the user themselves when the user enabled confirmations. */
 export const CRM_STAND_TOOL_NAMES = new Set(["mcp__crm__crm_update_from_fs", "mcp__crm__crm_compile", "crm_update_from_fs", "crm_compile"]);
 
+/** Built-in CRM browser tools: read the page in the app's own window; clicks ask the user themselves. */
+export const CRM_BROWSER_TOOL_PATTERN = /^(mcp__app__)?crm_browser_[a-z_]+$/;
+
 /** True when file path contains secrets (credentials, certificates, private keys). */
 export function isSecretFile(p: string): boolean {
 	return SECRET_FILE_PATTERN.test(p.trim());
@@ -189,6 +192,7 @@ function bashMayDestroy(command: string): boolean {
  */
 export function isAutoApprovedToolCall(toolName: string, input: Record<string, unknown>): boolean {
 	if (CRM_STAND_TOOL_NAMES.has(toolName)) { return true; }
+	if (CRM_BROWSER_TOOL_PATTERN.test(toolName)) { return true; }
 	// Bash commands need special handling: check for destructive/risky operations BEFORE
 	// isReadOnlyToolCall, which doesn't know about -delete or git state changes.
 	if (toolName === "Bash") {

@@ -1,5 +1,5 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
-import type { ProjectValidationResult, AgentProvider, AgentSettings, CursorModelOption, ClaudeModelOption, CursorModelParam, ClaudeEffort, DbSettingsPatch, CrmSettingsPatch } from '../shared/types'
+import type { ProjectValidationResult, AgentProvider, AgentSettings, CursorModelOption, ClaudeModelOption, CursorModelParam, ClaudeEffort, DbSettingsPatch, CrmSettingsPatch, CrmBrowserState } from '../shared/types'
 import type { AgentEvent } from '@bpmsoft-agent/agent-runtime'
 
 export interface AgentPermissionRequest {
@@ -35,6 +35,13 @@ export interface BpmsoftDesktopApi {
   setCrmPassword: (password: string) => Promise<void>
   clearCrmPassword: () => Promise<void>
   testCrmConnection: () => Promise<string>
+  onCrmBrowserActivity: (callback: () => void) => () => void
+  onCrmBrowserState: (callback: (state: CrmBrowserState) => void) => () => void
+  setCrmBrowserBounds: (bounds: { x: number; y: number; width: number; height: number }) => Promise<void>
+  setCrmBrowserVisible: (visible: boolean) => Promise<void>
+  openCrmBrowserHome: () => Promise<void>
+  reloadCrmBrowser: () => Promise<void>
+  closeCrmBrowser: () => Promise<void>
   openLogs: () => Promise<void>
 }
 

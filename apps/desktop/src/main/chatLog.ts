@@ -56,6 +56,18 @@ function findFilename(dir: string, base: string, ext: string): string {
   return attempt
 }
 
+/** Image blocks: base64 `data` (also inside `source`) is replaced by its size, not written to the log. */
+function stripImageData(block: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = { ...block }
+  if (typeof result.data === 'string' && result.data.length > 200) {
+    result.data = `<изображение: ${result.data.length} символов base64>`
+  }
+  if (result.source !== null && typeof result.source === 'object' && !Array.isArray(result.source)) {
+    result.source = stripImageData(result.source as Record<string, unknown>)
+  }
+  return result
+}
+
 export function truncateDeep(value: unknown): unknown {
   if (typeof value === 'string') {
     if (value.length > 20000) {
@@ -67,10 +79,11 @@ export function truncateDeep(value: unknown): unknown {
     return value.map((item) => truncateDeep(item))
   }
   if (value !== null && typeof value === 'object' && Object.prototype.toString.call(value) === '[object Object]') {
+    const source = (value as Record<string, unknown>).type === 'image' ? stripImageData(value as Record<string, unknown>) : (value as Record<string, unknown>)
     const result: Record<string, unknown> = {}
-    for (const key in value as Record<string, unknown>) {
-      if (Object.prototype.hasOwnProperty.call(value, key)) {
-        result[key] = truncateDeep((value as Record<string, unknown>)[key])
+    for (const key in source) {
+      if (Object.prototype.hasOwnProperty.call(source, key)) {
+        result[key] = truncateDeep(source[key])
       }
     }
     return result
@@ -187,6 +200,8 @@ function renderMarkdown(kind: string, data: Record<string, any>): string {
           : `⚠️ ${short(String(data.error ?? data.summary ?? ''), 300)}`
       return `- ⚙️ ${title} → ${outcome}\n`
     }
+    case 'crm_browser':
+      return `- 🌐 Браузер CRM: ${data.tool}${data.detail ? ' ' + short(String(data.detail), 120) : ''} → ${data.success ? `ok · ${data.durationMs} мс` : '⚠️ ' + short(String(data.error ?? ''), 300)}\n`
     case 'error':
       return `\n**Ошибка:** ${data.message}\n`
     case 'turn_end':

@@ -560,6 +560,18 @@ describe("sandboxGuard", () => {
 			expect(result).toBe(false);
 		});
 
+		it("returns true for the CRM browser tool exposed by the app MCP server", () => {
+			expect(isAutoApprovedToolCall("mcp__app__crm_browser_open", { path: "/x" })).toBe(true);
+		});
+
+		it("returns true for a bare CRM browser tool name (Cursor)", () => {
+			expect(isAutoApprovedToolCall("crm_browser_click", { selector: "button" })).toBe(true);
+		});
+
+		it("returns false for another tool of the app MCP server", () => {
+			expect(isAutoApprovedToolCall("mcp__app__other", {})).toBe(false);
+		});
+
 		it("returns false for Bash git checkout", () => {
 			const result = isAutoApprovedToolCall("Bash", { command: "git checkout -- a.json" });
 			expect(result).toBe(false);

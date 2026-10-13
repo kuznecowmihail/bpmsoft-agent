@@ -184,3 +184,28 @@ export function IconLayout(props: IconProps): React.JSX.Element {
     </Svg>
   )
 }
+
+export function IconGlobe(props: IconProps): React.JSX.Element {
+  return (
+    <Svg {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z" />
+    </Svg>
+  )
+}
+
+export function IconRefresh(props: IconProps): React.JSX.Element {
+  return (
+    <Svg {...props}>
+      <path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7" />
+    </Svg>
+  )
+}
+
+export function IconLogout(props: IconProps): React.JSX.Element {
+  return (
+    <Svg {...props}>
+      <path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l-5-5 5-5M5 12h11" />
+    </Svg>
+  )
+}

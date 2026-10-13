@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { IpcRendererEvent } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
-import type { ProjectValidationResult, AgentProvider, AgentSettings, CursorModelOption, ClaudeModelOption, CursorModelParam, ClaudeEffort, DbSettingsPatch, CrmSettingsPatch } from '../shared/types'
+import type { ProjectValidationResult, AgentProvider, AgentSettings, CursorModelOption, ClaudeModelOption, CursorModelParam, ClaudeEffort, DbSettingsPatch, CrmSettingsPatch, CrmBrowserState } from '../shared/types'
 import type { AgentEvent } from '@bpmsoft-agent/agent-runtime'
 
 export interface AgentPermissionRequest {
@@ -48,6 +48,22 @@ const api = {
   setCrmPassword: (password: string): Promise<void> => ipcRenderer.invoke('crm:setPassword', password),
   clearCrmPassword: (): Promise<void> => ipcRenderer.invoke('crm:clearPassword'),
   testCrmConnection: (): Promise<string> => ipcRenderer.invoke('crm:test'),
+  onCrmBrowserActivity: (callback: () => void): (() => void) => {
+    const listener = (): void => callback()
+    ipcRenderer.on('crmBrowser:activity', listener)
+    return () => ipcRenderer.removeListener('crmBrowser:activity', listener)
+  },
+  onCrmBrowserState: (callback: (state: CrmBrowserState) => void): (() => void) => {
+    const listener = (_event: IpcRendererEvent, state: CrmBrowserState): void => callback(state)
+    ipcRenderer.on('crmBrowser:state', listener)
+    return () => ipcRenderer.removeListener('crmBrowser:state', listener)
+  },
+  setCrmBrowserBounds: (bounds: { x: number; y: number; width: number; height: number }): Promise<void> =>
+    ipcRenderer.invoke('crmBrowser:setBounds', bounds),
+  setCrmBrowserVisible: (visible: boolean): Promise<void> => ipcRenderer.invoke('crmBrowser:setVisible', visible),
+  openCrmBrowserHome: (): Promise<void> => ipcRenderer.invoke('crmBrowser:openHome'),
+  reloadCrmBrowser: (): Promise<void> => ipcRenderer.invoke('crmBrowser:reload'),
+  closeCrmBrowser: (): Promise<void> => ipcRenderer.invoke('crmBrowser:close'),
   openLogs: (): Promise<void> => ipcRenderer.invoke('logs:open')
 }
 

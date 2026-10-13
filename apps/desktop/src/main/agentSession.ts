@@ -5,6 +5,7 @@ import { join } from 'path'
 import { saveSecret, loadSecret, clearSecret } from './secureStore'
 import { startChatLogIfNeeded, endChatLog, logChatRecord } from './chatLog'
 import { getAppSettings } from './appSettings'
+import { createCrmBrowserTools, markCrmBrowserStale } from './crmBrowser'
 import type { AgentProvider } from '../shared/types'
 
 /**
@@ -254,7 +255,7 @@ export async function sendAgentMessage(
   additionalDirectories?: string[],
   readRoot?: string
 ): Promise<void> {
-  const { provider, cursorModel, cursorModelParams, claudeModel, claudeEffort, dbAccessEnabled, dbConfirmQueries, crmActionsEnabled, crmConfirmActions } = getAppSettings()
+  const { provider, cursorModel, cursorModelParams, claudeModel, claudeEffort, dbAccessEnabled, dbConfirmQueries, crmActionsEnabled, crmConfirmActions, crmBrowserEnabled } = getAppSettings()
   if (provider === 'cursor' && !currentCursorApiKey) {
     throw new Error('Ключ Cursor не задан — укажите его в настройках')
   }
@@ -288,18 +289,30 @@ export async function sendAgentMessage(
         })
       : undefined
 
-  const connection = crmActionsEnabled ? crmConnection() : undefined
-  const crmTools = connection
+  const crmConn = crmActionsEnabled || crmBrowserEnabled ? crmConnection() : undefined
+  const crmTools = crmActionsEnabled && crmConn
     ? createCrmTools({
-        connection,
+        connection: crmConn,
         appRoot: readRoot,
         confirm: crmConfirmActions ? (action) => requestToolPermission({ toolName: 'crm_action', input: { action } }) : undefined,
-        onAction: (record) => logChatRecord('crm_action', { ...record })
+        onAction: (record) => {
+          logChatRecord('crm_action', { ...record })
+          if (record.action === 'update' && record.success) {
+            markCrmBrowserStale()
+          }
+        }
+      })
+    : undefined
+  const appTools = crmBrowserEnabled && crmConn
+    ? createCrmBrowserTools({
+        connection: crmConn,
+        confirm: crmConfirmActions ? (action) => requestToolPermission({ toolName: 'crm_browser_click', input: { action } }) : undefined,
+        onAction: (record) => logChatRecord('crm_browser', { ...record })
       })
     : undefined
 
   startChatLogIfNeeded({ projectPath, readRoot })
-  logChatRecord('user_message', { text: prompt, resume: currentSessionId ?? null, provider, model: provider === 'cursor' ? { id: cursorModel, params: cursorModelParams } : { id: claudeModel || null, effort: claudeEffort || null }, dbAccess: Boolean(dbTool), crmActions: Boolean(crmTools) })
+  logChatRecord('user_message', { text: prompt, resume: currentSessionId ?? null, provider, model: provider === 'cursor' ? { id: cursorModel, params: cursorModelParams } : { id: claudeModel || null, effort: claudeEffort || null }, dbAccess: Boolean(dbTool), crmActions: Boolean(crmTools), crmBrowser: Boolean(appTools) })
 
   const startedAt = Date.now()
   const events =
@@ -313,7 +326,8 @@ export async function sendAgentMessage(
           resume: currentSessionId,
           readRoot: readRoot ?? projectPath,
           dbTool,
-          crmTools
+          crmTools,
+          appTools
         })
       : runBpmsoftAgentQuery({
           apiKey: currentApiKey as string,
@@ -326,7 +340,8 @@ export async function sendAgentMessage(
           additionalDirectories,
           sandbox: { readRoots: [readRoot ?? projectPath], writeRoots: [projectPath] },
           dbTool,
-          crmTools
+          crmTools,
+          appTools
         })
 
   try {

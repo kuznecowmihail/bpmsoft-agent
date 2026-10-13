@@ -265,4 +265,38 @@ describe('chatLog', () => {
       expect(md).toContain('Компиляция и перезапуск CRM → ⚠️ Сборка не прошла')
     })
   })
+
+  describe('crm browser and images', () => {
+    it('replaces base64 image data with its size in the JSON log', () => {
+      startChatLogIfNeeded({ projectPath: '/test/proj' })
+      const data = 'A'.repeat(5000)
+      logChatRecord('agent_event', {
+        event: {
+          type: 'other',
+          raw: { type: 'user', message: { content: [{ type: 'tool_result', content: [{ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data } }] }] } }
+        }
+      })
+      logChatRecord('agent_event', { event: { type: 'other', raw: { type: 'image', data: 'B'.repeat(300), mimeType: 'image/jpeg' } } })
+
+      const jsonl = readFileSync(getCurrentChatLogPath()!, 'utf-8')
+      expect(jsonl).not.toContain('AAAAAAAAAA')
+      expect(jsonl).not.toContain('BBBBBBBBBB')
+      expect(jsonl).toContain('<изображение: 5000 символов base64>')
+      expect(jsonl).toContain('<изображение: 300 символов base64>')
+    })
+
+    it('keeps short image data unchanged', () => {
+      expect(truncateDeep({ type: 'image', data: 'short' })).toEqual({ type: 'image', data: 'short' })
+    })
+
+    it('renders CRM browser calls: success and failure', () => {
+      startChatLogIfNeeded({ projectPath: '/test/proj' })
+      logChatRecord('crm_browser', { tool: 'crm_browser_open', detail: '#SectionModuleV2/Test/', success: true, durationMs: 1234 })
+      logChatRecord('crm_browser', { tool: 'crm_browser_click', detail: 'Сохранить', success: false, durationMs: 10, error: 'Пользователь отклонил клик' })
+
+      const md = readFileSync(getCurrentChatLogPath()!.replace('.jsonl', '.md'), 'utf-8')
+      expect(md).toContain('- 🌐 Браузер CRM: crm_browser_open #SectionModuleV2/Test/ → ok · 1234 мс')
+      expect(md).toContain('- 🌐 Браузер CRM: crm_browser_click Сохранить → ⚠️ Пользователь отклонил клик')
+    })
+  })
 })

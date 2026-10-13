@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { ProjectValidationResult, AgentProvider, AgentSettings } from '../../shared/types'
 import {
   agentEventToLog,
@@ -11,6 +11,7 @@ import {
   projectName
 } from './chatFormat'
 import type { ChatEntry, LogEvent } from './chatFormat'
+import { BrowserPanel } from './components/BrowserPanel'
 import { Composer } from './components/Composer'
 import { EmptyState } from './components/EmptyState'
 import { Header } from './components/Header'
@@ -43,6 +44,9 @@ function App(): React.JSX.Element {
   const [logEvents, setLogEvents] = useState<LogEvent[]>([])
   const [logsOpen, setLogsOpen] = useState(false)
   const [composerFocusKey, setComposerFocusKey] = useState(0)
+
+  const [browserOpen, setBrowserOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
 
   const feedRef = useRef<HTMLDivElement | null>(null)
   const stickToBottomRef = useRef(true)
@@ -215,6 +219,20 @@ function App(): React.JSX.Element {
     resetChatView()
   }
 
+  const handleChangeProject = async (): Promise<void> => {
+    if (isRunning) {
+      return
+    }
+    await window.api.newChat()
+    resetChatView()
+    setBrowserOpen(false)
+    await window.api.setCrmBrowserVisible(false)
+    await window.api.closeCrmBrowser()
+    setSelectedPath(null)
+    setValidation(null)
+    setScreen('picker')
+  }
+
   const handleOpenLogsFolder = async (): Promise<void> => {
     await window.api.openLogs()
   }
@@ -225,6 +243,17 @@ function App(): React.JSX.Element {
   }
 
   const handleCloseLogs = useCallback(() => setLogsOpen(false), [])
+
+  // the agent uses the CRM browser: open its panel
+  useEffect(() => window.api.onCrmBrowserActivity(() => setBrowserOpen(true)), [])
+
+  // the panel is shown only with the CRM browser enabled; otherwise the native view must stay hidden
+  const browserPanelShown = browserOpen && Boolean(agentSettings?.crmBrowserEnabled)
+  useEffect(() => {
+    if (!browserPanelShown) {
+      void window.api.setCrmBrowserVisible(false)
+    }
+  }, [browserPanelShown])
 
   if (screen === 'picker') {
     return (
@@ -318,31 +347,40 @@ function App(): React.JSX.Element {
         onSettingsChanged={() => {
           void refreshSettings()
         }}
+        browserOpen={browserOpen}
+        onToggleBrowser={() => setBrowserOpen((value) => !value)}
+        onMenuOpenChange={setMenuOpen}
+        onChangeProject={handleChangeProject}
       />
-      <main className="main">
-        <div ref={feedRef} onScroll={handleFeedScroll} className={`feed${isEmpty ? ' is-empty' : ''}`}>
-          {isEmpty ? (
-            <EmptyState projectName={projectName(selectedPath ?? '')} onPick={handlePickSuggestion} />
-          ) : (
-            <MessageList
-              entries={visibleEntries}
-              isRunning={isRunning}
-              permissionRequests={permissionRequests}
-              onPermissionResponse={handlePermissionResponse}
-              onChoiceSubmit={(text) => {
-                void sendText(text)
-              }}
-            />
-          )}
-        </div>
-        <Composer
-          value={prompt}
-          onChange={setPrompt}
-          onSend={handleSend}
-          isRunning={isRunning}
-          focusKey={composerFocusKey}
-        />
-      </main>
+      <div className="workspace">
+        <main className="main">
+          <div ref={feedRef} onScroll={handleFeedScroll} className={`feed${isEmpty ? ' is-empty' : ''}`}>
+            {isEmpty ? (
+              <EmptyState projectName={projectName(selectedPath ?? '')} onPick={handlePickSuggestion} />
+            ) : (
+              <MessageList
+                entries={visibleEntries}
+                isRunning={isRunning}
+                permissionRequests={permissionRequests}
+                onPermissionResponse={handlePermissionResponse}
+                onChoiceSubmit={(text) => {
+                  void sendText(text)
+                }}
+              />
+            )}
+          </div>
+          <Composer
+            value={prompt}
+            onChange={setPrompt}
+            onSend={handleSend}
+            isRunning={isRunning}
+            focusKey={composerFocusKey}
+          />
+        </main>
+        {browserPanelShown && (
+          <BrowserPanel open={browserOpen} overlayOpen={menuOpen || logsOpen} onClose={() => setBrowserOpen(false)} />
+        )}
+      </div>
       {logsOpen && (
         <LogsDrawer
           events={logEvents}

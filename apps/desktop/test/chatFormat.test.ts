@@ -106,6 +106,27 @@ describe('chatFormat', () => {
     })
   })
 
+  describe('CRM browser tools', () => {
+    it('describes the browser tools in Russian, with or without the app prefix', () => {
+      expect(describeToolCall('crm_browser_open', { path: '#SectionModuleV2/Contact/' })).toBe('Открывает страницу CRM #SectionModuleV2/Contact/')
+      expect(describeToolCall('mcp__app__crm_browser_open', {})).toBe('Открывает страницу CRM')
+      expect(describeToolCall('mcp__app__crm_browser_screenshot', {})).toBe('Делает снимок страницы CRM')
+      expect(describeToolCall('crm_browser_text', {})).toBe('Читает текст страницы CRM')
+      expect(describeToolCall('crm_browser_console', {})).toBe('Смотрит консоль браузера CRM')
+      expect(describeToolCall('crm_browser_network', {})).toBe('Смотрит сетевые запросы CRM')
+    })
+
+    it('describes a click by selector or by text', () => {
+      expect(describeToolCall('crm_browser_click', { selector: '#btn' })).toBe('Нажимает в CRM #btn')
+      expect(describeToolCall('mcp__app__crm_browser_click', { text: 'Сохранить' })).toBe('Нажимает в CRM Сохранить')
+      expect(describeToolCall('crm_browser_click', {})).toBe('Нажимает в CRM')
+    })
+
+    it('shows the click action as the permission subject', () => {
+      expect(permissionSubject('crm_browser_click', { action: 'Клик в CRM: «Сохранить»' })).toBe('Клик в CRM: «Сохранить»')
+    })
+  })
+
   describe('permissionSubject', () => {
     it('returns sql for the CRM database tool under both names', () => {
       expect(permissionSubject('crm_db_query', { sql: 'SELECT 1' })).toBe('SELECT 1')

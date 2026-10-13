@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { AgentProvider, AgentSettings } from '../../../shared/types'
 import { projectName } from '../chatFormat'
-import { IconFolder, IconLogo, IconPlus, IconSettings, IconTerminal } from './icons'
+import { IconFolder, IconGlobe, IconLogo, IconLogout, IconPlus, IconSettings, IconTerminal } from './icons'
 import { SettingsMenu } from './SettingsMenu'
 
 interface HeaderProps {
@@ -19,6 +19,13 @@ interface HeaderProps {
   onSettingsChanged: () => void
   /** Opened application folder: the root for the CRM database connection check. */
   appRoot?: string
+  /** CRM browser panel is open. */
+  browserOpen: boolean
+  onToggleBrowser: () => void
+  /** Reports the settings popover state, so the native CRM browser view can step aside. */
+  onMenuOpenChange?: (open: boolean) => void
+  /** Returns to the project picker. */
+  onChangeProject: () => void
 }
 
 type BadgeStatus = { state: 'checking' | 'ok' | 'error'; text: string }
@@ -100,11 +107,19 @@ export function Header({
   settings,
   onProviderChange,
   onSettingsChanged,
-  appRoot
+  appRoot,
+  browserOpen,
+  onToggleBrowser,
+  onMenuOpenChange,
+  onChangeProject
 }: HeaderProps): React.JSX.Element {
   const [menuOpen, setMenuOpen] = useState(false)
   const [copied, setCopied] = useState(false)
   const menuRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    onMenuOpenChange?.(menuOpen)
+  }, [menuOpen])
 
   useEffect(() => {
     if (!menuOpen) {
@@ -164,27 +179,55 @@ export function Header({
             {settings && (
               <StatusBadge
                 label="CRM"
-                enabled={Boolean(settings.crmActionsEnabled && settings.crmUrl && settings.crmUser && settings.hasCrmPassword)}
-                offTitle={settings.crmActionsEnabled ? 'CRM: укажите адрес, пользователя и пароль в настройках' : 'Действия агента в CRM выключены — включаются в настройках'}
+                enabled={Boolean((settings.crmActionsEnabled || settings.crmBrowserEnabled) && settings.crmUrl && settings.crmUser && settings.hasCrmPassword)}
+                offTitle={
+                  settings.crmActionsEnabled || settings.crmBrowserEnabled
+                    ? 'CRM: укажите адрес, пользователя и пароль в настройках'
+                    : 'Действия агента в CRM и браузер выключены — включаются в настройках'
+                }
                 deps={[settings.crmUrl, settings.crmUser, settings.hasCrmPassword]}
                 check={() => window.api.testCrmConnection()}
               />
             )}
           </span>
-          <button
-            type="button"
-            className="project-chip"
-            title={`${projectPath}\nНажмите, чтобы скопировать путь`}
-            onClick={handleCopyPath}
-          >
-            <IconFolder size={12} />
-            <span className="project-name">{projectName(projectPath)}</span>
-            {(copied || projectKind) && <span className="project-kind">· {copied ? 'путь скопирован' : projectKind}</span>}
-          </button>
+          <div className="project-row">
+            <button
+              type="button"
+              className="project-chip"
+              title={`${projectPath}\nНажмите, чтобы скопировать путь`}
+              onClick={handleCopyPath}
+            >
+              <IconFolder size={12} />
+              <span className="project-name">{projectName(projectPath)}</span>
+              {(copied || projectKind) && <span className="project-kind">· {copied ? 'путь скопирован' : projectKind}</span>}
+            </button>
+            <button
+              type="button"
+              className="btn btn-ghost btn-icon btn-sm project-switch"
+              onClick={onChangeProject}
+              disabled={isRunning}
+              title={isRunning ? 'Дождитесь окончания ответа агента' : 'Сменить проект — вернуться к выбору папки'}
+              aria-label="Сменить проект"
+            >
+              <IconLogout size={13} />
+            </button>
+          </div>
         </div>
       </div>
 
       <div className="header-actions">
+        {settings?.crmBrowserEnabled && (
+          <button
+            type="button"
+            className={`btn btn-ghost btn-icon${browserOpen ? ' is-active' : ''}`}
+            onClick={onToggleBrowser}
+            title="Браузер CRM"
+            aria-label="Браузер CRM"
+            aria-pressed={browserOpen}
+          >
+            <IconGlobe size={16} />
+          </button>
+        )}
         <button type="button" className="btn btn-ghost" onClick={onOpenLogs} title="Логи сессии">
           <IconTerminal size={14} />
           <span className="btn-label">Логи</span>

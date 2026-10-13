@@ -202,6 +202,22 @@ describe("cursorProvider", () => {
 		});
 	});
 
+	describe("normalizeCursorToolCall (CRM browser tools)", () => {
+		it("maps a direct crm_browser_open custom tool call", () => {
+			expect(normalizeCursorToolCall("crm_browser_open", { path: "/x" })).toEqual({
+				name: "crm_browser_open",
+				input: { path: "/x" }
+			});
+		});
+
+		it("maps an MCP-wrapped crm_browser_text call with nested args", () => {
+			expect(normalizeCursorToolCall("mcp", { toolName: "crm_browser_text", args: { selector: "h1" } })).toEqual({
+				name: "crm_browser_text",
+				input: { selector: "h1" }
+			});
+		});
+	});
+
 	describe("mapCursorMessage", () => {
 		const seenCalls = new Set<string>();
 

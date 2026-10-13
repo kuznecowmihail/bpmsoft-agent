@@ -571,22 +571,35 @@ export function SettingsMenu({
             label="Действия агента в CRM"
           />
         </div>
+        <div className="popover-row">
+          <div>
+            <div className="popover-row-title">Встроенный браузер CRM</div>
+            <div className="popover-row-hint">Агент открывает страницы CRM в панели справа (кнопка с глобусом): текст, снимок, консоль, сеть; клики — с разрешения, если включено подтверждение</div>
+          </div>
+          <Toggle
+            checked={Boolean(settings?.crmBrowserEnabled)}
+            onChange={(value) => saveCrmSettings({ crmBrowserEnabled: value })}
+            label="Встроенный браузер CRM"
+          />
+        </div>
         {crmError && <div className="popover-error">{crmError}</div>}
-        {settings?.crmActionsEnabled && (
+        {(settings?.crmActionsEnabled || settings?.crmBrowserEnabled) && (
           <>
-            <div className="popover-field">
-              <div className="popover-row">
-                <div>
-                  <div className="popover-row-title">Спрашивать перед каждым действием</div>
-                  <div className="popover-row-hint">Показывать действие и ждать вашего разрешения</div>
+            {(settings?.crmActionsEnabled || settings?.crmBrowserEnabled) && (
+              <div className="popover-field">
+                <div className="popover-row">
+                  <div>
+                    <div className="popover-row-title">Спрашивать перед каждым действием</div>
+                    <div className="popover-row-hint">Обновление, компиляция и клики в браузере — показывать и ждать вашего разрешения</div>
+                  </div>
+                  <Toggle
+                    checked={Boolean(settings?.crmConfirmActions)}
+                    onChange={(value) => saveCrmSettings({ crmConfirmActions: value })}
+                    label="Спрашивать перед каждым действием"
+                  />
                 </div>
-                <Toggle
-                  checked={Boolean(settings?.crmConfirmActions)}
-                  onChange={(value) => saveCrmSettings({ crmConfirmActions: value })}
-                  label="Спрашивать перед каждым действием"
-                />
               </div>
-            </div>
+            )}
             <div className="popover-field">
               <div className="popover-field-label">Адрес CRM и пользователь</div>
               <div className="popover-inline popover-inline-2">

@@ -5,6 +5,8 @@ import type { AgentEvent } from "./messageMapper";
 import { buildBpmsoftSystemPrompt } from "./systemPrompt";
 import type { CrmDbTool } from "../db/crmDbTool";
 import type { CrmTool } from "../crm/crmTools";
+import type { AppTool } from "../tools/appTool";
+import { appToolContent, appToolJsonSchema } from "../tools/appTool";
 
 export interface CursorModelParam {
 	id: string;
@@ -38,6 +40,8 @@ export interface RunCursorAgentQueryOptions {
 	dbTool?: CrmDbTool;
 	/** CRM stand actions (update from the file system, compile), exposed to Cursor as custom tools; omit when the user has not enabled them. */
 	crmTools?: CrmTool[];
+	/** Tools of the host app (built-in CRM browser and others), exposed to Cursor as custom tools; omit when none. */
+	appTools?: AppTool[];
 }
 
 /** Tools never offered to the Cursor agent: network, MCP, image generation. */
@@ -116,8 +120,54 @@ function cursorCrmTool(crmTool: CrmTool): SDKCustomTool {
 	};
 }
 
+/** A host-app tool in Cursor's custom-tool shape (parameters from its JSON Schema). */
+function cursorAppTool(appTool: AppTool): SDKCustomTool {
+	return {
+		description: appTool.description,
+		inputSchema: appToolJsonSchema(appTool) as SDKCustomTool["inputSchema"],
+		execute: async (args) => {
+			const result = await appTool.execute(args as Record<string, unknown>);
+			return { content: appToolContent(result), isError: result.isError };
+		}
+	};
+}
+
+/**
+ * Arguments of a crm_browser_* call wrapped by MCP: the first of args / arguments / input / toolArgs
+ * that is an object, or a JSON string of one; empty object otherwise.
+ */
+function wrappedToolArguments(args: unknown): Record<string, unknown> {
+	const r = record(args);
+	for (const key of ["args", "arguments", "input", "toolArgs"]) {
+		const value = r[key];
+		if (value && typeof value === "object") {
+			return value as Record<string, unknown>;
+		}
+		if (typeof value === "string") {
+			try {
+				const parsed: unknown = JSON.parse(value);
+				if (parsed && typeof parsed === "object") {
+					return parsed as Record<string, unknown>;
+				}
+			} catch {
+				// not JSON — keep looking
+			}
+		}
+	}
+	return {};
+}
+
 /** Maps a Cursor tool call to the Claude-style name and input the desktop UI already understands. */
 export function normalizeCursorToolCall(name: string, args: unknown): { name: string; input: Record<string, unknown> } {
+	if (/^crm_browser_[a-z_]+$/.test(name)) {
+		return { name, input: record(args) };
+	}
+	if (/mcp/i.test(name)) {
+		const browserTool = /crm_browser_[a-z_]+/.exec(JSON.stringify(args ?? null));
+		if (browserTool) {
+			return { name: browserTool[0], input: wrappedToolArguments(args) };
+		}
+	}
 	for (const toolName of ["crm_update_from_fs", "crm_compile"]) {
 		if (name === toolName || (/mcp/i.test(name) && JSON.stringify(args ?? null).includes(toolName))) {
 			return { name: toolName, input: {} };
@@ -397,13 +447,16 @@ export async function listCursorModels(apiKey: string): Promise<CursorModelOptio
 
 async function* runCursorAgentQueryUnsafe(options: RunCursorAgentQueryOptions): AsyncGenerator<AgentEvent, void> {
 	const knowledgeDir = knowledgeDirectory();
-	const useCustomTools = Boolean(options.dbTool) || Boolean(options.crmTools?.length);
+	const useCustomTools = Boolean(options.dbTool) || Boolean(options.crmTools?.length) || Boolean(options.appTools?.length);
 	const customTools: Record<string, SDKCustomTool> = {};
 	if (options.dbTool) {
 		customTools[options.dbTool.name] = cursorDbTool(options.dbTool);
 	}
 	for (const crmTool of options.crmTools ?? []) {
 		customTools[crmTool.name] = cursorCrmTool(crmTool);
+	}
+	for (const appTool of options.appTools ?? []) {
+		customTools[appTool.name] = cursorAppTool(appTool);
 	}
 	const agentOptions: AgentOptions = {
 		apiKey: options.apiKey,
@@ -427,7 +480,7 @@ async function* runCursorAgentQueryUnsafe(options: RunCursorAgentQueryOptions): 
 		const message = options.resume
 			? buildCursorFollowUpMessage(options.prompt)
 			: buildCursorFirstMessage(
-					buildBpmsoftSystemPrompt(knowledgeDir, { dbQuery: Boolean(options.dbTool), crmActions: Boolean(options.crmTools?.length) }),
+					buildBpmsoftSystemPrompt(knowledgeDir, { dbQuery: Boolean(options.dbTool), crmActions: Boolean(options.crmTools?.length), crmBrowser: Boolean(options.appTools?.some((t) => t.name.startsWith("crm_browser_"))) }),
 					buildCursorSafetyRules(options.readRoot ?? options.cwd, options.cwd, knowledgeDir),
 					options.prompt
 				);

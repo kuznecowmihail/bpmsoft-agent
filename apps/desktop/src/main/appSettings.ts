@@ -17,11 +17,12 @@ export interface StoredSettings {
   dbUser: string
   crmActionsEnabled: boolean
   crmConfirmActions: boolean
+  crmBrowserEnabled: boolean
   crmUrl: string
   crmUser: string
 }
 
-export const DEFAULT_SETTINGS: StoredSettings = { provider: 'claude', cursorModel: 'composer-2.5', cursorModelParams: [], cursorModelName: '', claudeModel: '', claudeEffort: '', claudeModelName: '', dbAccessEnabled: false, dbConfirmQueries: false, dbHost: '', dbPort: '', dbUser: '', crmActionsEnabled: false, crmConfirmActions: false, crmUrl: '', crmUser: '' }
+export const DEFAULT_SETTINGS: StoredSettings = { provider: 'claude', cursorModel: 'composer-2.5', cursorModelParams: [], cursorModelName: '', claudeModel: '', claudeEffort: '', claudeModelName: '', dbAccessEnabled: false, dbConfirmQueries: false, dbHost: '', dbPort: '', dbUser: '', crmActionsEnabled: false, crmConfirmActions: false, crmBrowserEnabled: false, crmUrl: '', crmUser: '' }
 
 let settingsPath: string | undefined
 let cache: StoredSettings = { ...DEFAULT_SETTINGS }
@@ -53,6 +54,7 @@ function normalize(value: unknown): StoredSettings {
     dbUser: typeof raw.dbUser === 'string' ? raw.dbUser.trim() : '',
     crmActionsEnabled: raw.crmActionsEnabled === true,
     crmConfirmActions: raw.crmConfirmActions === true,
+    crmBrowserEnabled: raw.crmBrowserEnabled === true,
     crmUrl: /^https?:\/\/[^\s]+$/i.test(crmUrl) ? crmUrl : '',
     crmUser: typeof raw.crmUser === 'string' ? raw.crmUser.trim() : ''
   }

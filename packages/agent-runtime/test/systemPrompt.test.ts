@@ -29,9 +29,38 @@ describe("buildBpmsoftSystemPrompt", () => {
 		expect(prompt).not.toContain("crm_update_from_fs");
 	});
 
-	it("contains no backtick characters in either variant", () => {
+	it("adds the CRM browser section when crmBrowser is enabled", () => {
+		const prompt = buildBpmsoftSystemPrompt("/kn", { crmBrowser: true });
+		expect(prompt).toContain("БРАУЗЕР CRM");
+		expect(prompt).toContain("crm_browser_open");
+	});
+
+	it("does not mention the CRM browser by default", () => {
+		const prompt = buildBpmsoftSystemPrompt("/kn");
+		expect(prompt).not.toContain("БРАУЗЕР CRM");
+		expect(prompt).not.toContain("crm_browser_");
+	});
+
+	it("asks the user to verify the implementation in the browser when crmBrowser is enabled", () => {
+		const prompt = buildBpmsoftSystemPrompt("/kn", { crmBrowser: true });
+		expect(prompt).toContain("Проверить реализацию в браузере?");
+		expect(prompt).toContain("Проверь сам");
+	});
+
+	it("points the agent to browser-check.md when crmBrowser is enabled", () => {
+		const prompt = buildBpmsoftSystemPrompt("/kn", { crmBrowser: true });
+		expect(prompt).toContain("browser-check.md");
+	});
+
+	it("lists browser-check.md in the knowledge index by default", () => {
+		const prompt = buildBpmsoftSystemPrompt("/kn");
+		expect(prompt).toContain("browser-check.md");
+	});
+
+	it("contains no backtick characters in any variant", () => {
 		expect(buildBpmsoftSystemPrompt("/kn")).not.toContain("`");
 		expect(buildBpmsoftSystemPrompt("/kn", { dbQuery: true })).not.toContain("`");
 		expect(buildBpmsoftSystemPrompt("/kn", { crmActions: true })).not.toContain("`");
+		expect(buildBpmsoftSystemPrompt("/kn", { crmBrowser: true })).not.toContain("`");
 	});
 });
