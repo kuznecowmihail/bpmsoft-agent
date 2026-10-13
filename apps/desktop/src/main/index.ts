@@ -37,8 +37,15 @@ import {
   setCrmBrowserVisible
 } from './crmBrowser'
 import { initAppSettings, getAppSettings, updateAppSettings } from './appSettings'
+import { loadLoginShellPath } from './shellPath'
 import { listCursorModels, listClaudeModels } from '@bpmsoft-agent/agent-runtime'
 import type { AgentProvider, CursorModelParam, ClaudeEffort, DbSettingsPatch, CrmSettingsPatch } from '../shared/types'
+
+if (app.isPackaged) loadLoginShellPath()
+
+// Cursor SDK looks for its platform binaries (sandbox, ripgrep, tree-sitter) in node_modules
+// above process.argv[1]; a packaged app has no script argument, so point it at this bundle.
+if (app.isPackaged) process.argv.splice(1, 0, __filename)
 
 function resolveChatLogDir(): string {
   const override = process.env['BPMSOFT_AGENT_LOG_DIR']
@@ -154,6 +161,7 @@ app.whenReady().then(() => {
 
   ipcMain.handle('settings:get', () => ({
     ...getAppSettings(),
+    platform: process.platform,
     hasClaudeKey: hasApiKey(),
     hasCursorKey: hasCursorApiKey(),
     hasDbPassword: hasDbPassword(),
@@ -174,6 +182,12 @@ app.whenReady().then(() => {
 
   ipcMain.handle('settings:setClaudeModel', (_event, model: { id: string; effort?: ClaudeEffort; name?: string }) => {
     updateAppSettings({ claudeModel: model.id, claudeEffort: model.effort ?? '', claudeModelName: model.name ?? '' })
+  })
+
+  ipcMain.handle('settings:setCursorUnsandboxed', (_event, value: boolean) => {
+    if (typeof value !== 'boolean') return
+    updateAppSettings({ cursorUnsandboxed: value })
+    resetAgentSession()
   })
 
   ipcMain.handle('settings:setDb', (_event, patch: DbSettingsPatch) => {

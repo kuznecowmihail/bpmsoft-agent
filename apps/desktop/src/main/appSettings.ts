@@ -7,6 +7,7 @@ export interface StoredSettings {
   cursorModel: string
   cursorModelParams: CursorModelParam[]
   cursorModelName: string
+  cursorUnsandboxed: boolean
   claudeModel: string
   claudeEffort: ClaudeEffort | ''
   claudeModelName: string
@@ -22,7 +23,7 @@ export interface StoredSettings {
   crmUser: string
 }
 
-export const DEFAULT_SETTINGS: StoredSettings = { provider: 'claude', cursorModel: 'composer-2.5', cursorModelParams: [], cursorModelName: '', claudeModel: '', claudeEffort: '', claudeModelName: '', dbAccessEnabled: false, dbConfirmQueries: false, dbHost: '', dbPort: '', dbUser: '', crmActionsEnabled: false, crmConfirmActions: false, crmBrowserEnabled: false, crmUrl: '', crmUser: '' }
+export const DEFAULT_SETTINGS: StoredSettings = { provider: 'claude', cursorModel: 'composer-2.5', cursorModelParams: [], cursorModelName: '', cursorUnsandboxed: false, claudeModel: '', claudeEffort: '', claudeModelName: '', dbAccessEnabled: false, dbConfirmQueries: false, dbHost: '', dbPort: '', dbUser: '', crmActionsEnabled: false, crmConfirmActions: false, crmBrowserEnabled: false, crmUrl: '', crmUser: '' }
 
 let settingsPath: string | undefined
 let cache: StoredSettings = { ...DEFAULT_SETTINGS }
@@ -44,6 +45,7 @@ function normalize(value: unknown): StoredSettings {
     cursorModel: typeof raw.cursorModel === 'string' && raw.cursorModel.trim() ? raw.cursorModel : DEFAULT_SETTINGS.cursorModel,
     cursorModelParams: params,
     cursorModelName: typeof raw.cursorModelName === 'string' ? raw.cursorModelName : '',
+    cursorUnsandboxed: raw.cursorUnsandboxed === true,
     claudeModel: typeof raw.claudeModel === 'string' ? raw.claudeModel.trim() : '',
     claudeEffort,
     claudeModelName: typeof raw.claudeModelName === 'string' ? raw.claudeModelName : '',

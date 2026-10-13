@@ -43,6 +43,10 @@ export interface AgentSettings {
 	cursorModel: string
 	cursorModelParams: CursorModelParam[]
 	cursorModelName: string
+	/** Windows only: run Cursor without its local sandbox (the Cursor SDK has none there). */
+	cursorUnsandboxed: boolean
+	/** process.platform of the main process. */
+	platform: string
 	/** Claude model id; '' = SDK default. */
 	claudeModel: string
 	claudeEffort: ClaudeEffort | ''

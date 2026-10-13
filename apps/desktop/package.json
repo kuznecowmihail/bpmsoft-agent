@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "description": "BPMSoft AI Agent — Electron desktop shell",
+  "author": "bpmsoft-agent",
   "main": "./out/main/index.js",
   "scripts": {
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
@@ -10,7 +11,10 @@
     "typecheck": "npm run typecheck:node && npm run typecheck:web",
     "dev": "electron-vite dev",
     "build": "npm run typecheck && electron-vite build",
-    "test": "vitest run"
+    "test": "vitest run",
+    "dist": "npm run build && electron-builder --publish never",
+    "dist:mac": "npm run build && node ../../scripts/fetch-platform-packages.mjs darwin arm64 darwin x64 && electron-builder --mac --arm64 --x64 --publish never",
+    "dist:win": "npm run build && node ../../scripts/fetch-platform-packages.mjs win32 x64 && electron-builder --win --x64 --publish never"
   },
   "dependencies": {
     "@bpmsoft-agent/agent-runtime": "0.0.1",
@@ -26,7 +30,8 @@
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
-    "electron": "^39.2.6",
+    "electron": "39.8.10",
+    "electron-builder": "^26.15.3",
     "electron-vite": "^5.0.0",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",

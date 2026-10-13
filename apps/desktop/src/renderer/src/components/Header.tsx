@@ -13,7 +13,6 @@ interface HeaderProps {
   onNewChat: () => void
   onOpenLogs: () => void
   onOpenLogsFolder: () => void
-  onChangeApiKey: () => void
   settings: AgentSettings | null
   onProviderChange: (provider: AgentProvider) => void
   onSettingsChanged: () => void
@@ -103,7 +102,6 @@ export function Header({
   onNewChat,
   onOpenLogs,
   onOpenLogsFolder,
-  onChangeApiKey,
   settings,
   onProviderChange,
   onSettingsChanged,
@@ -268,7 +266,6 @@ export function Header({
                       setMenuOpen(false)
                       onProviderChange(provider)
                     }}
-                    onChangeClaudeKey={onChangeApiKey}
                     onSettingsChanged={onSettingsChanged}
                     onOpenLogsFolder={onOpenLogsFolder}
                     appRoot={appRoot}

@@ -20,15 +20,13 @@ import { MessageList } from './components/MessageList'
 import type { PermissionRequestEntry } from './components/MessageList'
 import { IconAlert, IconFolder, IconLogo } from './components/icons'
 
-type Screen = 'picker' | 'apiKey' | 'chat'
+type Screen = 'picker' | 'chat'
 
 function App(): React.JSX.Element {
   const [screen, setScreen] = useState<Screen>('picker')
   const [selectedPath, setSelectedPath] = useState<string | null>(null)
   const [validation, setValidation] = useState<ProjectValidationResult | null>(null)
   const [isChecking, setIsChecking] = useState(false)
-
-  const [apiKeyInput, setApiKeyInput] = useState('')
 
   const [agentSettings, setAgentSettings] = useState<AgentSettings | null>(null)
 
@@ -104,34 +102,13 @@ function App(): React.JSX.Element {
       const result = await window.api.validateProject(projectPath)
       setValidation(result)
       if (result.isValid) {
-        const settings = await refreshSettings()
-        if (settings.provider === 'claude' && !settings.hasClaudeKey) {
-          setScreen('apiKey')
-        } else {
-          subscribeToAgent()
-          setScreen('chat')
-        }
+        await refreshSettings()
+        subscribeToAgent()
+        setScreen('chat')
       }
     } finally {
       setIsChecking(false)
     }
-  }
-
-  const handleSubmitApiKey = async (): Promise<void> => {
-    if (!apiKeyInput.trim()) {
-      return
-    }
-    await window.api.setApiKey(apiKeyInput.trim())
-    setApiKeyInput('')
-    await refreshSettings()
-    subscribeToAgent()
-    setScreen('chat')
-  }
-
-  const handleChangeApiKey = async (): Promise<void> => {
-    await window.api.clearApiKey()
-    await refreshSettings()
-    setScreen('apiKey')
   }
 
   const handlePermissionResponse = async (id: string, approved: boolean): Promise<void> => {
@@ -196,19 +173,8 @@ function App(): React.JSX.Element {
       return
     }
     await window.api.setProvider(provider)
-    const settings = await refreshSettings()
-    resetChatView()
-    if (provider === 'claude' && !settings.hasClaudeKey) {
-      setScreen('apiKey')
-    }
-  }
-
-  const handleUseCursor = async (): Promise<void> => {
-    await window.api.setProvider('cursor')
     await refreshSettings()
     resetChatView()
-    subscribeToAgent()
-    setScreen('chat')
   }
 
   const handleNewChat = async (): Promise<void> => {
@@ -282,50 +248,6 @@ function App(): React.JSX.Element {
     )
   }
 
-  if (screen === 'apiKey') {
-    return (
-      <div className="screen">
-        <div className="screen-drag" />
-        <div className="screen-body">
-          <div className="card">
-            <div className="logo-lg">
-              <IconLogo size={24} />
-            </div>
-            <h1>Ключ Anthropic API</h1>
-            <p>
-              Проект: <b title={selectedPath ?? ''}>{projectName(selectedPath ?? '')}</b>. Ключ хранится локально в
-              защищённом хранилище ОС (Keychain).
-            </p>
-            <input
-              className="input"
-              type="password"
-              value={apiKeyInput}
-              onChange={(event) => setApiKeyInput(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') {
-                  handleSubmitApiKey()
-                }
-              }}
-              placeholder="sk-ant-…"
-              autoFocus
-            />
-            <button
-              type="button"
-              className="btn btn-primary btn-lg btn-block"
-              onClick={handleSubmitApiKey}
-              disabled={!apiKeyInput.trim()}
-            >
-              Продолжить
-            </button>
-            <button type="button" className="btn btn-ghost btn-block" onClick={handleUseCursor}>
-              Использовать Cursor вместо Claude
-            </button>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
   const visibleEntries = entries.filter((entry) => isEntryVisible(entry, showDebug))
   const isEmpty = visibleEntries.length === 0 && permissionRequests.length === 0 && !isRunning
 
@@ -341,7 +263,6 @@ function App(): React.JSX.Element {
         onNewChat={handleNewChat}
         onOpenLogs={() => setLogsOpen(true)}
         onOpenLogsFolder={handleOpenLogsFolder}
-        onChangeApiKey={handleChangeApiKey}
         settings={agentSettings}
         onProviderChange={handleProviderChange}
         onSettingsChanged={() => {

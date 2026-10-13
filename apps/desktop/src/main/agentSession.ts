@@ -255,12 +255,17 @@ export async function sendAgentMessage(
   additionalDirectories?: string[],
   readRoot?: string
 ): Promise<void> {
-  const { provider, cursorModel, cursorModelParams, claudeModel, claudeEffort, dbAccessEnabled, dbConfirmQueries, crmActionsEnabled, crmConfirmActions, crmBrowserEnabled } = getAppSettings()
+  const { provider, cursorModel, cursorModelParams, cursorUnsandboxed, claudeModel, claudeEffort, dbAccessEnabled, dbConfirmQueries, crmActionsEnabled, crmConfirmActions, crmBrowserEnabled } = getAppSettings()
   if (provider === 'cursor' && !currentCursorApiKey) {
     throw new Error('Ключ Cursor не задан — укажите его в настройках')
   }
   if (provider === 'claude' && !currentApiKey) {
-    throw new Error('API-ключ Anthropic не задан — вызовите setApiKey перед отправкой сообщения')
+    throw new Error('API-ключ Anthropic не задан — укажите его в настройках')
+  }
+  // The Cursor SDK has no filesystem sandbox on Windows: run without it only when the user allowed that.
+  const cursorSandboxed = process.platform !== 'win32'
+  if (provider === 'cursor' && !cursorSandboxed && !cursorUnsandboxed) {
+    throw new Error('Cursor на Windows работает без песочницы: запись вне Pkg ограничена только правилами для модели. Включите «Разрешить Cursor без песочницы» в настройках или выберите Claude')
   }
 
   if (
@@ -312,7 +317,7 @@ export async function sendAgentMessage(
     : undefined
 
   startChatLogIfNeeded({ projectPath, readRoot })
-  logChatRecord('user_message', { text: prompt, resume: currentSessionId ?? null, provider, model: provider === 'cursor' ? { id: cursorModel, params: cursorModelParams } : { id: claudeModel || null, effort: claudeEffort || null }, dbAccess: Boolean(dbTool), crmActions: Boolean(crmTools), crmBrowser: Boolean(appTools) })
+  logChatRecord('user_message', { text: prompt, resume: currentSessionId ?? null, provider, model: provider === 'cursor' ? { id: cursorModel, params: cursorModelParams } : { id: claudeModel || null, effort: claudeEffort || null }, dbAccess: Boolean(dbTool), crmActions: Boolean(crmTools), crmBrowser: Boolean(appTools), cursorSandbox: provider === 'cursor' ? cursorSandboxed : undefined })
 
   const startedAt = Date.now()
   const events =
@@ -325,6 +330,7 @@ export async function sendAgentMessage(
           modelParams: cursorModelParams,
           resume: currentSessionId,
           readRoot: readRoot ?? projectPath,
+          sandbox: cursorSandboxed,
           dbTool,
           crmTools,
           appTools

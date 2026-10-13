@@ -36,6 +36,11 @@ export interface RunCursorAgentQueryOptions {
 	resume?: string;
 	/** Opened application folder: the agent is told to read only here and in the knowledge directory. */
 	readRoot?: string;
+	/**
+	 * Cursor's local sandbox (writes only in `cwd`); default true. False on Windows, where the
+	 * Cursor SDK has no filesystem sandbox — then only the safety rules in the prompt limit writes.
+	 */
+	sandbox?: boolean;
 	/** Read-only CRM database tool, exposed to Cursor as a custom tool; omit when database access is off. */
 	dbTool?: CrmDbTool;
 	/** CRM stand actions (update from the file system, compile), exposed to Cursor as custom tools; omit when the user has not enabled them. */
@@ -61,12 +66,14 @@ function record(value: unknown): Record<string, unknown> {
  * Rules the Cursor agent must follow itself: unlike the Claude provider there is
  * no per-action approval callback and reads are not sandboxed.
  */
-export function buildCursorSafetyRules(readRoot: string, writeRoot: string, knowledgeDir: string): string {
+export function buildCursorSafetyRules(readRoot: string, writeRoot: string, knowledgeDir: string, sandboxed = true): string {
 	return [
 		"РЕЖИМ CURSOR. Приложение не может спрашивать у пользователя разрешение на отдельные действия, поэтому соблюдай правила сам:",
 		"- Порядок работы из инструкций обязателен, даже если задача кажется простой: 1) пакет — если пользователь не назвал пакет, а в Pkg их несколько, сначала спроси, в каком пакете работать, и не выбирай за него, даже если найдёшь подходящие схемы; 2) вопросы по требованиям с вариантами ответов; 3) план с AC/CC/DoD и остановка до подтверждения пользователя. Только после этого — изменения файлов.",
 		`- Читай только папку приложения ${readRoot} и каталог знаний ${knowledgeDir}. Файлы вне них не открывай и не ищи.`,
-		`- Изменяй файлы только в ${writeRoot} (запись дополнительно ограничена песочницей).`,
+		sandboxed
+			? `- Изменяй файлы только в ${writeRoot} (запись дополнительно ограничена песочницей).`
+			: `- Изменяй файлы только в ${writeRoot}. Песочницы в этой среде нет, поэтому правило — на тебе: не создавай, не меняй и не удаляй файлы вне этой папки, не запускай команды, которые пишут за её пределы (перенаправление вывода, cp, mv, редакторы, скрипты с путями вне неё), даже во временные папки.`,
 		"- Не читай файлы с секретами: ConnectionStrings.config, *.pfx, *.p12, *.pem, *.key — даже внутри папки приложения. Тип СУБД бери из DBEngineType существующих SQL-скриптов в Pkg; если их нет — спроси у пользователя.",
 		"- Удаление файлов и папок, перемещение с перезаписью и команды git, меняющие состояние (checkout, reset, restore, stash, add, commit и т.п.), — только после явного согласия пользователя в чате: перечисли, что удалишь или изменишь, и дождись ответа.",
 		`- Инструмент удаления файлов (Delete) в этой среде не работает: после согласия пользователя удаляй командой rm в терминале и только внутри ${writeRoot}.`,
@@ -447,6 +454,7 @@ export async function listCursorModels(apiKey: string): Promise<CursorModelOptio
 
 async function* runCursorAgentQueryUnsafe(options: RunCursorAgentQueryOptions): AsyncGenerator<AgentEvent, void> {
 	const knowledgeDir = knowledgeDirectory();
+	const sandboxed = options.sandbox !== false;
 	const useCustomTools = Boolean(options.dbTool) || Boolean(options.crmTools?.length) || Boolean(options.appTools?.length);
 	const customTools: Record<string, SDKCustomTool> = {};
 	if (options.dbTool) {
@@ -466,7 +474,7 @@ async function* runCursorAgentQueryUnsafe(options: RunCursorAgentQueryOptions): 
 			cwd: options.cwd,
 			// Isolation from the developer's own Cursor setup (rules, hooks, plugins).
 			settingSources: [] as never[],
-			sandboxOptions: { enabled: true },
+			sandboxOptions: { enabled: sandboxed },
 			// Custom tools run in this process (not in Cursor's sandbox); settingSources: [] keeps the user's own MCP servers out.
 			customTools: Object.keys(customTools).length > 0 ? customTools : undefined
 		}
@@ -481,7 +489,7 @@ async function* runCursorAgentQueryUnsafe(options: RunCursorAgentQueryOptions): 
 			? buildCursorFollowUpMessage(options.prompt)
 			: buildCursorFirstMessage(
 					buildBpmsoftSystemPrompt(knowledgeDir, { dbQuery: Boolean(options.dbTool), crmActions: Boolean(options.crmTools?.length), crmBrowser: Boolean(options.appTools?.some((t) => t.name.startsWith("crm_browser_"))) }),
-					buildCursorSafetyRules(options.readRoot ?? options.cwd, options.cwd, knowledgeDir),
+					buildCursorSafetyRules(options.readRoot ?? options.cwd, options.cwd, knowledgeDir, sandboxed),
 					options.prompt
 				);
 		let finished = false;
@@ -547,7 +555,7 @@ async function* runCursorAgentQueryUnsafe(options: RunCursorAgentQueryOptions): 
 /**
  * Runs one turn of the BPMSoft agent through the Cursor SDK (local agent on the
  * user's machine) and yields the same AgentEvents as `runBpmsoftAgentQuery`.
- * Writes are limited to `cwd` (Pkg) by Cursor's sandbox; the remaining rules are
+ * Writes are limited to `cwd` (Pkg) by Cursor's sandbox unless `sandbox` is false; the remaining rules are
  * passed to the model in the first message (see `buildCursorSafetyRules`).
  */
 export async function* runCursorAgentQuery(options: RunCursorAgentQueryOptions): AsyncGenerator<AgentEvent, void> {

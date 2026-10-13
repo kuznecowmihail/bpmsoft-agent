@@ -9,7 +9,6 @@ interface SettingsMenuProps {
   showDebug: boolean
   onToggleDebug: (value: boolean) => void
   onProviderChange: (provider: AgentProvider) => void
-  onChangeClaudeKey: () => void
   onSettingsChanged: () => void
   onOpenLogsFolder: () => void
   /** Opened application folder: the root for the CRM database connection check. */
@@ -42,7 +41,6 @@ export function SettingsMenu({
   showDebug,
   onToggleDebug,
   onProviderChange,
-  onChangeClaudeKey,
   onSettingsChanged,
   onOpenLogsFolder,
   appRoot,
@@ -50,6 +48,8 @@ export function SettingsMenu({
 }: SettingsMenuProps): React.JSX.Element {
   const [cursorKeyInput, setCursorKeyInput] = useState('')
   const [editingCursorKey, setEditingCursorKey] = useState(false)
+  const [claudeKeyInput, setClaudeKeyInput] = useState('')
+  const [editingClaudeKey, setEditingClaudeKey] = useState(false)
   const [models, setModels] = useState<CursorModelOption[] | null>(null)
   const [modelsError, setModelsError] = useState<string | null>(null)
   const [claudeModels, setClaudeModels] = useState<ClaudeModelOption[] | null>(null)
@@ -71,6 +71,7 @@ export function SettingsMenu({
   const [crmTestResult, setCrmTestResult] = useState<{ ok: boolean; text: string } | null>(null)
   const [isTestingCrm, setIsTestingCrm] = useState(false)
   const [crmError, setCrmError] = useState<string | null>(null)
+  const [cursorError, setCursorError] = useState<string | null>(null)
 
   useEffect(() => {
     setDbHost(settings?.dbHost ?? '')
@@ -151,6 +152,27 @@ export function SettingsMenu({
     }
   }
 
+  const handleSaveClaudeKey = async (): Promise<void> => {
+    const key = claudeKeyInput.trim()
+    if (!key) {
+      return
+    }
+    setIsSaving(true)
+    setKeyError(null)
+    try {
+      await window.api.setApiKey(key)
+      setClaudeKeyInput('')
+      setEditingClaudeKey(false)
+      setClaudeModels(null)
+      setClaudeModelsError(null)
+      onSettingsChanged()
+    } catch (error) {
+      setKeyError((error as Error).message.replace(/^Error invoking remote method '[^']+': (Error: )?/, ''))
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
   const handleModelChange = async (key: string): Promise<void> => {
     const option = (models ?? []).find((m) => modelKey(m.id, m.params) === key)
     if (option) {
@@ -178,6 +200,16 @@ export function SettingsMenu({
       onSettingsChanged()
     } catch (error) {
       setDbError(errorText(error))
+    }
+  }
+
+  const saveCursorUnsandboxed = async (value: boolean): Promise<void> => {
+    setCursorError(null)
+    try {
+      await window.api.setCursorUnsandboxed(value)
+      onSettingsChanged()
+    } catch (error) {
+      setCursorError(errorText(error))
     }
   }
 
@@ -314,24 +346,44 @@ export function SettingsMenu({
       <div className="popover-divider" />
       {provider === 'claude' ? (
         <div className="popover-section">
-          <div className="popover-label">API-ключ Anthropic</div>
-          <div className="popover-row">
-            <span className={`key-status${settings?.hasClaudeKey ? '' : ' is-off'}`}>
-              {settings?.hasClaudeKey ? 'Сохранён в Keychain' : 'Не задан'}
-            </span>
-            <button
-              type="button"
-              className="btn btn-secondary btn-sm"
-              disabled={isRunning}
-              onClick={() => {
-                onClose()
-                onChangeClaudeKey()
-              }}
-            >
-              <IconKey size={13} />
-              {settings?.hasClaudeKey ? 'Сменить' : 'Задать'}
-            </button>
-          </div>
+          <div className="popover-label">Claude</div>
+          {settings?.hasClaudeKey && !editingClaudeKey ? (
+            <div className="popover-row">
+              <span className="key-status">Ключ сохранён в Keychain</span>
+              <button type="button" className="btn btn-secondary btn-sm" disabled={isRunning} onClick={() => setEditingClaudeKey(true)}>
+                <IconKey size={13} />
+                Сменить
+              </button>
+            </div>
+          ) : (
+            <div>
+              <div className="popover-field-label">API-ключ Anthropic (console.anthropic.com → API Keys)</div>
+              <div className="popover-inline">
+                <input
+                  className="input"
+                  type="password"
+                  placeholder="sk-ant-…"
+                  value={claudeKeyInput}
+                  onChange={(event) => setClaudeKeyInput(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      handleSaveClaudeKey()
+                    }
+                  }}
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  disabled={isSaving || !claudeKeyInput.trim()}
+                  onClick={handleSaveClaudeKey}
+                >
+                  Сохранить
+                </button>
+              </div>
+              {keyError && <div className="popover-error">{keyError}</div>}
+            </div>
+          )}
           {settings?.hasClaudeKey && (
             <div className="popover-field">
               <div className="popover-field-label">Модель</div>
@@ -439,9 +491,24 @@ export function SettingsMenu({
               <div className="popover-note">Варианты Thinking и Max умнее на сложных задачах, но медленнее и дороже.</div>
             </div>
           )}
+          {settings?.platform === 'win32' && (
+            <div className="popover-field">
+              <div className="popover-row">
+                <div>
+                  <div className="popover-row-title">Разрешить Cursor без песочницы</div>
+                  <div className="popover-row-hint">На Windows у Cursor нет песочницы: запись вне Pkg ограничена только правилами для модели</div>
+                </div>
+                <Toggle
+                  checked={Boolean(settings?.cursorUnsandboxed)}
+                  onChange={(value) => saveCursorUnsandboxed(value)}
+                  label="Разрешить Cursor без песочницы"
+                />
+              </div>
+              {cursorError && <div className="popover-error">{cursorError}</div>}
+            </div>
+          )}
           <div className="popover-note">
-            Cursor не спрашивает разрешений по ходу работы: запись ограничена папкой Pkg, удаление и изменения git агент
-            делает только после вашего согласия в чате.
+            Cursor не спрашивает разрешений по ходу работы: запись ограничена папкой Pkg{settings?.platform === 'win32' ? ' (на Windows — только правилами для модели)' : ''}, удаление и изменения git агент делает только после вашего согласия в чате.
           </div>
         </div>
       )}

@@ -406,6 +406,21 @@ describe("cursorProvider", () => {
 			expect(result).toContain("сначала спроси, в каком пакете работать");
 			expect(result).toContain("остановка до подтверждения");
 		});
+
+		it("by default says writes are limited by the sandbox and not the no-sandbox rule", () => {
+			const result = buildCursorSafetyRules("/app", "/app/Pkg", "/kn");
+
+			expect(result).toContain("ограничена песочницей");
+			expect(result).not.toContain("Песочницы в этой среде нет");
+		});
+
+		it("without sandbox says there is no sandbox and names the write root", () => {
+			const result = buildCursorSafetyRules("/app", "/app/Pkg", "/kn", false);
+
+			expect(result).toContain("Песочницы в этой среде нет");
+			expect(result).toContain("/app/Pkg");
+			expect(result).not.toContain("ограничена песочницей");
+		});
 	});
 
 	describe("cursorRecommendationRank", () => {
