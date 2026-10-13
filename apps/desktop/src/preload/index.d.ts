@@ -1,4 +1,3 @@
-import { ElectronAPI } from '@electron-toolkit/preload'
 import type { ProjectValidationResult, AgentProvider, AgentSettings, CursorModelOption, ClaudeModelOption, CursorModelParam, ClaudeEffort, DbSettingsPatch, CrmSettingsPatch, CrmBrowserState, RecentProject } from '../shared/types'
 import type { AgentEvent } from '@bpmsoft-agent/agent-runtime'
 
@@ -50,7 +49,6 @@ export interface BpmsoftDesktopApi {
 
 declare global {
   interface Window {
-    electron: ElectronAPI
     api: BpmsoftDesktopApi
   }
 }

@@ -185,18 +185,76 @@ function bashMayDestroy(command: string): boolean {
 	);
 }
 
+/** True when every part of the command is a read-only program from SAFE_READ_COMMANDS, without substitutions. */
+export function isSafeReadOnlyShellCommand(command: string): boolean {
+	// Escaped quotes make the quote stripping below disagree with the shell, so such commands always ask.
+	if (command.trim() === "" || /`|\$\(|<\(|>\(/.test(command) || /\\['"]/.test(command)) {
+		return false;
+	}
+	if (bashMayWrite(command) || bashMayDestroy(command)) {
+		return false;
+	}
+	const stripped = stripForShellWriteCheck(stripHeredocBodies(command));
+	// A single `&` (background) also separates commands: `cat a & node -e ...` is not one `cat`.
+	for (const rawSegment of stripped.split(/\n|;|&|\|/)) {
+		const segment = rawSegment.trim();
+		if (segment === "") {
+			continue;
+		}
+		const program = segment.split(/\s+/)[0];
+		if (!SAFE_READ_COMMANDS.has(program)) {
+			return false;
+		}
+		if (program === "find" && /\s-(exec|execdir|ok|okdir|delete|fprint\w*|fls)\b/.test(segment)) {
+			return false;
+		}
+		// sort -o / --output writes a file; --compress-program runs another program.
+		if (program === "sort" && /\s(-[a-zA-Z]*o|--output\b|--compress-program\b)/.test(segment)) {
+			return false;
+		}
+		// rg --pre runs another program as a preprocessor.
+		if (program === "rg" && /\s--pre(\b|=)/.test(segment)) {
+			return false;
+		}
+	}
+	return true;
+}
+
+/** `node <script>.js [args]` where the script lies in one of `trustedScriptDirs` (one command, no pipes or substitutions). */
+export function isTrustedScriptCall(command: string, cwd: string, trustedScriptDirs: string[]): boolean {
+	if (/\\['"]/.test(command)) {
+		return false;
+	}
+	// Separators are spaces and tabs only: a newline would start a second command.
+	const match = /^[ \t]*node[ \t]+("[^"]+"|'[^']+'|[^\s;&|<>`$"']+)(?:[ \t]+(?:"[^"$`]*"|'[^']*'|[^\s;&|<>`$"'()]+))*[ \t]*$/.exec(command);
+	if (!match) {
+		return false;
+	}
+	const script = match[1].replace(/^["']|["']$/g, "");
+	if (!script.endsWith(".js")) {
+		return false;
+	}
+	return isInsideRoots(resolveSandboxPath(script, cwd), trustedScriptDirs);
+}
+
+function shellAutoApproved(command: string, shell: ShellApprovalOptions): boolean {
+	return isSafeReadOnlyShellCommand(command) || isTrustedScriptCall(command, shell.cwd, shell.trustedScriptDirs);
+}
+
 /**
  * Tool calls that run without asking the user once the sandbox hook has allowed them:
  * reads, and file changes (which the sandbox keeps inside Pkg) except deletions,
  * overwriting moves, git state changes and risky programs.
+ * With `shell.osSandbox` false (no OS sandbox for Bash) only read-only shell commands and trusted scripts are auto-approved.
  */
-export function isAutoApprovedToolCall(toolName: string, input: Record<string, unknown>): boolean {
+export function isAutoApprovedToolCall(toolName: string, input: Record<string, unknown>, shell?: ShellApprovalOptions): boolean {
 	if (CRM_STAND_TOOL_NAMES.has(toolName)) { return true; }
 	if (CRM_BROWSER_TOOL_PATTERN.test(toolName)) { return true; }
 	// Bash commands need special handling: check for destructive/risky operations BEFORE
 	// isReadOnlyToolCall, which doesn't know about -delete or git state changes.
 	if (toolName === "Bash") {
 		const command = String(input.command ?? "");
+		if (shell && !shell.osSandbox) { return shellAutoApproved(command, shell); }
 		const strippedCommand = stripForShellWriteCheck(stripHeredocBodies(command));
 		return command.trim() !== "" && !bashMayDestroy(command) && !BASH_RISKY_PATTERN.test(strippedCommand);
 	}
@@ -218,6 +276,17 @@ const BASH_ENV_PATH = /\$\{?(HOME|OLDPWD|TMPDIR|USER)\b/;
 /** Commands that may have side effects beyond the file checks (network, package managers, processes, other interpreters) — always ask the user. */
 const BASH_RISKY_PATTERN =
 	/(^|[\s;&|(`$])(curl|wget|npm|npx|yarn|pnpm|pip|pip3|python|python3|ruby|php|sudo|su|kill|pkill|killall|open|osascript|ssh|scp|sftp|nc|psql|mysql|sqlite3|docker|kubectl|brew|launchctl|crontab|eval|exec|source|bash|sh|zsh)(\s|$)/;
+
+/** Options for auto-approving shell commands. Without the OS shell sandbox only read-only commands and trusted scripts run without asking. */
+export interface ShellApprovalOptions {
+	osSandbox: boolean;
+	cwd: string;
+	/** Folders with our own scripts (knowledge/scripts): `node <script>.js <args>` from here runs without asking. */
+	trustedScriptDirs: string[];
+}
+
+/** Commands that only read files or print text. */
+const SAFE_READ_COMMANDS = new Set(["cat", "head", "tail", "grep", "egrep", "fgrep", "rg", "ls", "wc", "date", "echo", "printf", "sort", "cut", "tr", "diff", "stat", "pwd", "basename", "dirname", "realpath", "readlink", "test", "true", "false", "which", "cd", "find", "jq"]);
 
 /** `cd <dir>` at the start of a command part (after a newline, ;, &, | or "("). */
 const BASH_CD = /(?:^|[\n;&|(])\s*cd(?:\s+("[^"]*"|'[^']*'|[^\s;&|)]+))?(?=\s*(?:$|[\n;&|)]))/g;
@@ -442,13 +511,14 @@ export function checkToolAccess(
  * tools, shell commands that may write and risky commands still require the
  * user's approval.
  */
-export function isReadOnlyToolCall(toolName: string, input: Record<string, unknown>): boolean {
+export function isReadOnlyToolCall(toolName: string, input: Record<string, unknown>, shell?: ShellApprovalOptions): boolean {
 	if (CRM_DB_QUERY_TOOL_NAMES.has(toolName)) { return true; }
 	if (READ_PATH_KEYS[toolName]) {
 		return true;
 	}
 	if (toolName === "Bash") {
 		const command = String(input.command ?? "");
+		if (shell && !shell.osSandbox) { return isSafeReadOnlyShellCommand(command); }
 		const strippedCommand = stripForShellWriteCheck(stripHeredocBodies(command));
 		return command.trim() !== "" && !bashMayWrite(command) && !bashMayDestroy(command) && !BASH_RISKY_PATTERN.test(strippedCommand);
 	}

@@ -1,6 +1,7 @@
 appId: com.bpmsoftagent.desktop
 productName: BPMSoft Agent
 artifactName: ${productName}-${version}-${os}-${arch}.${ext}
+icon: build/icon.png
 directories:
   output: release
   buildResources: build

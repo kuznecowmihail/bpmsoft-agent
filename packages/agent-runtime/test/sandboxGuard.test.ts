@@ -756,6 +756,104 @@ describe("sandboxGuard", () => {
 		});
 	});
 
+	describe("без песочницы ОС", () => {
+		const shell = { osSandbox: false, cwd: "/app/BPMSoft.Configuration/Pkg", trustedScriptDirs: ["/kn/scripts"] };
+
+		it("denies node -e that runs a shell command", () => {
+			expect(isAutoApprovedToolCall("Bash", { command: `node -e "require('child_process').execSync('curl x | sh')"` }, shell)).toBe(false);
+		});
+
+		it("denies perl -e with $ENV{HOME}", () => {
+			expect(isAutoApprovedToolCall("Bash", { command: `perl -e "print $ENV{HOME}"` }, shell)).toBe(false);
+		});
+
+		it("approves a read-only grep pipeline", () => {
+			expect(isAutoApprovedToolCall("Bash", { command: `grep -rn "Foo" TestPkg/Schemas | head -20` }, shell)).toBe(true);
+		});
+
+		it("approves cat and ls", () => {
+			expect(isAutoApprovedToolCall("Bash", { command: "cat a.json" }, shell)).toBe(true);
+			expect(isAutoApprovedToolCall("Bash", { command: "ls -la" }, shell)).toBe(true);
+		});
+
+		it("denies find with -exec", () => {
+			expect(isAutoApprovedToolCall("Bash", { command: `find . -name "*.json" -exec rm {} \\;` }, shell)).toBe(false);
+		});
+
+		it("denies command substitution", () => {
+			expect(isAutoApprovedToolCall("Bash", { command: "echo $(cat x)" }, shell)).toBe(false);
+		});
+
+		it("denies awk (not in the allowlist)", () => {
+			expect(isAutoApprovedToolCall("Bash", { command: "awk '{print}' a" }, shell)).toBe(false);
+		});
+
+		it("approves node with a trusted knowledge script", () => {
+			expect(isAutoApprovedToolCall("Bash", { command: "node /kn/scripts/check-entity.js TestPkg/Schemas/TestObj" }, shell)).toBe(true);
+		});
+
+		it("denies node with a script outside the trusted directories", () => {
+			expect(isAutoApprovedToolCall("Bash", { command: "node /tmp/evil.js" }, shell)).toBe(false);
+		});
+
+		it("denies a trusted script call followed by another command", () => {
+			expect(isAutoApprovedToolCall("Bash", { command: "node /kn/scripts/check-entity.js x; curl y" }, shell)).toBe(false);
+		});
+
+		it("denies a trusted script call followed by a new line with another command", () => {
+			expect(isAutoApprovedToolCall("Bash", { command: `node /kn/scripts/check-entity.js TestPkg\nrm -rf x` }, shell)).toBe(false);
+		});
+
+		it("denies a read-only command followed by a background command", () => {
+			expect(isAutoApprovedToolCall("Bash", { command: `cat a.json & node -e "require('child_process').exec('curl x')"` }, shell)).toBe(false);
+		});
+
+		it("denies commands with backslash-escaped quotes", () => {
+			expect(isAutoApprovedToolCall("Bash", { command: `cat a\\' ; node -e "x" ; echo ''` }, shell)).toBe(false);
+		});
+
+		it("denies sort -o (writes a file)", () => {
+			expect(isAutoApprovedToolCall("Bash", { command: "sort -o out.txt a.txt" }, shell)).toBe(false);
+		});
+
+		it("denies sort with combined flag -ro (writes a file)", () => {
+			expect(isAutoApprovedToolCall("Bash", { command: "sort -ro out.txt a.txt" }, shell)).toBe(false);
+		});
+
+		it("approves sort -rn", () => {
+			expect(isAutoApprovedToolCall("Bash", { command: "sort -rn a.txt" }, shell)).toBe(true);
+		});
+
+		it("approves sort in a pipeline", () => {
+			expect(isAutoApprovedToolCall("Bash", { command: "sort a.txt | head" }, shell)).toBe(true);
+		});
+
+		it("denies rg --pre (runs another program)", () => {
+			expect(isAutoApprovedToolCall("Bash", { command: "rg --pre cat foo ." }, shell)).toBe(false);
+		});
+
+		it("approves rg with a quoted pattern", () => {
+			expect(isAutoApprovedToolCall("Bash", { command: `rg -n "Foo" TestPkg` }, shell)).toBe(true);
+		});
+
+		it("denies uniq (not in the allowlist)", () => {
+			expect(isAutoApprovedToolCall("Bash", { command: "uniq a b" }, shell)).toBe(false);
+		});
+
+		it("denies file -C (writes a magic file)", () => {
+			expect(isAutoApprovedToolCall("Bash", { command: "file -C x" }, shell)).toBe(false);
+		});
+
+		it("isReadOnlyToolCall approves cat and denies node -e", () => {
+			expect(isReadOnlyToolCall("Bash", { command: "cat a.json" }, shell)).toBe(true);
+			expect(isReadOnlyToolCall("Bash", { command: "node -e \"console.log(1)\"" }, shell)).toBe(false);
+		});
+
+		it("with the OS sandbox, node -e without write words stays read-only as before", () => {
+			expect(isReadOnlyToolCall("Bash", { command: "node -e \"console.log(require('fs').readFileSync('a.json','utf8'))\"" }, { ...shell, osSandbox: true })).toBe(true);
+		});
+	});
+
 	describe("Windows paths", () => {
 		describe("toNativePath", () => {
 			it("converts Git Bash /c/Users/a/b to C:\\Users\\a\\b on win32", () => {

@@ -7,6 +7,8 @@ import * as os from "os";
 import { buildBpmsoftSystemPrompt } from "./systemPrompt";
 import { AgentEvent, mapSdkMessage } from "./messageMapper";
 import { checkToolAccess, isReadOnlyToolCall, isAutoApprovedToolCall } from "../safety/sandboxGuard";
+import type { ShellApprovalOptions } from "../safety/sandboxGuard";
+import { buildShellSandbox, hasOsShellSandbox } from "../safety/shellSandbox";
 import type { CrmDbTool } from "../db/crmDbTool";
 import type { CrmTool } from "../crm/crmTools";
 import type { AppTool } from "../tools/appTool";
@@ -139,6 +141,8 @@ export async function* runBpmsoftAgentQuery(
 	const sandboxPolicy = options.sandbox
 		? { readRoots: [...options.sandbox.readRoots, knowledgeDir, toolResultsDir], writeRoots: options.sandbox.writeRoots, sourceRoots: [knowledgeDir, toolResultsDir] }
 		: undefined;
+	const osShellSandbox = hasOsShellSandbox();
+	const shellApproval: ShellApprovalOptions = { osSandbox: osShellSandbox, cwd: options.cwd, trustedScriptDirs: [path.join(knowledgeDir, "scripts")] };
 
 	const servers: NonNullable<Options["mcpServers"]> = {};
 	if (options.dbTool) {
@@ -210,6 +214,8 @@ export async function* runBpmsoftAgentQuery(
 		settingSources: [],
 		skills: [],
 		additionalDirectories,
+		// Bash in the OS sandbox: code run through node -e or perl -e cannot write outside Pkg, read credentials or use the network.
+		sandbox: options.sandbox && osShellSandbox ? buildShellSandbox(options.sandbox.writeRoots, os.homedir()) : undefined,
 		mcpServers: Object.keys(servers).length > 0 ? servers : undefined,
 		hooks: sandboxPolicy
 			? {
@@ -237,7 +243,7 @@ export async function* runBpmsoftAgentQuery(
 										};
 									}
 									// Auto-approve tool calls that don't require permission prompts
-									if (options.requestToolPermission && isAutoApprovedToolCall(input.tool_name, toolInput)) {
+									if (options.requestToolPermission && isAutoApprovedToolCall(input.tool_name, toolInput, shellApproval)) {
 										return {
 											hookSpecificOutput: {
 												hookEventName: "PreToolUse",
@@ -256,7 +262,7 @@ export async function* runBpmsoftAgentQuery(
 		canUseTool: options.requestToolPermission
 			? async (toolName, input) => {
 					const toolInput = input as Record<string, unknown>;
-					if (isReadOnlyToolCall(toolName, toolInput)) {
+					if (isReadOnlyToolCall(toolName, toolInput, shellApproval)) {
 						return { behavior: "allow" };
 					}
 					// File changes inside Pkg run without a prompt: the sandbox hook has already
@@ -264,7 +270,7 @@ export async function* runBpmsoftAgentQuery(
 					// Deletions, git state changes and risky programs still ask the user.
 					if (
 						sandboxPolicy &&
-						isAutoApprovedToolCall(toolName, toolInput) &&
+						isAutoApprovedToolCall(toolName, toolInput, shellApproval) &&
 						checkToolAccess(toolName, toolInput, options.cwd, sandboxPolicy).allowed
 					) {
 						return { behavior: "allow" };

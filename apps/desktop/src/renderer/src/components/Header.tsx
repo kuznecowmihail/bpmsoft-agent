@@ -262,10 +262,7 @@ export function Header({
                     isRunning={isRunning}
                     showDebug={showDebug}
                     onToggleDebug={onToggleDebug}
-                    onProviderChange={(provider) => {
-                      setMenuOpen(false)
-                      onProviderChange(provider)
-                    }}
+                    onProviderChange={onProviderChange}
                     onSettingsChanged={onSettingsChanged}
                     onOpenLogsFolder={onOpenLogsFolder}
                     appRoot={appRoot}

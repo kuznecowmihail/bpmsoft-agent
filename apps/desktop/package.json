@@ -19,7 +19,6 @@
   "dependencies": {
     "@bpmsoft-agent/agent-runtime": "0.0.1",
     "@bpmsoft-agent/metadata-core": "0.0.1",
-    "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1"
@@ -30,7 +29,7 @@
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
-    "electron": "39.8.10",
+    "electron": "44.7.1",
     "electron-builder": "^26.15.3",
     "electron-vite": "^5.0.0",
     "react": "^19.2.1",

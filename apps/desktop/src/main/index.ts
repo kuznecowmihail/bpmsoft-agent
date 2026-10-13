@@ -39,6 +39,7 @@ import {
 } from './crmBrowser'
 import { initAppSettings, getAppSettings, updateAppSettings, addRecentProject, removeRecentProject } from './appSettings'
 import { loadLoginShellPath } from './shellPath'
+import { isExternalWebUrl } from './urlPolicy'
 import { listCursorModels, listClaudeModels } from '@bpmsoft-agent/agent-runtime'
 import type { AgentProvider, CursorModelParam, ClaudeEffort, DbSettingsPatch, CrmSettingsPatch, RecentProject } from '../shared/types'
 
@@ -47,6 +48,10 @@ if (app.isPackaged) loadLoginShellPath()
 // Cursor SDK looks for its platform binaries (sandbox, ripgrep, tree-sitter) in node_modules
 // above process.argv[1]; a packaged app has no script argument, so point it at this bundle.
 if (app.isPackaged) process.argv.splice(1, 0, __filename)
+
+// Packaged builds take the icon from the bundle (icns/ico made by electron-builder from build/icon.png);
+// in dev the Dock and the window would show the default Electron icon.
+const DEV_ICON_PATH = join(__dirname, '../../build/icon.png')
 
 function resolveChatLogDir(): string {
   const override = process.env['BPMSOFT_AGENT_LOG_DIR']
@@ -68,12 +73,13 @@ function createWindow(): void {
     show: false,
     autoHideMenuBar: true,
     backgroundColor: '#fafafa',
+    ...(is.dev && process.platform !== 'darwin' ? { icon: DEV_ICON_PATH } : {}),
     ...(process.platform === 'darwin'
       ? { titleBarStyle: 'hiddenInset' as const, trafficLightPosition: { x: 18, y: 20 } }
       : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false
+      sandbox: true
     }
   })
 
@@ -86,8 +92,17 @@ function createWindow(): void {
   mainWindow.on('closed', () => closeCrmBrowser())
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url)
+    if (isExternalWebUrl(details.url)) {
+      void shell.openExternal(details.url)
+    }
     return { action: 'deny' }
+  })
+
+  // The window shows only the app's own page: dropped files, links and redirects cannot replace it.
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    if (url !== mainWindow.webContents.getURL()) {
+      event.preventDefault()
+    }
   })
 
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
@@ -98,6 +113,10 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  if (is.dev && process.platform === 'darwin') {
+    app.dock?.setIcon(DEV_ICON_PATH)
+  }
+
   // corporate proxies/VPNs — Cursor SDK requests go through Node's TLS
   trustSystemCertificates()
 
@@ -115,6 +134,11 @@ app.whenReady().then(() => {
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
+  })
+
+  // No <webview> tags anywhere in the app.
+  app.on('web-contents-created', (_event, contents) => {
+    contents.on('will-attach-webview', (attachEvent) => attachEvent.preventDefault())
   })
 
   // Milestone 9, slice 2: project picker + validation.

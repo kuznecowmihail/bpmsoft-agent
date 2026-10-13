@@ -4,6 +4,7 @@ export * from "./provider/anthropicProvider";
 export * from "./provider/claudeModels";
 export * from "./provider/cursorProvider";
 export * from "./safety/sandboxGuard";
+export * from "./safety/shellSandbox";
 export * from "./db";
 export * from "./crm";
 export * from "./tools";
