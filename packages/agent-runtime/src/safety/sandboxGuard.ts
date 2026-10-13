@@ -33,6 +33,9 @@ const SECRET_DENY_REASON = "Файл с секретами (пароли, сер
 /** The read-only CRM database tool: Claude sees it as an in-process MCP tool, Cursor as a custom tool. It confirms queries itself when the user asked for that. */
 export const CRM_DB_QUERY_TOOL_NAMES = new Set(["mcp__crm_db__crm_db_query", "crm_db_query"]);
 
+/** CRM stand actions (update from the file system, compile + restart): change the stand, so they are not read-only; they ask the user themselves when the user enabled confirmations. */
+export const CRM_STAND_TOOL_NAMES = new Set(["mcp__crm__crm_update_from_fs", "mcp__crm__crm_compile", "crm_update_from_fs", "crm_compile"]);
+
 /** True when file path contains secrets (credentials, certificates, private keys). */
 export function isSecretFile(p: string): boolean {
 	return SECRET_FILE_PATTERN.test(p.trim());
@@ -185,6 +188,7 @@ function bashMayDestroy(command: string): boolean {
  * overwriting moves, git state changes and risky programs.
  */
 export function isAutoApprovedToolCall(toolName: string, input: Record<string, unknown>): boolean {
+	if (CRM_STAND_TOOL_NAMES.has(toolName)) { return true; }
 	// Bash commands need special handling: check for destructive/risky operations BEFORE
 	// isReadOnlyToolCall, which doesn't know about -delete or git state changes.
 	if (toolName === "Bash") {

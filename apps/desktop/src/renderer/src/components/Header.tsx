@@ -21,22 +21,32 @@ interface HeaderProps {
   appRoot?: string
 }
 
-type DbStatus = { state: 'checking' | 'ok' | 'error'; text: string }
+type BadgeStatus = { state: 'checking' | 'ok' | 'error'; text: string }
 
-/** Header badge: is the read-only CRM database reachable? Shown only when DB access is on and a project is open; click re-checks. */
-function DbBadge({ settings, appRoot }: { settings: AgentSettings; appRoot?: string }): React.JSX.Element {
-  const [status, setStatus] = useState<DbStatus>({ state: 'checking', text: '' })
+/** Header status badge (DB, CRM): gray when off, checks on change and on click. */
+function StatusBadge({
+  label,
+  enabled,
+  offTitle,
+  deps,
+  check
+}: {
+  label: string
+  enabled: boolean
+  offTitle: string
+  deps: unknown[]
+  check: () => Promise<string>
+}): React.JSX.Element {
+  const [status, setStatus] = useState<BadgeStatus>({ state: 'checking', text: '' })
   const [attempt, setAttempt] = useState(0)
-  const enabled = settings.dbAccessEnabled && Boolean(appRoot)
 
   useEffect(() => {
-    if (!enabled || !appRoot) {
+    if (!enabled) {
       return
     }
     let cancelled = false
     setStatus({ state: 'checking', text: '' })
-    window.api
-      .testDbConnection(appRoot)
+    check()
       .then((text) => {
         if (!cancelled) setStatus({ state: 'ok', text })
       })
@@ -48,25 +58,22 @@ function DbBadge({ settings, appRoot }: { settings: AgentSettings; appRoot?: str
     return () => {
       cancelled = true
     }
-  }, [enabled, appRoot, settings.dbHost, settings.dbPort, settings.dbUser, settings.hasDbPassword, attempt])
+  }, [enabled, ...deps, attempt])
 
   if (!enabled) {
     return (
-      <span
-        className="db-badge is-off"
-        title={settings.dbAccessEnabled ? 'БД CRM: откройте проект, чтобы проверить подключение' : 'Доступ агента к БД CRM выключен — включается в настройках'}
-      >
-        БД выкл
+      <span className="db-badge is-off" title={offTitle}>
+        {label} выкл
       </span>
     )
   }
 
   const title =
     status.state === 'checking'
-      ? 'Проверяю подключение к БД CRM…'
+      ? 'Проверяю подключение…'
       : status.state === 'ok'
         ? `${status.text}. Нажмите, чтобы проверить снова`
-        : `Нет подключения к БД CRM: ${status.text}. Нажмите, чтобы проверить снова`
+        : `Нет подключения: ${status.text}. Нажмите, чтобы проверить снова`
   return (
     <button
       type="button"
@@ -75,7 +82,7 @@ function DbBadge({ settings, appRoot }: { settings: AgentSettings; appRoot?: str
       disabled={status.state === 'checking'}
       onClick={() => setAttempt((value) => value + 1)}
     >
-      {status.state === 'error' ? 'БД недоступна' : 'БД'}
+      {status.state === 'error' ? `${label} недоступна` : label}
     </button>
   )
 }
@@ -145,7 +152,24 @@ export function Header({
                 {settings.provider === 'cursor' ? `Cursor · ${settings.cursorModelName || settings.cursorModel}` : settings.claudeModelName ? `Claude · ${settings.claudeModelName}` : 'Claude'}
               </span>
             )}
-            {settings && <DbBadge settings={settings} appRoot={appRoot} />}
+            {settings && (
+              <StatusBadge
+                label="БД"
+                enabled={Boolean(settings.dbAccessEnabled && appRoot)}
+                offTitle={settings.dbAccessEnabled ? 'БД CRM: откройте проект, чтобы проверить подключение' : 'Доступ агента к БД CRM выключен — включается в настройках'}
+                deps={[appRoot, settings.dbHost, settings.dbPort, settings.dbUser, settings.hasDbPassword]}
+                check={() => window.api.testDbConnection(appRoot as string)}
+              />
+            )}
+            {settings && (
+              <StatusBadge
+                label="CRM"
+                enabled={Boolean(settings.crmActionsEnabled && settings.crmUrl && settings.crmUser && settings.hasCrmPassword)}
+                offTitle={settings.crmActionsEnabled ? 'CRM: укажите адрес, пользователя и пароль в настройках' : 'Действия агента в CRM выключены — включаются в настройках'}
+                deps={[settings.crmUrl, settings.crmUser, settings.hasCrmPassword]}
+                check={() => window.api.testCrmConnection()}
+              />
+            )}
           </span>
           <button
             type="button"

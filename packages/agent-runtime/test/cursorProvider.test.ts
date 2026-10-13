@@ -189,6 +189,19 @@ describe("cursorProvider", () => {
 		});
 	});
 
+	describe("normalizeCursorToolCall (CRM stand tools)", () => {
+		it("maps a direct crm_compile custom tool call", () => {
+			expect(normalizeCursorToolCall("crm_compile", {})).toEqual({ name: "crm_compile", input: {} });
+		});
+
+		it("maps an MCP-wrapped crm_update_from_fs call", () => {
+			expect(normalizeCursorToolCall("mcp", { toolName: "crm_update_from_fs", args: {} })).toEqual({
+				name: "crm_update_from_fs",
+				input: {}
+			});
+		});
+	});
+
 	describe("mapCursorMessage", () => {
 		const seenCalls = new Set<string>();
 

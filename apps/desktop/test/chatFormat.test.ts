@@ -96,6 +96,14 @@ describe('chatFormat', () => {
       expect(describeToolCall('crm_db_query', { sql: 'SELECT 1' })).toBe('Запрос к БД CRM')
       expect(describeToolCall('mcp__bpmsoft__crm_db_query', { sql: 'SELECT 1' })).toBe('Запрос к БД CRM')
     })
+
+    it('describes the CRM stand actions under both names', () => {
+      expect(describeToolCall('crm_update_from_fs', {})).toBe('Обновляет CRM из файловой системы')
+      expect(describeToolCall('mcp__bpmsoft__crm_update_from_fs', {})).toBe('Обновляет CRM из файловой системы')
+      expect(describeToolCall('crm_compile', {})).toBe('Компилирует и перезапускает CRM')
+      expect(describeToolCall('mcp__bpmsoft__crm_compile', {})).toBe('Компилирует и перезапускает CRM')
+      expect(describeToolCall('crm_action', { action: 'update' })).toBe('Действие в CRM')
+    })
   })
 
   describe('permissionSubject', () => {
@@ -106,6 +114,11 @@ describe('chatFormat', () => {
 
     it('returns undefined for the CRM database tool without sql', () => {
       expect(permissionSubject('crm_db_query', {})).toBeUndefined()
+    })
+
+    it('returns the action for the CRM stand action tool', () => {
+      expect(permissionSubject('crm_action', { action: 'compile' })).toBe('compile')
+      expect(permissionSubject('crm_action', {})).toBeUndefined()
     })
 
     it('returns command for Bash tool', () => {

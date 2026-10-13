@@ -8,6 +8,7 @@ import { buildBpmsoftSystemPrompt } from "./systemPrompt";
 import { AgentEvent, mapSdkMessage } from "./messageMapper";
 import { checkToolAccess, isReadOnlyToolCall, isAutoApprovedToolCall } from "../safety/sandboxGuard";
 import type { CrmDbTool } from "../db/crmDbTool";
+import type { CrmTool } from "../crm/crmTools";
 
 export interface ToolPermissionRequest {
 	toolName: string;
@@ -55,6 +56,8 @@ export interface RunBpmsoftAgentQueryOptions {
 	requestToolPermission?: (request: ToolPermissionRequest) => Promise<boolean>;
 	/** Read-only CRM database tool (see createCrmDbTool); omit when the user has not enabled database access. */
 	dbTool?: CrmDbTool;
+	/** CRM stand actions (see createCrmTools); omit when the user has not enabled them. */
+	crmTools?: CrmTool[];
 }
 
 /**
@@ -122,13 +125,51 @@ export async function* runBpmsoftAgentQuery(
 		? { readRoots: [...options.sandbox.readRoots, knowledgeDir, toolResultsDir], writeRoots: options.sandbox.writeRoots, sourceRoots: [knowledgeDir, toolResultsDir] }
 		: undefined;
 
+	const servers: NonNullable<Options["mcpServers"]> = {};
+	if (options.dbTool) {
+		servers.crm_db = createSdkMcpServer({
+			name: "crm_db",
+			version: "1.0.0",
+			tools: [
+				tool(
+					options.dbTool.name,
+					options.dbTool.description,
+					{ sql: z.string().describe("Один запрос SELECT или WITH") },
+					async (args) => {
+						const result = await options.dbTool!.execute(args.sql);
+						return { content: [{ type: "text", text: result.text }], isError: result.isError };
+					},
+					{ annotations: { readOnlyHint: true }, alwaysLoad: true }
+				)
+			]
+		});
+	}
+	if (options.crmTools?.length) {
+		servers.crm = createSdkMcpServer({
+			name: "crm",
+			version: "1.0.0",
+			tools: options.crmTools.map((crmTool) =>
+				tool(
+					crmTool.name,
+					crmTool.description,
+					{},
+					async () => {
+						const result = await crmTool.execute();
+						return { content: [{ type: "text", text: result.text }], isError: result.isError };
+					},
+					{ alwaysLoad: true }
+				)
+			)
+		});
+	}
+
 	const sdkOptions: Options = {
 		cwd: options.cwd,
 		model: options.model,
 		effort: options.effort,
 		resume: options.resume,
 		env: { ...process.env, ANTHROPIC_API_KEY: options.apiKey },
-		systemPrompt: { type: "custom", prompt: buildBpmsoftSystemPrompt(knowledgeDir, { dbQuery: Boolean(options.dbTool) }) },
+		systemPrompt: { type: "custom", prompt: buildBpmsoftSystemPrompt(knowledgeDir, { dbQuery: Boolean(options.dbTool), crmActions: Boolean(options.crmTools?.length) }) },
 		// Isolation from the developer's own Claude Code setup: without these the
 		// SDK loads ~/.claude settings (plugins, SessionStart hooks) and personal
 		// skills into the BPMSoft agent. Our behaviour comes only from the system
@@ -136,26 +177,7 @@ export async function* runBpmsoftAgentQuery(
 		settingSources: [],
 		skills: [],
 		additionalDirectories,
-		mcpServers: options.dbTool
-			? {
-					crm_db: createSdkMcpServer({
-						name: "crm_db",
-						version: "1.0.0",
-						tools: [
-							tool(
-								options.dbTool.name,
-								options.dbTool.description,
-								{ sql: z.string().describe("Один запрос SELECT или WITH") },
-								async (args) => {
-									const result = await options.dbTool!.execute(args.sql);
-									return { content: [{ type: "text", text: result.text }], isError: result.isError };
-								},
-								{ annotations: { readOnlyHint: true }, alwaysLoad: true }
-							)
-						]
-					})
-				}
-			: undefined,
+		mcpServers: Object.keys(servers).length > 0 ? servers : undefined,
 		hooks: sandboxPolicy
 			? {
 					PreToolUse: [

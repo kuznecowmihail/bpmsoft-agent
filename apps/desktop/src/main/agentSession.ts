@@ -1,6 +1,6 @@
 import type { BrowserWindow } from 'electron'
-import { runBpmsoftAgentQuery, runCursorAgentQuery, createCrmDbTool, testCrmDbConnection } from '@bpmsoft-agent/agent-runtime'
-import type { AgentEvent, ToolPermissionRequest, CrmDbToolOptions } from '@bpmsoft-agent/agent-runtime'
+import { runBpmsoftAgentQuery, runCursorAgentQuery, createCrmDbTool, testCrmDbConnection, createCrmTools, testCrmConnection } from '@bpmsoft-agent/agent-runtime'
+import type { AgentEvent, ToolPermissionRequest, CrmDbToolOptions, CrmConnection } from '@bpmsoft-agent/agent-runtime'
 import { join } from 'path'
 import { saveSecret, loadSecret, clearSecret } from './secureStore'
 import { startChatLogIfNeeded, endChatLog, logChatRecord } from './chatLog'
@@ -140,6 +140,42 @@ export async function testDbConnection(readRoot: string): Promise<string> {
   return testCrmDbConnection(dbConnectionOptions(readRoot))
 }
 
+const CRM_PASSWORD_SECRET = 'crmPassword'
+
+/** Password of the CRM user the agent acts as (stand actions), kept in the OS keychain. */
+export function setCrmPassword(password: string): void {
+  if (!password) {
+    throw new Error('Пароль пустой')
+  }
+  saveSecret(CRM_PASSWORD_SECRET, password)
+}
+
+export function hasCrmPassword(): boolean {
+  return Boolean(loadSecret(CRM_PASSWORD_SECRET))
+}
+
+export function clearCrmPassword(): void {
+  clearSecret(CRM_PASSWORD_SECRET)
+}
+
+/** CRM connection from settings (address, user) and the keychain password; undefined until all three are set. */
+export function crmConnection(): CrmConnection | undefined {
+  const { crmUrl, crmUser } = getAppSettings()
+  const password = loadSecret(CRM_PASSWORD_SECRET)
+  if (!crmUrl || !crmUser || !password) {
+    return undefined
+  }
+  return { url: crmUrl, user: crmUser, password }
+}
+
+export async function testCrm(): Promise<string> {
+  const connection = crmConnection()
+  if (!connection) {
+    throw new Error('Укажите адрес CRM, пользователя и пароль')
+  }
+  return testCrmConnection(connection)
+}
+
 /**
  * Conversation continuity: the SDK session id of the current chat and the
  * project AND provider it belongs to. Every turn resumes this session so the
@@ -218,7 +254,7 @@ export async function sendAgentMessage(
   additionalDirectories?: string[],
   readRoot?: string
 ): Promise<void> {
-  const { provider, cursorModel, cursorModelParams, claudeModel, claudeEffort, dbAccessEnabled, dbConfirmQueries } = getAppSettings()
+  const { provider, cursorModel, cursorModelParams, claudeModel, claudeEffort, dbAccessEnabled, dbConfirmQueries, crmActionsEnabled, crmConfirmActions } = getAppSettings()
   if (provider === 'cursor' && !currentCursorApiKey) {
     throw new Error('Ключ Cursor не задан — укажите его в настройках')
   }
@@ -252,8 +288,18 @@ export async function sendAgentMessage(
         })
       : undefined
 
+  const connection = crmActionsEnabled ? crmConnection() : undefined
+  const crmTools = connection
+    ? createCrmTools({
+        connection,
+        appRoot: readRoot,
+        confirm: crmConfirmActions ? (action) => requestToolPermission({ toolName: 'crm_action', input: { action } }) : undefined,
+        onAction: (record) => logChatRecord('crm_action', { ...record })
+      })
+    : undefined
+
   startChatLogIfNeeded({ projectPath, readRoot })
-  logChatRecord('user_message', { text: prompt, resume: currentSessionId ?? null, provider, model: provider === 'cursor' ? { id: cursorModel, params: cursorModelParams } : { id: claudeModel || null, effort: claudeEffort || null }, dbAccess: Boolean(dbTool) })
+  logChatRecord('user_message', { text: prompt, resume: currentSessionId ?? null, provider, model: provider === 'cursor' ? { id: cursorModel, params: cursorModelParams } : { id: claudeModel || null, effort: claudeEffort || null }, dbAccess: Boolean(dbTool), crmActions: Boolean(crmTools) })
 
   const startedAt = Date.now()
   const events =
@@ -266,7 +312,8 @@ export async function sendAgentMessage(
           modelParams: cursorModelParams,
           resume: currentSessionId,
           readRoot: readRoot ?? projectPath,
-          dbTool
+          dbTool,
+          crmTools
         })
       : runBpmsoftAgentQuery({
           apiKey: currentApiKey as string,
@@ -278,7 +325,8 @@ export async function sendAgentMessage(
           requestToolPermission,
           additionalDirectories,
           sandbox: { readRoots: [readRoot ?? projectPath], writeRoots: [projectPath] },
-          dbTool
+          dbTool,
+          crmTools
         })
 
   try {

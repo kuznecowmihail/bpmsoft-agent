@@ -122,6 +122,7 @@ namespace BPMSoft.Configuration
 - Логгер проекта — `LogManager.GetLogger("Common")` из `global::Common.Logging`; строки видны в `[app]/Logs/<ГГГГ-ММ-ДД>/Common.log`.
 - Вызов сервиса с клиента: `ServiceHelper.callService("<Сервис>", "<Метод>", function (r) { ... }, {<параметры>})` — ответ приходит как `{<Метод>Result: <значение>}`. Проверка из консоли браузера: `require(["ServiceHelper"], function (sh) { sh.callService("TestSrcService", "Greet", function (r) { console.log(r); }, { name: "тест" }); });`.
 - ✅ `ServiceHelper.callService` всегда шлёт `POST` с телом `{}` (подтверждено в CRM, 09.10.2026): метод, который вызывают так, объявляй с `Method = "POST"` и `BodyStyle = WebMessageBodyStyle.Wrapped` — ответ придёт как `{<Метод>Result: …}`. Метод с `Method = "GET"` и `BodyStyle = WebMessageBodyStyle.Bare` открывается из адресной строки (`<адрес CRM>/0/rest/<Сервис>/<Метод>`, на части стендов без `/0`; ✅ 08.10.2026), но через `ServiceHelper` даёт 400 Bad Request. Исключение внутри метода тоже возвращается страницей «Request Error» — причину смотри в `Error.log`.
+- Адрес своего REST-сервиса для проверки вне карточки: на стенде .NET Core адреса без префикса `/0/` (✅ для `ServiceModel/…`, 13.10.2026); для своих сервисов — 🧪 предположительно `<адрес CRM>/rest/<Сервис>/<Метод>`, на .NET Framework — `<адрес CRM>/0/rest/<Сервис>/<Метод>`. Префикс смотри по адресу открытой CRM у пользователя (есть ли `/0/` в адресной строке).
 
 ### Ресурсы
 `resource.ru-RU.xml` (и так же `resource.en-US.xml`):

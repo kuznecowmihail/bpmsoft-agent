@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { AgentProvider, AgentSettings, CursorModelOption, ClaudeModelOption, DbSettingsPatch } from '../../../shared/types'
+import type { AgentProvider, AgentSettings, CursorModelOption, ClaudeModelOption, DbSettingsPatch, CrmSettingsPatch } from '../../../shared/types'
 import { IconExternal, IconKey } from './icons'
 import { Toggle } from './Toggle'
 
@@ -64,12 +64,24 @@ export function SettingsMenu({
   const [dbTestResult, setDbTestResult] = useState<{ ok: boolean; text: string } | null>(null)
   const [isTestingDb, setIsTestingDb] = useState(false)
   const [dbError, setDbError] = useState<string | null>(null)
+  const [crmUrl, setCrmUrl] = useState(settings?.crmUrl ?? '')
+  const [crmUser, setCrmUser] = useState(settings?.crmUser ?? '')
+  const [crmPasswordInput, setCrmPasswordInput] = useState('')
+  const [editingCrmPassword, setEditingCrmPassword] = useState(false)
+  const [crmTestResult, setCrmTestResult] = useState<{ ok: boolean; text: string } | null>(null)
+  const [isTestingCrm, setIsTestingCrm] = useState(false)
+  const [crmError, setCrmError] = useState<string | null>(null)
 
   useEffect(() => {
     setDbHost(settings?.dbHost ?? '')
     setDbPort(settings?.dbPort ?? '')
     setDbUser(settings?.dbUser ?? '')
   }, [settings?.dbHost, settings?.dbPort, settings?.dbUser])
+
+  useEffect(() => {
+    setCrmUrl(settings?.crmUrl ?? '')
+    setCrmUser(settings?.crmUser ?? '')
+  }, [settings?.crmUrl, settings?.crmUser])
 
   const provider = settings?.provider ?? 'claude'
   const hasCursorKey = Boolean(settings?.hasCursorKey)
@@ -210,6 +222,57 @@ export function SettingsMenu({
       setDbTestResult({ ok: false, text: errorText(error) })
     } finally {
       setIsTestingDb(false)
+    }
+  }
+
+  const saveCrmSettings = async (patch: CrmSettingsPatch): Promise<void> => {
+    setCrmError(null)
+    try {
+      await window.api.setCrmSettings(patch)
+      onSettingsChanged()
+    } catch (error) {
+      setCrmError(errorText(error))
+    }
+  }
+
+  const handleSaveCrmPassword = async (): Promise<void> => {
+    if (!crmPasswordInput) {
+      return
+    }
+    setIsSaving(true)
+    setCrmError(null)
+    try {
+      await window.api.setCrmPassword(crmPasswordInput)
+      setCrmPasswordInput('')
+      setEditingCrmPassword(false)
+      onSettingsChanged()
+    } catch (error) {
+      setCrmError(errorText(error))
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleClearCrmPassword = async (): Promise<void> => {
+    setCrmError(null)
+    try {
+      await window.api.clearCrmPassword()
+      onSettingsChanged()
+    } catch (error) {
+      setCrmError(errorText(error))
+    }
+  }
+
+  const handleTestCrm = async (): Promise<void> => {
+    setIsTestingCrm(true)
+    setCrmTestResult(null)
+    try {
+      const text = await window.api.testCrmConnection()
+      setCrmTestResult({ ok: true, text })
+    } catch (error) {
+      setCrmTestResult({ ok: false, text: errorText(error) })
+    } finally {
+      setIsTestingCrm(false)
     }
   }
 
@@ -491,6 +554,110 @@ export function SettingsMenu({
             <div className="popover-note">
               Логин и пароль агенту не передаются — приложение подключается само. Надёжнее указать отдельного пользователя БД с
               правами только на чтение. Изменения действуют со следующего сообщения.
+            </div>
+          </>
+        )}
+      </div>
+      <div className="popover-divider" />
+      <div className="popover-section">
+        <div className="popover-row">
+          <div>
+            <div className="popover-row-title">Действия агента в CRM</div>
+            <div className="popover-row-hint">Обновить из файловой системы, компиляция и перезапуск — агент делает сам</div>
+          </div>
+          <Toggle
+            checked={Boolean(settings?.crmActionsEnabled)}
+            onChange={(value) => saveCrmSettings({ crmActionsEnabled: value })}
+            label="Действия агента в CRM"
+          />
+        </div>
+        {crmError && <div className="popover-error">{crmError}</div>}
+        {settings?.crmActionsEnabled && (
+          <>
+            <div className="popover-field">
+              <div className="popover-row">
+                <div>
+                  <div className="popover-row-title">Спрашивать перед каждым действием</div>
+                  <div className="popover-row-hint">Показывать действие и ждать вашего разрешения</div>
+                </div>
+                <Toggle
+                  checked={Boolean(settings?.crmConfirmActions)}
+                  onChange={(value) => saveCrmSettings({ crmConfirmActions: value })}
+                  label="Спрашивать перед каждым действием"
+                />
+              </div>
+            </div>
+            <div className="popover-field">
+              <div className="popover-field-label">Адрес CRM и пользователь</div>
+              <div className="popover-inline popover-inline-2">
+                <input
+                  className="input"
+                  placeholder="http://localhost:8007"
+                  value={crmUrl}
+                  onChange={(event) => setCrmUrl(event.target.value)}
+                  onBlur={() => saveCrmSettings({ crmUrl: crmUrl.trim() })}
+                />
+                <input
+                  className="input"
+                  placeholder="Пользователь"
+                  value={crmUser}
+                  onChange={(event) => setCrmUser(event.target.value)}
+                  onBlur={() => saveCrmSettings({ crmUser: crmUser.trim() })}
+                />
+              </div>
+            </div>
+            <div className="popover-field">
+              {settings?.hasCrmPassword && !editingCrmPassword ? (
+                <div className="popover-row">
+                  <span className="key-status">Пароль в Keychain</span>
+                  <div className="popover-inline">
+                    <button type="button" className="btn btn-secondary btn-sm" onClick={() => setEditingCrmPassword(true)}>
+                      Сменить
+                    </button>
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={handleClearCrmPassword}>
+                      Сбросить
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="popover-inline">
+                  <input
+                    className="input"
+                    type="password"
+                    placeholder="Пароль"
+                    value={crmPasswordInput}
+                    onChange={(event) => setCrmPasswordInput(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        handleSaveCrmPassword()
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    disabled={isSaving || !crmPasswordInput}
+                    onClick={handleSaveCrmPassword}
+                  >
+                    Сохранить
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className="popover-field">
+              <button type="button" className="btn btn-secondary btn-sm" disabled={isTestingCrm} onClick={handleTestCrm}>
+                Проверить вход
+              </button>
+              {crmTestResult &&
+                (crmTestResult.ok ? (
+                  <div className="popover-note">{crmTestResult.text}</div>
+                ) : (
+                  <div className="popover-error">{crmTestResult.text}</div>
+                ))}
+            </div>
+            <div className="popover-note">
+              Нужен пользователь с ролью «Системный администратор». Пароль агенту не передаётся. Изменения действуют со следующего
+              сообщения.
             </div>
           </>
         )}

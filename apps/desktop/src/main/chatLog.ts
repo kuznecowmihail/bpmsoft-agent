@@ -178,6 +178,15 @@ function renderMarkdown(kind: string, data: Record<string, any>): string {
           : `${data.rowCount} строк${data.truncated ? ' (обрезано)' : ''} · ${data.durationMs} мс`
       return `- 🗄 Запрос к БД: ${short(String(data.sql ?? ''), 300)} → ${outcome}\n`
     }
+    case 'crm_action': {
+      const title = data.action === 'compile' ? 'Компиляция и перезапуск CRM' : 'Обновление CRM из файловой системы'
+      const outcome = data.denied
+        ? 'отклонено пользователем'
+        : data.success
+          ? `успешно · ${Math.round(Number(data.durationMs) / 1000)} с`
+          : `⚠️ ${short(String(data.error ?? data.summary ?? ''), 300)}`
+      return `- ⚙️ ${title} → ${outcome}\n`
+    }
     case 'error':
       return `\n**Ошибка:** ${data.message}\n`
     case 'turn_end':

@@ -29,11 +29,11 @@ describe('appSettings', () => {
 
     // Verify file was written
     const written = JSON.parse(fs.readFileSync(filePath, 'utf-8'))
-    expect(written).toEqual({ provider: 'cursor', cursorModel: 'composer-2.6', cursorModelParams: [{ id: 'thinking', value: 'on' }], cursorModelName: 'Composer with Thinking', claudeModel: '', claudeEffort: '', claudeModelName: '', dbAccessEnabled: false, dbConfirmQueries: false, dbHost: '', dbPort: '', dbUser: '' })
+    expect(written).toEqual({ provider: 'cursor', cursorModel: 'composer-2.6', cursorModelParams: [{ id: 'thinking', value: 'on' }], cursorModelName: 'Composer with Thinking', claudeModel: '', claudeEffort: '', claudeModelName: '', dbAccessEnabled: false, dbConfirmQueries: false, dbHost: '', dbPort: '', dbUser: '', crmActionsEnabled: false, crmConfirmActions: false, crmUrl: '', crmUser: '' })
 
     // Verify reading the file again loads the same settings
     initAppSettings(filePath)
-    expect(getAppSettings()).toEqual({ provider: 'cursor', cursorModel: 'composer-2.6', cursorModelParams: [{ id: 'thinking', value: 'on' }], cursorModelName: 'Composer with Thinking', claudeModel: '', claudeEffort: '', claudeModelName: '', dbAccessEnabled: false, dbConfirmQueries: false, dbHost: '', dbPort: '', dbUser: '' })
+    expect(getAppSettings()).toEqual({ provider: 'cursor', cursorModel: 'composer-2.6', cursorModelParams: [{ id: 'thinking', value: 'on' }], cursorModelName: 'Composer with Thinking', claudeModel: '', claudeEffort: '', claudeModelName: '', dbAccessEnabled: false, dbConfirmQueries: false, dbHost: '', dbPort: '', dbUser: '', crmActionsEnabled: false, crmConfirmActions: false, crmUrl: '', crmUser: '' })
   })
 
   it('broken JSON loads defaults', () => {
@@ -173,5 +173,57 @@ describe('appSettings', () => {
       initAppSettings(filePath)
       expect(getAppSettings().dbPort).toBe('')
     }
+  })
+
+  it('crm settings default to disabled with empty connection', () => {
+    const settings = getAppSettings()
+    expect(settings.crmActionsEnabled).toBe(false)
+    expect(settings.crmConfirmActions).toBe(false)
+    expect(settings.crmUrl).toBe('')
+    expect(settings.crmUser).toBe('')
+  })
+
+  it('crm flags are true only for boolean true', () => {
+    const filePath = path.join(tempDir, 'settings.json')
+    fs.writeFileSync(filePath, JSON.stringify({ crmActionsEnabled: 'true', crmConfirmActions: 1 }))
+    initAppSettings(filePath)
+    expect(getAppSettings().crmActionsEnabled).toBe(false)
+    expect(getAppSettings().crmConfirmActions).toBe(false)
+
+    fs.writeFileSync(filePath, JSON.stringify({ crmActionsEnabled: true, crmConfirmActions: true }))
+    initAppSettings(filePath)
+    expect(getAppSettings().crmActionsEnabled).toBe(true)
+    expect(getAppSettings().crmConfirmActions).toBe(true)
+  })
+
+  it('crm url is trimmed and loses trailing slashes', () => {
+    const filePath = path.join(tempDir, 'settings.json')
+    fs.writeFileSync(filePath, JSON.stringify({ crmUrl: '  http://localhost:8007//  ' }))
+    initAppSettings(filePath)
+    expect(getAppSettings().crmUrl).toBe('http://localhost:8007')
+
+    fs.writeFileSync(filePath, JSON.stringify({ crmUrl: 'HTTPS://crm.example.test/app' }))
+    initAppSettings(filePath)
+    expect(getAppSettings().crmUrl).toBe('HTTPS://crm.example.test/app')
+  })
+
+  it('crm url without http(s) scheme, with spaces or non-strings becomes empty', () => {
+    const filePath = path.join(tempDir, 'settings.json')
+    for (const invalid of ['localhost:8007', 'ftp://host', 'http://', 'http://ho st', 'http:/host', 42, null]) {
+      fs.writeFileSync(filePath, JSON.stringify({ crmUrl: invalid }))
+      initAppSettings(filePath)
+      expect(getAppSettings().crmUrl).toBe('')
+    }
+  })
+
+  it('crm user is trimmed, non-strings become empty', () => {
+    const filePath = path.join(tempDir, 'settings.json')
+    fs.writeFileSync(filePath, JSON.stringify({ crmUser: ' admin ' }))
+    initAppSettings(filePath)
+    expect(getAppSettings().crmUser).toBe('admin')
+
+    fs.writeFileSync(filePath, JSON.stringify({ crmUser: 7 }))
+    initAppSettings(filePath)
+    expect(getAppSettings().crmUser).toBe('')
   })
 })

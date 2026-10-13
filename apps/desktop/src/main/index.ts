@@ -20,12 +20,16 @@ import {
   setDbPassword,
   hasDbPassword,
   clearDbPassword,
-  testDbConnection
+  testDbConnection,
+  setCrmPassword,
+  hasCrmPassword,
+  clearCrmPassword,
+  testCrm
 } from './agentSession'
 import { initChatLog, getChatLogDir } from './chatLog'
 import { initAppSettings, getAppSettings, updateAppSettings } from './appSettings'
 import { listCursorModels, listClaudeModels } from '@bpmsoft-agent/agent-runtime'
-import type { AgentProvider, CursorModelParam, ClaudeEffort, DbSettingsPatch } from '../shared/types'
+import type { AgentProvider, CursorModelParam, ClaudeEffort, DbSettingsPatch, CrmSettingsPatch } from '../shared/types'
 
 function resolveChatLogDir(): string {
   const override = process.env['BPMSOFT_AGENT_LOG_DIR']
@@ -139,7 +143,8 @@ app.whenReady().then(() => {
     ...getAppSettings(),
     hasClaudeKey: hasApiKey(),
     hasCursorKey: hasCursorApiKey(),
-    hasDbPassword: hasDbPassword()
+    hasDbPassword: hasDbPassword(),
+    hasCrmPassword: hasCrmPassword()
   }))
 
   ipcMain.handle('settings:setProvider', (_event, provider: AgentProvider) => {
@@ -177,6 +182,25 @@ app.whenReady().then(() => {
   })
 
   ipcMain.handle('db:test', (_event, readRoot: string) => testDbConnection(readRoot))
+
+  ipcMain.handle('settings:setCrm', (_event, patch: CrmSettingsPatch) => {
+    const next: CrmSettingsPatch = {}
+    if (typeof patch?.crmActionsEnabled === 'boolean') next.crmActionsEnabled = patch.crmActionsEnabled
+    if (typeof patch?.crmConfirmActions === 'boolean') next.crmConfirmActions = patch.crmConfirmActions
+    if (typeof patch?.crmUrl === 'string') next.crmUrl = patch.crmUrl
+    if (typeof patch?.crmUser === 'string') next.crmUser = patch.crmUser
+    updateAppSettings(next)
+  })
+
+  ipcMain.handle('crm:setPassword', (_event, password: string) => {
+    setCrmPassword(password)
+  })
+
+  ipcMain.handle('crm:clearPassword', () => {
+    clearCrmPassword()
+  })
+
+  ipcMain.handle('crm:test', () => testCrm())
 
   ipcMain.handle('cursor:setApiKey', (_event, apiKey: string) => {
     setCursorApiKey(apiKey)

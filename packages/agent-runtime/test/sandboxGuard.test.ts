@@ -734,6 +734,16 @@ describe("sandboxGuard", () => {
 		});
 	});
 
+	describe("CRM stand tools", () => {
+		it("isAutoApprovedToolCall returns true for mcp__crm__crm_compile", () => {
+			expect(isAutoApprovedToolCall("mcp__crm__crm_compile", {})).toBe(true);
+		});
+
+		it("isReadOnlyToolCall returns false for mcp__crm__crm_compile", () => {
+			expect(isReadOnlyToolCall("mcp__crm__crm_compile", {})).toBe(false);
+		});
+	});
+
 	describe("Windows paths", () => {
 		describe("toNativePath", () => {
 			it("converts Git Bash /c/Users/a/b to C:\\Users\\a\\b on win32", () => {

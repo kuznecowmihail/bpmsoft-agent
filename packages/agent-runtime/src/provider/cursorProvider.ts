@@ -4,6 +4,7 @@ import * as path from "path";
 import type { AgentEvent } from "./messageMapper";
 import { buildBpmsoftSystemPrompt } from "./systemPrompt";
 import type { CrmDbTool } from "../db/crmDbTool";
+import type { CrmTool } from "../crm/crmTools";
 
 export interface CursorModelParam {
 	id: string;
@@ -35,6 +36,8 @@ export interface RunCursorAgentQueryOptions {
 	readRoot?: string;
 	/** Read-only CRM database tool, exposed to Cursor as a custom tool; omit when database access is off. */
 	dbTool?: CrmDbTool;
+	/** CRM stand actions (update from the file system, compile), exposed to Cursor as custom tools; omit when the user has not enabled them. */
+	crmTools?: CrmTool[];
 }
 
 /** Tools never offered to the Cursor agent: network, MCP, image generation. */
@@ -101,8 +104,25 @@ function cursorDbTool(dbTool: CrmDbTool): SDKCustomTool {
 	};
 }
 
+/** A CRM stand action in Cursor's custom-tool shape (no parameters). */
+function cursorCrmTool(crmTool: CrmTool): SDKCustomTool {
+	return {
+		description: crmTool.description,
+		inputSchema: { type: "object", properties: {} },
+		execute: async () => {
+			const result = await crmTool.execute();
+			return { content: [{ type: "text", text: result.text }], isError: result.isError };
+		}
+	};
+}
+
 /** Maps a Cursor tool call to the Claude-style name and input the desktop UI already understands. */
 export function normalizeCursorToolCall(name: string, args: unknown): { name: string; input: Record<string, unknown> } {
+	for (const toolName of ["crm_update_from_fs", "crm_compile"]) {
+		if (name === toolName || (/mcp/i.test(name) && JSON.stringify(args ?? null).includes(toolName))) {
+			return { name: toolName, input: {} };
+		}
+	}
 	if (name === "crm_db_query" || (/mcp/i.test(name) && JSON.stringify(args ?? null).includes("crm_db_query"))) {
 		return { name: "crm_db_query", input: { sql: findSqlArgument(args) } };
 	}
@@ -377,17 +397,25 @@ export async function listCursorModels(apiKey: string): Promise<CursorModelOptio
 
 async function* runCursorAgentQueryUnsafe(options: RunCursorAgentQueryOptions): AsyncGenerator<AgentEvent, void> {
 	const knowledgeDir = knowledgeDirectory();
+	const useCustomTools = Boolean(options.dbTool) || Boolean(options.crmTools?.length);
+	const customTools: Record<string, SDKCustomTool> = {};
+	if (options.dbTool) {
+		customTools[options.dbTool.name] = cursorDbTool(options.dbTool);
+	}
+	for (const crmTool of options.crmTools ?? []) {
+		customTools[crmTool.name] = cursorCrmTool(crmTool);
+	}
 	const agentOptions: AgentOptions = {
 		apiKey: options.apiKey,
 		model: options.modelParams?.length ? { id: options.model, params: options.modelParams } : { id: options.model },
-		disallowedTools: options.dbTool ? DISALLOWED_TOOLS.filter((tool) => tool !== "mcp") : DISALLOWED_TOOLS,
+		disallowedTools: useCustomTools ? DISALLOWED_TOOLS.filter((tool) => tool !== "mcp") : DISALLOWED_TOOLS,
 		local: {
 			cwd: options.cwd,
 			// Isolation from the developer's own Cursor setup (rules, hooks, plugins).
 			settingSources: [] as never[],
 			sandboxOptions: { enabled: true },
 			// Custom tools run in this process (not in Cursor's sandbox); settingSources: [] keeps the user's own MCP servers out.
-			customTools: options.dbTool ? { [options.dbTool.name]: cursorDbTool(options.dbTool) } : undefined
+			customTools: Object.keys(customTools).length > 0 ? customTools : undefined
 		}
 	};
 	const startedAt = Date.now();
@@ -399,7 +427,7 @@ async function* runCursorAgentQueryUnsafe(options: RunCursorAgentQueryOptions): 
 		const message = options.resume
 			? buildCursorFollowUpMessage(options.prompt)
 			: buildCursorFirstMessage(
-					buildBpmsoftSystemPrompt(knowledgeDir, { dbQuery: Boolean(options.dbTool) }),
+					buildBpmsoftSystemPrompt(knowledgeDir, { dbQuery: Boolean(options.dbTool), crmActions: Boolean(options.crmTools?.length) }),
 					buildCursorSafetyRules(options.readRoot ?? options.cwd, options.cwd, knowledgeDir),
 					options.prompt
 				);

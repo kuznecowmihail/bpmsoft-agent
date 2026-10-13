@@ -250,5 +250,19 @@ describe('chatLog', () => {
       expect(md).toContain('🗄 Запрос к БД')
       expect(md).toContain('3 строк')
     })
+
+    it('renders CRM stand actions: success, denied and failure', () => {
+      startChatLogIfNeeded({ projectPath: '/test/proj' })
+      logChatRecord('crm_action', { action: 'update', success: true, durationMs: 4200, summary: 'ok' })
+      logChatRecord('crm_action', { action: 'compile', success: false, denied: true, durationMs: 0, summary: '' })
+      logChatRecord('crm_action', { action: 'compile', success: false, durationMs: 900, summary: '', error: 'Сборка не прошла' })
+
+      const mdPath = getCurrentChatLogPath()!.replace('.jsonl', '.md')
+      const md = readFileSync(mdPath, 'utf-8')
+
+      expect(md).toContain('Обновление CRM из файловой системы → успешно · 4 с')
+      expect(md).toContain('Компиляция и перезапуск CRM → отклонено пользователем')
+      expect(md).toContain('Компиляция и перезапуск CRM → ⚠️ Сборка не прошла')
+    })
   })
 })

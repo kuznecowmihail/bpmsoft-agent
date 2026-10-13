@@ -5,3 +5,4 @@ export * from "./provider/claudeModels";
 export * from "./provider/cursorProvider";
 export * from "./safety/sandboxGuard";
 export * from "./db";
+export * from "./crm";

@@ -644,6 +644,7 @@ button, input, textarea { font: inherit; color: inherit; }
 .popover-inline { display: flex; gap: 6px; }
 .popover-inline .input { height: 30px; font-size: 12.5px; }
 .popover-inline-3 { display: grid; grid-template-columns: 1fr 72px 1fr; gap: 6px; }
+.popover-inline-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .popover-error { margin-top: 6px; font-size: 11.5px; color: var(--error); }
 .popover-note { margin-top: 8px; font-size: 11.5px; line-height: 1.4; color: var(--text-tertiary); }
 .key-status.is-off::before { background: var(--warning); }

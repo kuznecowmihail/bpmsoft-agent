@@ -107,6 +107,15 @@ export function describeToolCall(name: string, input: unknown): string {
   if (name === 'crm_db_query' || name.endsWith('__crm_db_query')) {
     return 'Запрос к БД CRM'
   }
+  if (name === 'crm_update_from_fs' || name.endsWith('__crm_update_from_fs')) {
+    return 'Обновляет CRM из файловой системы'
+  }
+  if (name === 'crm_compile' || name.endsWith('__crm_compile')) {
+    return 'Компилирует и перезапускает CRM'
+  }
+  if (name === 'crm_action') {
+    return 'Действие в CRM'
+  }
   switch (name) {
     case 'Read':
       return `Читает файл ${shortPath(field(input, 'file_path'))}`
@@ -150,6 +159,10 @@ export function permissionSubject(name: string, input: unknown): string | undefi
   if (name === 'crm_db_query' || name.endsWith('__crm_db_query')) {
     const sql = field(input, 'sql')
     return typeof sql === 'string' ? sql : undefined
+  }
+  if (name === 'crm_action') {
+    const action = field(input, 'action')
+    return typeof action === 'string' ? action : undefined
   }
   if (name === 'Bash') {
     const command = field(input, 'command')

@@ -56,6 +56,15 @@ export interface AgentSettings {
 	dbPort: string
 	dbUser: string
 	hasDbPassword: boolean
+	/**
+	 * Agent may run «Обновить из файловой системы» and compile+restart on the stand;
+	 * the user must have the «Системный администратор» role.
+	 */
+	crmActionsEnabled: boolean
+	crmConfirmActions: boolean
+	crmUrl: string
+	crmUser: string
+	hasCrmPassword: boolean
 }
 
 export interface DbSettingsPatch {
@@ -64,4 +73,11 @@ export interface DbSettingsPatch {
 	dbHost?: string
 	dbPort?: string
 	dbUser?: string
+}
+
+export interface CrmSettingsPatch {
+	crmActionsEnabled?: boolean
+	crmConfirmActions?: boolean
+	crmUrl?: string
+	crmUser?: string
 }

@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { IpcRendererEvent } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
-import type { ProjectValidationResult, AgentProvider, AgentSettings, CursorModelOption, ClaudeModelOption, CursorModelParam, ClaudeEffort, DbSettingsPatch } from '../shared/types'
+import type { ProjectValidationResult, AgentProvider, AgentSettings, CursorModelOption, ClaudeModelOption, CursorModelParam, ClaudeEffort, DbSettingsPatch, CrmSettingsPatch } from '../shared/types'
 import type { AgentEvent } from '@bpmsoft-agent/agent-runtime'
 
 export interface AgentPermissionRequest {
@@ -44,6 +44,10 @@ const api = {
   setDbPassword: (password: string): Promise<void> => ipcRenderer.invoke('db:setPassword', password),
   clearDbPassword: (): Promise<void> => ipcRenderer.invoke('db:clearPassword'),
   testDbConnection: (readRoot: string): Promise<string> => ipcRenderer.invoke('db:test', readRoot),
+  setCrmSettings: (patch: CrmSettingsPatch): Promise<void> => ipcRenderer.invoke('settings:setCrm', patch),
+  setCrmPassword: (password: string): Promise<void> => ipcRenderer.invoke('crm:setPassword', password),
+  clearCrmPassword: (): Promise<void> => ipcRenderer.invoke('crm:clearPassword'),
+  testCrmConnection: (): Promise<string> => ipcRenderer.invoke('crm:test'),
   openLogs: (): Promise<void> => ipcRenderer.invoke('logs:open')
 }
 

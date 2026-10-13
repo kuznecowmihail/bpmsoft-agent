@@ -15,9 +15,13 @@ export interface StoredSettings {
   dbHost: string
   dbPort: string
   dbUser: string
+  crmActionsEnabled: boolean
+  crmConfirmActions: boolean
+  crmUrl: string
+  crmUser: string
 }
 
-export const DEFAULT_SETTINGS: StoredSettings = { provider: 'claude', cursorModel: 'composer-2.5', cursorModelParams: [], cursorModelName: '', claudeModel: '', claudeEffort: '', claudeModelName: '', dbAccessEnabled: false, dbConfirmQueries: false, dbHost: '', dbPort: '', dbUser: '' }
+export const DEFAULT_SETTINGS: StoredSettings = { provider: 'claude', cursorModel: 'composer-2.5', cursorModelParams: [], cursorModelName: '', claudeModel: '', claudeEffort: '', claudeModelName: '', dbAccessEnabled: false, dbConfirmQueries: false, dbHost: '', dbPort: '', dbUser: '', crmActionsEnabled: false, crmConfirmActions: false, crmUrl: '', crmUser: '' }
 
 let settingsPath: string | undefined
 let cache: StoredSettings = { ...DEFAULT_SETTINGS }
@@ -32,6 +36,8 @@ function normalize(value: unknown): StoredSettings {
   const validEfforts = new Set<string>(['low', 'medium', 'high', 'xhigh', 'max'])
   const claudeEffort = typeof raw.claudeEffort === 'string' && validEfforts.has(raw.claudeEffort) ? (raw.claudeEffort as ClaudeEffort) : ''
 
+  const crmUrl = typeof raw.crmUrl === 'string' ? raw.crmUrl.trim().replace(/\/+$/, '') : ''
+
   return {
     provider: raw.provider === 'cursor' ? 'cursor' : 'claude',
     cursorModel: typeof raw.cursorModel === 'string' && raw.cursorModel.trim() ? raw.cursorModel : DEFAULT_SETTINGS.cursorModel,
@@ -44,7 +50,11 @@ function normalize(value: unknown): StoredSettings {
     dbConfirmQueries: raw.dbConfirmQueries === true,
     dbHost: typeof raw.dbHost === 'string' ? raw.dbHost.trim() : '',
     dbPort: typeof raw.dbPort === 'string' && /^\d{1,5}$/.test(raw.dbPort.trim()) ? raw.dbPort.trim() : '',
-    dbUser: typeof raw.dbUser === 'string' ? raw.dbUser.trim() : ''
+    dbUser: typeof raw.dbUser === 'string' ? raw.dbUser.trim() : '',
+    crmActionsEnabled: raw.crmActionsEnabled === true,
+    crmConfirmActions: raw.crmConfirmActions === true,
+    crmUrl: /^https?:\/\/[^\s]+$/i.test(crmUrl) ? crmUrl : '',
+    crmUser: typeof raw.crmUser === 'string' ? raw.crmUser.trim() : ''
   }
 }
 
