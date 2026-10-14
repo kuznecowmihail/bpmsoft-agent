@@ -185,6 +185,8 @@ define("<Имя>", ["BusinessRuleModule", "<Имя>Resources"], function(Busines
 - **Виртуальный атрибут с пересчётом**: `attributes: {"<Имя>": {dataValueType: BPMSoft.DataValueType.FLOAT, type: BPMSoft.ViewModelColumnType.VIRTUAL_COLUMN, value: 0, dependencies: [{columns: ["<Колонка>"], methodName: "<метод>"}]}}` — метод вызывается при изменении колонки.
 - **Переопределение метода родителя** с `this.callParent(arguments)` (проверено на `onEntityInitialized`).
 - **Валидация поля**: переопредели `setValidationConfig` (сначала `this.callParent(arguments)`), внутри `this.addColumnValidator("<Колонка>", this.<валидатор>)`; валидатор вызывается как `validator.call(this, value, column)` и возвращает `{invalidMessage: "<текст или пустая строка>"}`. Сообщение показывается под полем, сохранение блокируется.
+- ⚠️ **Свой валидатор не работает у обязательного поля** (✅ подтверждено в CRM и по коду платформы, 14.10.2026): `validateColumn` запускает сначала стандартные проверки (`getDefaultValidators` — `typeValidator`, `rangeValidator`, `requiredValidator`), потом твои из `validationConfig`, и останавливается на первой непройденной. У пустого обязательного поля (признак обязательности или правило REQUIRED) первым срабатывает `requiredValidator`, и свой валидатор уже не вызывается.
+- ✅ **Свой текст для обязательного поля** (подтверждено в CRM, 14.10.2026): переопредели `requiredValidator(value, column)`, возьми результат родителя через `this.callParent(arguments)` и, если `invalidMessage` не пуст и нужна именно твоя колонка (`column.name` или `column.columnPath`), замени его своей локализуемой строкой. Текст появится и под полем, и в окне при сохранении (шаблон платформы «Поле "<Подпись>": <текст>»). Саму обязательность задавай как обычно — правилом REQUIRED или признаком колонки.
 - **Правила `rules`** (зависимость `BusinessRuleModule`): `rules: {"<Колонка>": {"<ИмяПравила>": {ruleType: BusinessRuleModule.enums.RuleType.BINDPARAMETER, property: BusinessRuleModule.enums.Property.REQUIRED | VISIBLE | ENABLED, conditions: [{leftExpression: {type: BusinessRuleModule.enums.ValueType.ATTRIBUTE, attribute: "<Колонка>"}, comparisonType: BPMSoft.ComparisonType.GREATER | EQUAL | IS_NOT_NULL, rightExpression: {type: BusinessRuleModule.enums.ValueType.CONSTANT, value: <значение>}}]}}}` (у `IS_NOT_NULL` без `rightExpression`). Проверены REQUIRED + GREATER и VISIBLE + IS_NOT_NULL.
 - **Локализуемая строка в коде**: `resources.localizableStrings.<Ключ>` (модуль `<Имя>Resources` в зависимостях) или `this.get("Resources.Strings.<Ключ>")` — оба работают.
 - **Кнопка**: обработчик — метод из `methods`, `this.showInformationDialog(<текст>)` показывает сообщение. Стиль `BPMSoft.controls.ButtonEnums.style.GREEN` в BPMSoft заменён на `ORANGE` — для выделенной кнопки используй `ORANGE`.
@@ -303,6 +305,35 @@ define("<Имя>", ["BusinessRuleModule", "<Имя>Resources"], function(Busines
 - 🧪 По коду ядра (`[app]/Resources/ui/BPMSoft/amd/bootstrap.js`, `[app]/conf/content/BasePageV2.js`), отдельно не проверялось: PTP-сообщение получает только первый подписчик с совпавшим тегом, повторная подписка того же модуля с тем же тегом заменяет старую — запись, открытая в двух живых карточках, обновится в одной. `reloadEntity` вызывает `initEntity`, затем `onEntityInitialized`, затем `updateDetails`; в совмещённом режиме смена строки меняет `PrimaryColumnValue` и вызывает `reloadEntity`, модуль карточки не пересоздаётся.
 - ✅ Два экземпляра одного модуля на одной карточке получают сообщение, если карточка публикует его отдельно на id каждого экземпляра (подтверждено в CRM, 08.10.2026). 🧪 Одним вызовом с массивом из двух тегов, по коду ядра, дойдёт только до первого: `publishPtpMessage` в `bootstrap.js` останавливается на первом совпавшем теге.
 - ✅ Второй способ встраивания (подтверждено в CRM, 08.10.2026) — блок `modules: {}` + элемент `diff` с `itemType: BPMSoft.ViewItemType.MODULE` (см. `client-schemas.md`): модуль загрузился и обновлялся вместе с контейнером. ⚠️ Уточнение (подтверждено в CRM, 13.10.2026): запись `modules` только с `config.schemaName` (без `moduleName`) грузится модулем по умолчанию `BaseSchemaModuleV2` (`defaultModuleName` и `loadModule` в `[app]/conf/content/BaseSchemaViewModel.js`), который ждёт схему с вёрсткой (view model) и запрашивает `/<Модуль>Structure.js`; для схемы `SchemaType: Module` (`extend: "BPMSoft.BaseModule"`) это 404, модуль не появляется. Для такой схемы надёжный способ — `sandbox.loadModule` в контейнер (выше); 🧪 вариант с `"moduleName": "<Модуль>"` в записи `modules` не проверялся.
+
+## ✅ Фильтр выпадающего списка справочника на карточке
+
+**Подтверждено в CRM (14.10.2026).** Чтобы ограничить список значений простого справочника на карточке, переопредели `getLookupQuery` схемы: для своей колонки добавь в запрос фильтр по `Id` (список разрешённых записей из модуля констант), для остальных колонок верни `this.callParent(arguments)`. Без условия видны все значения справочника, с условием — только перечисленные. Очистку уже выбранного недопустимого значения делай отдельно, в обработчике изменения управляющей колонки.
+
+## ✅ Константы: клиентский модуль идентификаторов
+
+**Подтверждено в CRM (14.10.2026).** Сырые идентификаторы записей (UId справочников и т.п.) в карточках, модулях и деталях не пишем — они лежат в отдельном Module-модуле констант пакета, по одному на объект или тему. Внутри модуля — по вложенному объекту на справочник: одна переменная — одна таблица, идентификаторы в корне не лежат.
+
+Файлы модуля — как у обычного Module (см. «Новый модуль (Module) и встраивание в карточку с обменом сообщениями»), `properties.json` — `"SchemaType": "Module"`. Сам файл:
+```js
+define("TestConstants", [], function() {
+	Ext.define("BPMSoft.configuration.TestConstants", {
+		extend: "BPMSoft.BaseModule",
+		alternateClassName: "BPMSoft.TestConstants",
+		statics: {
+			/** Записи справочника «<Справочник>». */
+			TestSource: {
+				/** <Запись 1>. */
+				First: "<UId записи>",
+				/** <Запись 2>. */
+				Second: "<UId записи>"
+			}
+		}
+	});
+	return BPMSoft.TestConstants;
+});
+```
+Карточка подключает модуль зависимостью `define("<Схема>", [..., "TestConstants"], function(..., TestConstants) {` и берёт значения как `TestConstants.TestSource.First`. Сравнивая с `Id` выбранного значения, приводи обе стороны к нижнему регистру: в колонке lookup регистр UId может отличаться от записанного в константах.
 
 ## ✅ Новый миксин (Mixin) и подключение к схеме
 **Подтверждено**: миксин `TestMixin` подключён к карточке `TestColumnsPage`, его метод работает в отдельной карточке и в совмещённом режиме.

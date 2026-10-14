@@ -37,7 +37,6 @@ const api = {
   setProvider: (provider: AgentProvider): Promise<void> => ipcRenderer.invoke('settings:setProvider', provider),
   setCursorModel: (model: { id: string; params?: CursorModelParam[]; name?: string }): Promise<void> => ipcRenderer.invoke('settings:setCursorModel', model),
   setClaudeModel: (model: { id: string; effort?: ClaudeEffort; name?: string }): Promise<void> => ipcRenderer.invoke('settings:setClaudeModel', model),
-  setCursorUnsandboxed: (value: boolean): Promise<void> => ipcRenderer.invoke('settings:setCursorUnsandboxed', value),
   setCursorApiKey: (apiKey: string): Promise<void> => ipcRenderer.invoke('cursor:setApiKey', apiKey),
   clearCursorApiKey: (): Promise<void> => ipcRenderer.invoke('cursor:clearApiKey'),
   listCursorModels: (): Promise<CursorModelOption[]> => ipcRenderer.invoke('cursor:listModels'),

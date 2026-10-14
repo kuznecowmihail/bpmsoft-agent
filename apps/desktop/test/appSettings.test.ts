@@ -29,11 +29,11 @@ describe('appSettings', () => {
 
     // Verify file was written
     const written = JSON.parse(fs.readFileSync(filePath, 'utf-8'))
-    expect(written).toEqual({ provider: 'cursor', cursorModel: 'composer-2.6', cursorModelParams: [{ id: 'thinking', value: 'on' }], cursorModelName: 'Composer with Thinking', cursorUnsandboxed: false, claudeModel: '', claudeEffort: '', claudeModelName: '', dbAccessEnabled: false, dbConfirmQueries: false, dbHost: '', dbPort: '', dbUser: '', crmActionsEnabled: false, crmConfirmActions: false, crmBrowserEnabled: false, crmUrl: '', crmUser: '', recentProjects: [] })
+    expect(written).toEqual({ provider: 'cursor', cursorModel: 'composer-2.6', cursorModelParams: [{ id: 'thinking', value: 'on' }], cursorModelName: 'Composer with Thinking', claudeModel: '', claudeEffort: '', claudeModelName: '', dbAccessEnabled: false, dbConfirmQueries: false, dbHost: '', dbPort: '', dbUser: '', crmActionsEnabled: false, crmConfirmActions: false, crmBrowserEnabled: false, crmUrl: '', crmUser: '', recentProjects: [] })
 
     // Verify reading the file again loads the same settings
     initAppSettings(filePath)
-    expect(getAppSettings()).toEqual({ provider: 'cursor', cursorModel: 'composer-2.6', cursorModelParams: [{ id: 'thinking', value: 'on' }], cursorModelName: 'Composer with Thinking', cursorUnsandboxed: false, claudeModel: '', claudeEffort: '', claudeModelName: '', dbAccessEnabled: false, dbConfirmQueries: false, dbHost: '', dbPort: '', dbUser: '', crmActionsEnabled: false, crmConfirmActions: false, crmBrowserEnabled: false, crmUrl: '', crmUser: '', recentProjects: [] })
+    expect(getAppSettings()).toEqual({ provider: 'cursor', cursorModel: 'composer-2.6', cursorModelParams: [{ id: 'thinking', value: 'on' }], cursorModelName: 'Composer with Thinking', claudeModel: '', claudeEffort: '', claudeModelName: '', dbAccessEnabled: false, dbConfirmQueries: false, dbHost: '', dbPort: '', dbUser: '', crmActionsEnabled: false, crmConfirmActions: false, crmBrowserEnabled: false, crmUrl: '', crmUser: '', recentProjects: [] })
   })
 
   it('broken JSON loads defaults', () => {
@@ -227,23 +227,6 @@ describe('appSettings', () => {
     fs.writeFileSync(filePath, JSON.stringify({ crmBrowserEnabled: true }))
     initAppSettings(filePath)
     expect(getAppSettings().crmBrowserEnabled).toBe(true)
-  })
-
-  it('cursorUnsandboxed is off by default and on only for boolean true', () => {
-    expect(getAppSettings().cursorUnsandboxed).toBe(false)
-
-    const filePath = path.join(tempDir, 'settings.json')
-    fs.writeFileSync(filePath, JSON.stringify({}))
-    initAppSettings(filePath)
-    expect(getAppSettings().cursorUnsandboxed).toBe(false)
-
-    fs.writeFileSync(filePath, JSON.stringify({ cursorUnsandboxed: 'yes' }))
-    initAppSettings(filePath)
-    expect(getAppSettings().cursorUnsandboxed).toBe(false)
-
-    fs.writeFileSync(filePath, JSON.stringify({ cursorUnsandboxed: true }))
-    initAppSettings(filePath)
-    expect(getAppSettings().cursorUnsandboxed).toBe(true)
   })
 
   it('crm user is trimmed, non-strings become empty', () => {

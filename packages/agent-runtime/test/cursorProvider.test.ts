@@ -218,6 +218,35 @@ describe("cursorProvider", () => {
 		});
 	});
 
+	describe("normalizeCursorToolCall (local tools)", () => {
+		it("maps a direct read_file call to Read", () => {
+			expect(normalizeCursorToolCall("read_file", { path: "/a/b.json" })).toEqual({
+				name: "Read",
+				input: { file_path: "/a/b.json" }
+			});
+		});
+
+		it("maps a direct run_shell call to Bash with the command", () => {
+			const result = normalizeCursorToolCall("run_shell", { command: "date +%s000" });
+			expect(result.name).toBe("Bash");
+			expect(result.input.command).toBe("date +%s000");
+		});
+
+		it("maps an MCP-wrapped edit_file call with nested args", () => {
+			expect(normalizeCursorToolCall("mcp", { toolName: "edit_file", args: { path: "/x" } })).toEqual({
+				name: "Edit",
+				input: { file_path: "/x" }
+			});
+		});
+
+		it("maps an MCP-wrapped grep_files call with arguments as a JSON string", () => {
+			const result = normalizeCursorToolCall("mcp", { name: "grep_files", arguments: JSON.stringify({ pattern: "Foo", path: "/p" }) });
+			expect(result.name).toBe("Grep");
+			expect(result.input.pattern).toBe("Foo");
+			expect(result.input.path).toBe("/p");
+		});
+	});
+
 	describe("mapCursorMessage", () => {
 		const seenCalls = new Set<string>();
 
@@ -407,19 +436,28 @@ describe("cursorProvider", () => {
 			expect(result).toContain("остановка до подтверждения");
 		});
 
-		it("by default says writes are limited by the sandbox and not the no-sandbox rule", () => {
+		it("names the local tools that replace Cursor's built-in ones", () => {
 			const result = buildCursorSafetyRules("/app", "/app/Pkg", "/kn");
 
-			expect(result).toContain("ограничена песочницей");
-			expect(result).not.toContain("Песочницы в этой среде нет");
+			expect(result).toContain("read_file");
+			expect(result).toContain("edit_file");
+			expect(result).toContain("run_shell");
 		});
 
-		it("without sandbox says there is no sandbox and names the write root", () => {
-			const result = buildCursorSafetyRules("/app", "/app/Pkg", "/kn", false);
+		it("tells the agent to edit only with write_file and edit_file, not python or sed", () => {
+			const result = buildCursorSafetyRules("/app", "/app/Pkg", "/kn");
 
-			expect(result).toContain("Песочницы в этой среде нет");
+			expect(result).toContain("write_file и edit_file");
+			expect(result).toContain("python");
+		});
+
+		it("contains read, write and knowledge paths and no Delete instruction", () => {
+			const result = buildCursorSafetyRules("/app", "/app/Pkg", "/kn");
+
+			expect(result).toContain("/app");
 			expect(result).toContain("/app/Pkg");
-			expect(result).not.toContain("ограничена песочницей");
+			expect(result).toContain("/kn");
+			expect(result).not.toContain("Delete");
 		});
 	});
 

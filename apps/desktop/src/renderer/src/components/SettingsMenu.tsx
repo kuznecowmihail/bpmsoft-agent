@@ -71,7 +71,6 @@ export function SettingsMenu({
   const [crmTestResult, setCrmTestResult] = useState<{ ok: boolean; text: string } | null>(null)
   const [isTestingCrm, setIsTestingCrm] = useState(false)
   const [crmError, setCrmError] = useState<string | null>(null)
-  const [cursorError, setCursorError] = useState<string | null>(null)
 
   useEffect(() => {
     setDbHost(settings?.dbHost ?? '')
@@ -226,16 +225,6 @@ export function SettingsMenu({
       onSettingsChanged()
     } catch (error) {
       setDbError(errorText(error))
-    }
-  }
-
-  const saveCursorUnsandboxed = async (value: boolean): Promise<void> => {
-    setCursorError(null)
-    try {
-      await window.api.setCursorUnsandboxed(value)
-      onSettingsChanged()
-    } catch (error) {
-      setCursorError(errorText(error))
     }
   }
 
@@ -545,24 +534,8 @@ export function SettingsMenu({
               <div className="popover-note">Варианты Thinking и Max умнее на сложных задачах, но медленнее и дороже.</div>
             </div>
           )}
-          {settings?.platform === 'win32' && (
-            <div className="popover-field">
-              <div className="popover-row">
-                <div>
-                  <div className="popover-row-title">Разрешить Cursor без песочницы</div>
-                  <div className="popover-row-hint">На Windows у Cursor нет песочницы: запись вне Pkg ограничена только правилами для модели</div>
-                </div>
-                <Toggle
-                  checked={Boolean(settings?.cursorUnsandboxed)}
-                  onChange={(value) => saveCursorUnsandboxed(value)}
-                  label="Разрешить Cursor без песочницы"
-                />
-              </div>
-              {cursorError && <div className="popover-error">{cursorError}</div>}
-            </div>
-          )}
           <div className="popover-note">
-            Cursor не спрашивает разрешений по ходу работы: запись ограничена папкой Pkg{settings?.platform === 'win32' ? ' (на Windows — только правилами для модели)' : ''}, удаление и изменения git агент делает только после вашего согласия в чате.
+            Cursor работает через инструменты приложения: читает только папку проекта и знания, изменяет только Pkg, команды — без сети. Удаление, изменения git и сторонние программы — с вашего подтверждения.
           </div>
         </div>
       )}

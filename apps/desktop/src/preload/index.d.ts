@@ -24,7 +24,6 @@ export interface BpmsoftDesktopApi {
   setProvider: (provider: AgentProvider) => Promise<void>
   setCursorModel: (model: { id: string; params?: CursorModelParam[]; name?: string }) => Promise<void>
   setClaudeModel: (model: { id: string; effort?: ClaudeEffort; name?: string }) => Promise<void>
-  setCursorUnsandboxed: (value: boolean) => Promise<void>
   setCursorApiKey: (apiKey: string) => Promise<void>
   clearCursorApiKey: () => Promise<void>
   listCursorModels: () => Promise<CursorModelOption[]>

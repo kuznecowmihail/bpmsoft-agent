@@ -204,7 +204,6 @@ app.whenReady().then(() => {
 
   ipcMain.handle('settings:get', () => ({
     ...getAppSettings(),
-    platform: process.platform,
     hasClaudeKey: hasApiKey(),
     hasCursorKey: hasCursorApiKey(),
     hasDbPassword: hasDbPassword(),
@@ -225,12 +224,6 @@ app.whenReady().then(() => {
 
   ipcMain.handle('settings:setClaudeModel', (_event, model: { id: string; effort?: ClaudeEffort; name?: string }) => {
     updateAppSettings({ claudeModel: model.id, claudeEffort: model.effort ?? '', claudeModelName: model.name ?? '' })
-  })
-
-  ipcMain.handle('settings:setCursorUnsandboxed', (_event, value: boolean) => {
-    if (typeof value !== 'boolean') return
-    updateAppSettings({ cursorUnsandboxed: value })
-    resetAgentSession()
   })
 
   ipcMain.handle('settings:setDb', (_event, patch: DbSettingsPatch) => {

@@ -8,3 +8,5 @@ export * from "./safety/shellSandbox";
 export * from "./db";
 export * from "./crm";
 export * from "./tools";
+export * from "./tools/localTools";
+export * from "./tools/stagingCleanup";

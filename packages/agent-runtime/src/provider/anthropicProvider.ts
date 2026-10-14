@@ -13,6 +13,7 @@ import type { CrmDbTool } from "../db/crmDbTool";
 import type { CrmTool } from "../crm/crmTools";
 import type { AppTool } from "../tools/appTool";
 import { appToolContent } from "../tools/appTool";
+import { cleanupStagingDirs } from "../tools/stagingCleanup";
 
 export interface ToolPermissionRequest {
 	toolName: string;
@@ -143,6 +144,8 @@ export async function* runBpmsoftAgentQuery(
 		: undefined;
 	const osShellSandbox = hasOsShellSandbox();
 	const shellApproval: ShellApprovalOptions = { osSandbox: osShellSandbox, cwd: options.cwd, trustedScriptDirs: [path.join(knowledgeDir, "scripts")] };
+	// Folders the agent wrote to in this turn; the SDK's staging folders there are removed after the turn.
+	const touchedDirs = new Set<string>([options.cwd]);
 
 	const servers: NonNullable<Options["mcpServers"]> = {};
 	if (options.dbTool) {
@@ -227,6 +230,12 @@ export async function* runBpmsoftAgentQuery(
 										return {};
 									}
 									const toolInput = (input.tool_input ?? {}) as Record<string, unknown>;
+									for (const key of ["file_path", "notebook_path", "path"]) {
+										const value = toolInput[key];
+										if (typeof value === "string" && value !== "") {
+											touchedDirs.add(path.dirname(path.resolve(input.cwd || options.cwd, value)));
+										}
+									}
 									const decision = checkToolAccess(
 										input.tool_name,
 										toolInput,
@@ -293,5 +302,10 @@ export async function* runBpmsoftAgentQuery(
 		}
 	} finally {
 		close();
+		try {
+			cleanupStagingDirs(touchedDirs, options.sandbox?.writeRoots ?? []);
+		} catch {
+			// Best-effort cleanup: a failure must not break the turn.
+		}
 	}
 }

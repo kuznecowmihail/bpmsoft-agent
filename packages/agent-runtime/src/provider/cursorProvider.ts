@@ -1,12 +1,14 @@
 import { Agent, Cursor } from "@cursor/sdk";
-import type { AgentOptions, SDKAgent, SDKCustomTool, SDKMessage } from "@cursor/sdk";
+import type { AgentOptions, SDKAgent, SDKCustomTool, SDKMessage, ToolName } from "@cursor/sdk";
 import * as path from "path";
 import type { AgentEvent } from "./messageMapper";
+import type { ToolPermissionRequest } from "./anthropicProvider";
 import { buildBpmsoftSystemPrompt } from "./systemPrompt";
 import type { CrmDbTool } from "../db/crmDbTool";
 import type { CrmTool } from "../crm/crmTools";
 import type { AppTool } from "../tools/appTool";
 import { appToolContent, appToolJsonSchema } from "../tools/appTool";
+import { createLocalTools, LOCAL_TOOL_NAMES } from "../tools/localTools";
 
 export interface CursorModelParam {
 	id: string;
@@ -26,7 +28,7 @@ export interface RunCursorAgentQueryOptions {
 	/** Cursor API key (Cursor Dashboard → API Keys) — never logged or persisted here. */
 	apiKey: string;
 	prompt: string;
-	/** Working directory = the project's Pkg folder; the Cursor sandbox limits writes to it. */
+	/** Working directory = the project's Pkg folder; our local tools allow writes only here. */
 	cwd: string;
 	/** Cursor model id, e.g. "composer-2.5" (see `listCursorModels`). */
 	model: string;
@@ -37,10 +39,10 @@ export interface RunCursorAgentQueryOptions {
 	/** Opened application folder: the agent is told to read only here and in the knowledge directory. */
 	readRoot?: string;
 	/**
-	 * Cursor's local sandbox (writes only in `cwd`); default true. False on Windows, where the
-	 * Cursor SDK has no filesystem sandbox — then only the safety rules in the prompt limit writes.
+	 * Asks the user before shell commands that may delete files, change git state or run other programs
+	 * (run_shell of our local tools); without it such commands are refused.
 	 */
-	sandbox?: boolean;
+	requestToolPermission?: (request: ToolPermissionRequest) => Promise<boolean>;
 	/** Read-only CRM database tool, exposed to Cursor as a custom tool; omit when database access is off. */
 	dbTool?: CrmDbTool;
 	/** CRM stand actions (update from the file system, compile), exposed to Cursor as custom tools; omit when the user has not enabled them. */
@@ -49,8 +51,12 @@ export interface RunCursorAgentQueryOptions {
 	appTools?: AppTool[];
 }
 
-/** Tools never offered to the Cursor agent: network, MCP, image generation. */
-const DISALLOWED_TOOLS = ["webSearch", "webFetch", "mcp", "generateImage"];
+/**
+ * The only Cursor tools offered to the model: MCP (our custom tools) and the todo list. Built-in read, search,
+ * edit, delete, shell, subagents (task) and anything added in later SDK versions stay off: files and commands go
+ * through our local tools, which check every path (sandboxGuard) like the Claude provider does.
+ */
+const CURSOR_TOOLS: ToolName[] = ["mcp", "updateTodos", "readTodos"];
 
 const RESULT_TEXT_LIMIT = 4000;
 
@@ -63,20 +69,20 @@ function record(value: unknown): Record<string, unknown> {
 }
 
 /**
- * Rules the Cursor agent must follow itself: unlike the Claude provider there is
- * no per-action approval callback and reads are not sandboxed.
+ * Rules the Cursor agent follows itself (the model reads them in the first message). The paths are enforced
+ * by our local tools (read_file, write_file, run_shell…), which reject everything outside the given folders;
+ * the rest of the rules are the workflow and the confirmation of destructive actions.
  */
-export function buildCursorSafetyRules(readRoot: string, writeRoot: string, knowledgeDir: string, sandboxed = true): string {
+export function buildCursorSafetyRules(readRoot: string, writeRoot: string, knowledgeDir: string): string {
 	return [
-		"РЕЖИМ CURSOR. Приложение не может спрашивать у пользователя разрешение на отдельные действия, поэтому соблюдай правила сам:",
+		"РЕЖИМ CURSOR. Встроенных инструментов чтения, поиска, правки и терминала в этой среде нет — работай только инструментами приложения:",
+		"- read_file, list_dir, glob_files, grep_files — чтение и поиск (вместо Read, LS, Glob, Grep); где в инструкциях сказано «инструмент Read» — это read_file.",
+		"- write_file — создать или перезаписать файл; edit_file — точная замена фрагмента (вместо инструмента правки); run_shell — команда bash в папке Pkg (date, node со скриптами из каталога знаний, perl -pi и т.п.).",
+		"- Правь файлы только write_file и edit_file; читай read_file и grep_files. Команды для правки текста (python, python3, ruby, php, sed -i, perl -i, node -e) не используй: они дольше, ломают кодировку и часть из них каждый раз требует подтверждения пользователя. run_shell — для date, uuidgen, node --check, скриптов проверок из каталога знаний и чтения логов стенда.",
 		"- Порядок работы из инструкций обязателен, даже если задача кажется простой: 1) пакет — если пользователь не назвал пакет, а в Pkg их несколько, сначала спроси, в каком пакете работать, и не выбирай за него, даже если найдёшь подходящие схемы; 2) вопросы по требованиям с вариантами ответов; 3) план с AC/CC/DoD и остановка до подтверждения пользователя. Только после этого — изменения файлов.",
-		`- Читай только папку приложения ${readRoot} и каталог знаний ${knowledgeDir}. Файлы вне них не открывай и не ищи.`,
-		sandboxed
-			? `- Изменяй файлы только в ${writeRoot} (запись дополнительно ограничена песочницей).`
-			: `- Изменяй файлы только в ${writeRoot}. Песочницы в этой среде нет, поэтому правило — на тебе: не создавай, не меняй и не удаляй файлы вне этой папки, не запускай команды, которые пишут за её пределы (перенаправление вывода, cp, mv, редакторы, скрипты с путями вне неё), даже во временные папки.`,
+		`- Читать можно только папку приложения ${readRoot} и каталог знаний ${knowledgeDir}, изменять — только ${writeRoot}. Приложение проверяет каждый путь и отклоняет остальные; команды выполняются без сети.`,
 		"- Не читай файлы с секретами: ConnectionStrings.config, *.pfx, *.p12, *.pem, *.key — даже внутри папки приложения. Тип СУБД бери из DBEngineType существующих SQL-скриптов в Pkg; если их нет — спроси у пользователя.",
-		"- Удаление файлов и папок, перемещение с перезаписью и команды git, меняющие состояние (checkout, reset, restore, stash, add, commit и т.п.), — только после явного согласия пользователя в чате: перечисли, что удалишь или изменишь, и дождись ответа.",
-		`- Инструмент удаления файлов (Delete) в этой среде не работает: после согласия пользователя удаляй командой rm в терминале и только внутри ${writeRoot}.`,
+		"- Удаление файлов и папок, перемещение с перезаписью и команды git, меняющие состояние (checkout, reset, restore, stash, add, commit и т.п.), — только после явного согласия пользователя в чате: перечисли, что удалишь или изменишь, и дождись ответа. Такие команды run_shell приложение ещё раз показывает пользователю на подтверждение.",
 		"- Сеть, установка пакетов и сторонние программы не нужны — не используй их."
 	].join("\n");
 }
@@ -164,8 +170,36 @@ function wrappedToolArguments(args: unknown): Record<string, unknown> {
 	return {};
 }
 
+/** Claude-style name and input of one of our local tools, so the chat shows it like the Claude provider's tools. */
+function localToolEvent(toolName: string, a: Record<string, unknown>): { name: string; input: Record<string, unknown> } {
+	switch (toolName) {
+		case "read_file": return { name: "Read", input: { file_path: a.path } };
+		case "list_dir": return { name: "LS", input: { path: a.path } };
+		case "glob_files": return { name: "Glob", input: { pattern: a.pattern, path: a.path } };
+		case "grep_files": return { name: "Grep", input: { pattern: a.pattern, path: a.path } };
+		case "write_file": return { name: "Write", input: { file_path: a.path } };
+		case "edit_file": return { name: "Edit", input: { file_path: a.path } };
+		default: { // run_shell
+			const command = typeof a.command === "string" ? a.command : "";
+			const firstLine = command.split("\n")[0];
+			return { name: "Bash", input: { command, description: firstLine.length > 80 ? `${firstLine.slice(0, 80)}…` : firstLine } };
+		}
+	}
+}
+
 /** Maps a Cursor tool call to the Claude-style name and input the desktop UI already understands. */
 export function normalizeCursorToolCall(name: string, args: unknown): { name: string; input: Record<string, unknown> } {
+	if (LOCAL_TOOL_NAMES.includes(name)) {
+		return localToolEvent(name, record(args));
+	}
+	if (/mcp/i.test(name)) {
+		const r = record(args);
+		const explicit = [r.toolName, r.name, r.tool].find((value): value is string => typeof value === "string" && LOCAL_TOOL_NAMES.includes(value));
+		if (explicit) {
+			const inner = wrappedToolArguments(args);
+			return localToolEvent(explicit, Object.keys(inner).length > 0 ? inner : r);
+		}
+	}
 	if (/^crm_browser_[a-z_]+$/.test(name)) {
 		return { name, input: record(args) };
 	}
@@ -193,14 +227,8 @@ export function normalizeCursorToolCall(name: string, args: unknown): { name: st
 			return { name: "Edit", input: { file_path: a.path } };
 		case "delete":
 			return { name: "Delete", input: { file_path: a.path } };
-		case "shell": {
-			const command = typeof a.command === "string" ? a.command : "";
-			const firstLine = command.split("\n")[0];
-			return {
-				name: "Bash",
-				input: { command, description: firstLine.length > 80 ? `${firstLine.slice(0, 80)}…` : firstLine }
-			};
-		}
+		case "shell":
+			return localToolEvent("run_shell", a);
 		case "grep":
 			return { name: "Grep", input: { pattern: a.pattern, path: a.path } };
 		case "glob":
@@ -454,8 +482,6 @@ export async function listCursorModels(apiKey: string): Promise<CursorModelOptio
 
 async function* runCursorAgentQueryUnsafe(options: RunCursorAgentQueryOptions): AsyncGenerator<AgentEvent, void> {
 	const knowledgeDir = knowledgeDirectory();
-	const sandboxed = options.sandbox !== false;
-	const useCustomTools = Boolean(options.dbTool) || Boolean(options.crmTools?.length) || Boolean(options.appTools?.length);
 	const customTools: Record<string, SDKCustomTool> = {};
 	if (options.dbTool) {
 		customTools[options.dbTool.name] = cursorDbTool(options.dbTool);
@@ -466,17 +492,28 @@ async function* runCursorAgentQueryUnsafe(options: RunCursorAgentQueryOptions): 
 	for (const appTool of options.appTools ?? []) {
 		customTools[appTool.name] = cursorAppTool(appTool);
 	}
+	const localTools = createLocalTools({
+		cwd: options.cwd,
+		readRoots: [options.readRoot ?? options.cwd],
+		writeRoots: [options.cwd],
+		knowledgeDir,
+		requestPermission: options.requestToolPermission
+	});
+	for (const localTool of localTools) {
+		customTools[localTool.name] = cursorAppTool(localTool);
+	}
 	const agentOptions: AgentOptions = {
 		apiKey: options.apiKey,
 		model: options.modelParams?.length ? { id: options.model, params: options.modelParams } : { id: options.model },
-		disallowedTools: useCustomTools ? DISALLOWED_TOOLS.filter((tool) => tool !== "mcp") : DISALLOWED_TOOLS,
+		tools: CURSOR_TOOLS,
 		local: {
 			cwd: options.cwd,
 			// Isolation from the developer's own Cursor setup (rules, hooks, plugins).
 			settingSources: [] as never[],
-			sandboxOptions: { enabled: sandboxed },
+			// Cursor's own sandbox guards only its built-in shell, which is off; kept on where it exists as a second line of defence.
+			sandboxOptions: { enabled: process.platform !== "win32" },
 			// Custom tools run in this process (not in Cursor's sandbox); settingSources: [] keeps the user's own MCP servers out.
-			customTools: Object.keys(customTools).length > 0 ? customTools : undefined
+			customTools: customTools
 		}
 	};
 	const startedAt = Date.now();
@@ -489,7 +526,7 @@ async function* runCursorAgentQueryUnsafe(options: RunCursorAgentQueryOptions): 
 			? buildCursorFollowUpMessage(options.prompt)
 			: buildCursorFirstMessage(
 					buildBpmsoftSystemPrompt(knowledgeDir, { dbQuery: Boolean(options.dbTool), crmActions: Boolean(options.crmTools?.length), crmBrowser: Boolean(options.appTools?.some((t) => t.name.startsWith("crm_browser_"))) }),
-					buildCursorSafetyRules(options.readRoot ?? options.cwd, options.cwd, knowledgeDir, sandboxed),
+					buildCursorSafetyRules(options.readRoot ?? options.cwd, options.cwd, knowledgeDir),
 					options.prompt
 				);
 		let finished = false;
@@ -555,8 +592,10 @@ async function* runCursorAgentQueryUnsafe(options: RunCursorAgentQueryOptions): 
 /**
  * Runs one turn of the BPMSoft agent through the Cursor SDK (local agent on the
  * user's machine) and yields the same AgentEvents as `runBpmsoftAgentQuery`.
- * Writes are limited to `cwd` (Pkg) by Cursor's sandbox unless `sandbox` is false; the remaining rules are
- * passed to the model in the first message (see `buildCursorSafetyRules`).
+ * Files and commands go through our local tools (read_file, write_file, run_shell…), which check
+ * every path (sandboxGuard): reads only in the application folder and the knowledge directory, writes only in `cwd` (Pkg).
+ * Cursor's built-in tools are off. The workflow rules are passed to the model in the first message
+ * (see `buildCursorSafetyRules`).
  */
 export async function* runCursorAgentQuery(options: RunCursorAgentQueryOptions): AsyncGenerator<AgentEvent, void> {
 	try {
