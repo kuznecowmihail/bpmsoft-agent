@@ -216,6 +216,15 @@ export function mapAgentEventToEntry(event: AgentEvent): ChatEntry {
   }
   if (event.type === 'result') {
     const seconds = Math.max(1, Math.round(event.durationMs / 1000))
+    if (event.stopped) {
+      return {
+        id,
+        ts,
+        role: 'agent-result',
+        level: 'warn',
+        content: `Остановлено пользователем (${seconds} с). Если шло обновление или компиляция CRM, на стенде они могут ещё выполняться.`
+      }
+    }
     return {
       id,
       ts,
@@ -268,7 +277,12 @@ export function agentEventToLog(event: AgentEvent): LogEvent {
     return newLogEvent('info', 'tool', describeToolCall(event.name, event.input), clip(JSON.stringify(event.input, null, 2)))
   }
   if (event.type === 'result') {
-    const parts = [`Ход завершён ${event.success ? 'успешно' : 'с ошибкой'} за ${(event.durationMs / 1000).toFixed(1)} с`]
+    const seconds = (event.durationMs / 1000).toFixed(1)
+    const parts = [
+      event.stopped
+        ? `Ход остановлен пользователем за ${seconds} с`
+        : `Ход завершён ${event.success ? 'успешно' : 'с ошибкой'} за ${seconds} с`
+    ]
     if (event.totalCostUsd != null) {
       parts.push(`$${event.totalCostUsd.toFixed(3)}`)
     }
@@ -277,6 +291,9 @@ export function agentEventToLog(event: AgentEvent): LogEvent {
     }
     if (event.numTurns != null) {
       parts.push(`шагов: ${event.numTurns}`)
+    }
+    if (event.stopped) {
+      return newLogEvent('warn', 'turn', parts.join(' · '))
     }
     return newLogEvent(event.success ? 'info' : 'error', 'turn', parts.join(' · '))
   }

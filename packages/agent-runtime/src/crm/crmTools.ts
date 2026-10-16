@@ -1,11 +1,11 @@
 import * as fs from "fs";
 import * as path from "path";
 import { errorMessage } from "../db/crmDbTool";
-import { CrmConnection, CrmLoginError, CrmSession, FetchLike } from "./crmSession";
+import { CrmConnection, CrmLoginError, CrmSession, CrmStoppedError, FetchLike } from "./crmSession";
 import { LogMark, extractBuildErrors, extractPackageSync, hasAppStarted, markLog, readSince } from "./crmLogs";
 import { DEFAULT_MAX_FAILED_ACTIONS, FixLoop, errorSignature, schemaNameFromFile } from "./fixLoop";
 
-export interface CrmActionRecord { action: "update" | "compile"; success: boolean; durationMs: number; summary: string; error?: string; denied?: boolean; attempt?: number; foreignSchemas?: string[]; blocked?: boolean }
+export interface CrmActionRecord { action: "update" | "compile"; success: boolean; durationMs: number; summary: string; error?: string; denied?: boolean; attempt?: number; foreignSchemas?: string[]; blocked?: boolean; stopped?: boolean }
 export interface CrmToolsOptions {
 	connection: CrmConnection;
 	/** Opened application folder; enables log checks when <appRoot>/Logs exists. */
@@ -27,6 +27,8 @@ export interface CrmToolsOptions {
 	changedSince?: (ms: number) => boolean;
 	/** Chat start (ms): reference when no update ran in this turn. */
 	chatStartedAt?: () => number;
+	/** User stop: running waits are cut short, the action on the stand may continue. */
+	signal?: AbortSignal;
 }
 export interface CrmTool { name: string; description: string; execute(): Promise<{ text: string; isError: boolean }> }
 
@@ -82,6 +84,12 @@ function failure(text: string, error: string): ActionOutcome {
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
+function stoppedText(action: "update" | "compile"): string {
+	return action === "update"
+		? "Остановлено пользователем: ожидание обновления из файловой системы прервано. На стенде обновление могло продолжиться — не повторяй действие, пока пользователь не попросит."
+		: "Остановлено пользователем: ожидание компиляции прервано. На стенде компиляция или перезапуск приложения могли продолжиться — не повторяй действие, пока пользователь не попросит.";
+}
+
 /** Common flow: confirmation, login, the action itself, error texts and the action record. */
 async function runAction(
 	options: CrmToolsOptions,
@@ -90,6 +98,11 @@ async function runAction(
 	caption: string,
 	run: (session: CrmSession, logRoot: string | undefined) => Promise<ActionOutcome>
 ): Promise<{ text: string; isError: boolean }> {
+	if (options.signal?.aborted) {
+		options.onAction?.({ action, success: false, durationMs: 0, summary: "", stopped: true, error: "Остановлено пользователем" });
+		return { text: stoppedText(action), isError: true };
+	}
+
 	const blockedText = loop.blocked();
 	if (blockedText !== undefined) {
 		options.onAction?.({ action, success: false, durationMs: 0, summary: "", blocked: true, error: blockedText });
@@ -137,12 +150,20 @@ async function runAction(
 		return { text, isError: !outcome.success };
 	};
 
+	const stopped = (): { text: string; isError: boolean } => {
+		options.onAction?.({ action, success: false, durationMs: Date.now() - started, summary: "Остановлено пользователем", stopped: true, error: "Остановлено пользователем" });
+		return { text: stoppedText(action), isError: true };
+	};
+
 	const logRoot = options.appRoot !== undefined && fs.existsSync(path.join(options.appRoot, "Logs")) ? options.appRoot : undefined;
 	const session = new CrmSession(options.connection, options.fetchImpl);
 
 	try {
-		await session.login();
+		await session.login(undefined, options.signal);
 	} catch (e) {
+		if (e instanceof CrmStoppedError) {
+			return stopped();
+		}
 		const message = errorMessage(e).replace(/[.\s]+$/, "");
 		if (e instanceof CrmLoginError) {
 			return finish({ ...failure(`Вход в CRM не выполнен: ${message}. ${FALLBACK}`, message), countable: false });
@@ -153,14 +174,17 @@ async function runAction(
 	try {
 		return finish(await run(session, logRoot));
 	} catch (e) {
+		if (e instanceof CrmStoppedError) {
+			return stopped();
+		}
 		const message = errorMessage(e).replace(/[.\s]+$/, "");
 		return finish({ ...failure(`CRM недоступна: ${message}. ${FALLBACK}`, message), countable: false });
 	}
 }
 
-async function runUpdate(session: CrmSession, logRoot: string | undefined): Promise<ActionOutcome> {
+async function runUpdate(session: CrmSession, logRoot: string | undefined, signal?: AbortSignal): Promise<ActionOutcome> {
 	const mark = logRoot ? markLog(logRoot, "PackagesSynchronization.log") : undefined;
-	const response = await session.post(LOAD_PACKAGES_PATH, UPDATE_TIMEOUT_MS);
+	const response = await session.post(LOAD_PACKAGES_PATH, UPDATE_TIMEOUT_MS, signal);
 	const json = asRecord(response.json);
 
 	const loaded: string[] = [];
@@ -224,14 +248,23 @@ async function waitForRestart(options: CrmToolsOptions, commonMark: LogMark | un
 	const limitMs = options.restartLimitMs ?? DEFAULT_RESTART_LIMIT_MS;
 	let sawDown = false;
 	while (Date.now() - since < limitMs) {
+		if (options.signal?.aborted) {
+			throw new CrmStoppedError("остановлено пользователем");
+		}
 		await sleep(pollMs);
+		if (options.signal?.aborted) {
+			throw new CrmStoppedError("остановлено пользователем");
+		}
 		if (commonMark && hasAppStarted(readSince(commonMark))) {
 			return true;
 		}
 		const probe = new CrmSession(options.connection, options.fetchImpl);
 		try {
-			await probe.login();
-		} catch {
+			await probe.login(undefined, options.signal);
+		} catch (e) {
+			if (e instanceof CrmStoppedError) {
+				throw e;
+			}
 			sawDown = true;
 			continue;
 		}
@@ -244,7 +277,7 @@ async function waitForRestart(options: CrmToolsOptions, commonMark: LogMark | un
 
 async function runCompile(options: CrmToolsOptions, session: CrmSession, logRoot: string | undefined): Promise<ActionOutcome> {
 	const mark = logRoot ? markLog(logRoot, "Build.log") : undefined;
-	const response = await session.post(BUILD_PATH, BUILD_TIMEOUT_MS);
+	const response = await session.post(BUILD_PATH, BUILD_TIMEOUT_MS, options.signal);
 	const json = asRecord(response.json);
 
 	const real = asArray(json.errors).map(asRecord).filter((item) => item.warning === false);
@@ -276,8 +309,11 @@ async function runCompile(options: CrmToolsOptions, session: CrmSession, logRoot
 	const commonMark = logRoot ? markLog(logRoot, "Common.log") : undefined;
 	const restartStarted = Date.now();
 	try {
-		await session.post(RESTART_PATH, RESTART_TIMEOUT_MS);
-	} catch {
+		await session.post(RESTART_PATH, RESTART_TIMEOUT_MS, options.signal);
+	} catch (e) {
+		if (e instanceof CrmStoppedError) {
+			throw e;
+		}
 		// The application may already be restarting; the wait below decides.
 	}
 
@@ -301,7 +337,7 @@ export function createCrmTools(options: CrmToolsOptions): CrmTool[] {
 	/** Time of the last successful update in this tools instance (ms). */
 	let lastUpdateOkAt: number | undefined;
 	const runUpdateStep = async (): Promise<{ text: string; isError: boolean }> => {
-		const result = await runAction(options, loop, "update", UPDATE_CAPTION, (session, logRoot) => runUpdate(session, logRoot));
+		const result = await runAction(options, loop, "update", UPDATE_CAPTION, (session, logRoot) => runUpdate(session, logRoot, options.signal));
 		if (!result.isError) {
 			lastUpdateOkAt = Date.now();
 		}
@@ -314,6 +350,9 @@ export function createCrmTools(options: CrmToolsOptions): CrmTool[] {
 			const since = lastUpdateOkAt ?? options.chatStartedAt?.() ?? 0;
 			if (options.changedSince(since)) {
 				const update = await runUpdateStep();
+				if (options.signal?.aborted) {
+					return update;
+				}
 				if (update.isError) {
 					return { text: `Компиляция не запускалась: перед ней нужно обновление из файловой системы (файлы менялись), а оно не прошло.\n${update.text}`, isError: true };
 				}

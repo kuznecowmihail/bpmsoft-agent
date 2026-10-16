@@ -34,6 +34,7 @@ function App(): React.JSX.Element {
   const [entries, setEntries] = useState<ChatEntry[]>([])
   const [prompt, setPrompt] = useState('')
   const [isRunning, setIsRunning] = useState(false)
+  const [isStopping, setIsStopping] = useState(false)
   const [showDebug, setShowDebug] = useState(false)
   const unsubscribeRef = useRef<(() => void) | null>(null)
 
@@ -164,7 +165,18 @@ function App(): React.JSX.Element {
       pushLog(newLogEvent('error', 'app', message))
     } finally {
       setIsRunning(false)
+      setIsStopping(false)
     }
+  }
+
+  const handleStop = async (): Promise<void> => {
+    if (!isRunning || isStopping) {
+      return
+    }
+    setIsStopping(true)
+    setPermissionRequests([])
+    pushLog(newLogEvent('warn', 'user', 'Остановка агента по запросу пользователя'))
+    await window.api.stopAgent()
   }
 
   const handleSend = async (): Promise<void> => {
@@ -347,6 +359,9 @@ function App(): React.JSX.Element {
             onSend={handleSend}
             isRunning={isRunning}
             focusKey={composerFocusKey}
+            onStop={handleStop}
+            isStopping={isStopping}
+            stopOnEscape={!logsOpen && !menuOpen}
           />
         </main>
         {browserPanelShown && (

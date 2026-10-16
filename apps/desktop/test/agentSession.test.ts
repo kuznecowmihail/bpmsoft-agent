@@ -20,6 +20,8 @@ import {
   getCursorApiKey,
   createPendingPermissionRequest,
   resolvePermissionRequest,
+  rejectAllPendingPermissions,
+  stopAgent,
   getCurrentSessionId,
   resetAgentSession,
   rememberSessionId
@@ -153,6 +155,27 @@ describe('agentSession tool-permission requests', () => {
 
   it('does nothing when resolving an unknown request id', () => {
     expect(() => resolvePermissionRequest('missing-id', true)).not.toThrow()
+  })
+
+  it('rejectAllPendingPermissions resolves every pending wait with false', async () => {
+    const first = createPendingPermissionRequest()
+    const second = createPendingPermissionRequest()
+    rejectAllPendingPermissions()
+    await expect(first.wait).resolves.toBe(false)
+    await expect(second.wait).resolves.toBe(false)
+  })
+
+  it('a request rejected by rejectAllPendingPermissions cannot be resolved again', async () => {
+    const { id, wait } = createPendingPermissionRequest()
+    rejectAllPendingPermissions()
+    resolvePermissionRequest(id, true)
+    await expect(wait).resolves.toBe(false)
+  })
+})
+
+describe('agentSession stop', () => {
+  it('stopAgent returns false when no turn is running', () => {
+    expect(stopAgent()).toBe(false)
   })
 })
 

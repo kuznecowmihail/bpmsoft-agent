@@ -202,6 +202,13 @@ describe('chatFormat', () => {
       })
     })
 
+    it('maps a stopped result to a warning that starts with the stop note', () => {
+      const event = { type: 'result' as const, success: false, stopped: true, durationMs: 4000 }
+      const entry = mapAgentEventToEntry(event)
+      expect(entry).toMatchObject({ role: 'agent-result', level: 'warn' })
+      expect(entry.content.startsWith('Остановлено пользователем')).toBe(true)
+    })
+
     it('maps unknown event to agent-other', () => {
       const event = { type: 'other' as const, raw: {} }
       const entry = mapAgentEventToEntry(event)

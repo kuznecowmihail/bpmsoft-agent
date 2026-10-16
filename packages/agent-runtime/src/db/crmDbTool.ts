@@ -18,6 +18,8 @@ export interface CrmDbToolOptions {
 	onQuery?: (record: DbQueryRecord) => void;
 	/** Tests only. Default: new pg.Client(config). */
 	clientFactory?: (config: DbClientConfig) => DbClient;
+	/** User stop: closes the connection of a running query. */
+	signal?: AbortSignal;
 }
 export interface CrmDbTool { name: "crm_db_query"; description: string; execute(sql: string): Promise<{ text: string; isError: boolean }> }
 
@@ -158,6 +160,10 @@ export function createCrmDbTool(options: CrmDbToolOptions): CrmDbTool {
 				return { text: `Запрос отклонён: ${check.reason}`, isError: true };
 			}
 
+			if (options.signal?.aborted) {
+				return { text: "Запрос остановлен пользователем", isError: true };
+			}
+
 			if (options.confirm && !(await options.confirm(check.normalized))) {
 				options.onQuery?.({ sql: check.normalized, rowCount: 0, truncated: false, durationMs: 0, error: "Пользователь отклонил запрос", denied: true });
 				return { text: "Пользователь отклонил выполнение запроса", isError: true };
@@ -175,8 +181,10 @@ export function createCrmDbTool(options: CrmDbToolOptions): CrmDbTool {
 			const started = Date.now();
 			let client: DbClient | undefined;
 			let connected = false;
+			const onStop = () => { client?.end().catch(() => undefined); };
 			try {
 				client = buildClient(options, config, timeoutMs);
+				options.signal?.addEventListener("abort", onStop, { once: true });
 				await client.connect();
 				connected = true;
 				await client.query("BEGIN TRANSACTION READ ONLY");
@@ -192,12 +200,17 @@ export function createCrmDbTool(options: CrmDbToolOptions): CrmDbTool {
 				return { text, isError: false };
 			} catch (e) {
 				const message = errorMessage(e);
+				if (options.signal?.aborted) {
+					options.onQuery?.({ sql: check.normalized, rowCount: 0, truncated: false, durationMs: Date.now() - started, error: "Остановлено пользователем" });
+					return { text: "Запрос остановлен пользователем", isError: true };
+				}
 				options.onQuery?.({ sql: check.normalized, rowCount: 0, truncated: false, durationMs: Date.now() - started, error: message });
 				if (!connected) {
 					return { text: `БД CRM недоступна: ${message}. ${DB_UNAVAILABLE_HINT}`, isError: true };
 				}
 				return { text: `Ошибка запроса: ${message}`, isError: true };
 			} finally {
+				options.signal?.removeEventListener("abort", onStop);
 				if (client) {
 					if (connected) {
 						try { await client.query("ROLLBACK"); } catch { /* connection may not be open */ }

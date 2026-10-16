@@ -6,6 +6,8 @@ export type FetchLike = typeof fetch;
 
 export class CrmLoginError extends Error {}
 export class CrmUnavailableError extends Error {}
+/** The user stopped the request: not a failure of the CRM. */
+export class CrmStoppedError extends Error {}
 
 const LOGIN_PATH = "/ServiceModel/AuthService.svc/Login";
 const DEFAULT_LOGIN_TIMEOUT_MS = 30000;
@@ -44,9 +46,9 @@ export class CrmSession {
 	}
 
 	/** Throws CrmLoginError (wrong login, message from the CRM) or CrmUnavailableError (network/HTTP failure). */
-	async login(timeoutMs: number = DEFAULT_LOGIN_TIMEOUT_MS): Promise<void> {
+	async login(timeoutMs: number = DEFAULT_LOGIN_TIMEOUT_MS, signal?: AbortSignal): Promise<void> {
 		const body = JSON.stringify({ UserName: this.connection.user, UserPassword: this.connection.password });
-		const response = await this.send(LOGIN_PATH, body, timeoutMs);
+		const response = await this.send(LOGIN_PATH, body, timeoutMs, signal);
 		if (response.status !== 200) {
 			throw new CrmUnavailableError(`HTTP ${response.status}`);
 		}
@@ -60,12 +62,12 @@ export class CrmSession {
 	}
 
 	/** POST with body null after login(); throws CrmUnavailableError on network failure or timeout. */
-	async post(path: string, timeoutMs: number): Promise<CrmResponse> {
-		const response = await this.send(path, "null", timeoutMs);
+	async post(path: string, timeoutMs: number, signal?: AbortSignal): Promise<CrmResponse> {
+		const response = await this.send(path, "null", timeoutMs, signal);
 		return { status: response.status, text: response.text, json: parseJson(response.text) };
 	}
 
-	private async send(path: string, body: string, timeoutMs: number): Promise<RawResponse> {
+	private async send(path: string, body: string, timeoutMs: number, signal?: AbortSignal): Promise<RawResponse> {
 		const headers: Record<string, string> = { ...JSON_HEADERS };
 		if (this.cookies.size > 0) {
 			headers.Cookie = [...this.cookies].map(([name, value]) => `${name}=${value}`).join("; ");
@@ -75,20 +77,29 @@ export class CrmSession {
 			}
 		}
 
+		if (signal?.aborted) {
+			throw new CrmStoppedError("остановлено пользователем");
+		}
 		const controller = new AbortController();
 		const timer = setTimeout(() => controller.abort(), timeoutMs);
+		const onStop = () => controller.abort();
+		signal?.addEventListener("abort", onStop, { once: true });
 		try {
 			const response = await this.fetchImpl(`${this.baseUrl}${path}`, { method: "POST", headers, body, signal: controller.signal });
 			const text = await response.text();
 			this.absorbCookies(response.headers);
 			return { status: response.status, text, headers: response.headers };
 		} catch (e) {
+			if (signal?.aborted) {
+				throw new CrmStoppedError("остановлено пользователем");
+			}
 			if (controller.signal.aborted) {
 				throw new CrmUnavailableError(`таймаут ${timeoutMs / 1000} с`);
 			}
 			throw new CrmUnavailableError(networkMessage(e));
 		} finally {
 			clearTimeout(timer);
+			signal?.removeEventListener("abort", onStop);
 		}
 	}
 

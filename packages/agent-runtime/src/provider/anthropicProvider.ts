@@ -15,6 +15,8 @@ import type { AppTool } from "../tools/appTool";
 import { appToolContent } from "../tools/appTool";
 import { cleanupStagingDirs } from "../tools/stagingCleanup";
 
+const STOP_ABORT_DELAY_MS = 5000;
+
 export interface ToolPermissionRequest {
 	toolName: string;
 	input: Record<string, unknown>;
@@ -59,6 +61,8 @@ export interface RunBpmsoftAgentQueryOptions {
 	 * `@anthropic-ai/claude-agent-sdk`'s `CanUseTool` docs).
 	 */
 	requestToolPermission?: (request: ToolPermissionRequest) => Promise<boolean>;
+	/** Stops the turn: interrupt first, then hard abort of the CLI after STOP_ABORT_DELAY_MS. */
+	signal?: AbortSignal;
 	/** Read-only CRM database tool (see createCrmDbTool); omit when the user has not enabled database access. */
 	dbTool?: CrmDbTool;
 	/** CRM stand actions (see createCrmTools); omit when the user has not enabled them. */
@@ -146,6 +150,7 @@ export async function* runBpmsoftAgentQuery(
 	const shellApproval: ShellApprovalOptions = { osSandbox: osShellSandbox, cwd: options.cwd, trustedScriptDirs: [path.join(knowledgeDir, "scripts")] };
 	// Folders the agent wrote to in this turn; the SDK's staging folders there are removed after the turn.
 	const touchedDirs = new Set<string>([options.cwd]);
+	const abortController = new AbortController();
 
 	const servers: NonNullable<Options["mcpServers"]> = {};
 	if (options.dbTool) {
@@ -208,6 +213,7 @@ export async function* runBpmsoftAgentQuery(
 		model: options.model,
 		effort: options.effort,
 		resume: options.resume,
+		abortController,
 		env: { ...process.env, ANTHROPIC_API_KEY: options.apiKey },
 		systemPrompt: { type: "custom", prompt: buildBpmsoftSystemPrompt(knowledgeDir, { dbQuery: Boolean(options.dbTool), crmActions: Boolean(options.crmTools?.length), crmBrowser: Boolean(options.appTools?.some((t) => t.name.startsWith("crm_browser_"))) }) },
 		// Isolation from the developer's own Claude Code setup: without these the
@@ -293,14 +299,48 @@ export async function* runBpmsoftAgentQuery(
 	};
 
 	const { stream, close } = createSingleTurnPromptStream(options.prompt);
+	const startedAt = Date.now();
+	let sessionId: string | undefined = options.resume;
+	let abortTimer: NodeJS.Timeout | undefined;
+	const q = query({ prompt: stream, options: sdkOptions });
+	const onStop = () => {
+		q.interrupt().catch(() => undefined);
+		abortTimer = setTimeout(() => abortController.abort(), STOP_ABORT_DELAY_MS);
+	};
+	const signal = options.signal;
+	if (signal?.aborted) {
+		onStop();
+	} else {
+		signal?.addEventListener("abort", onStop, { once: true });
+	}
+	let resultSent = false;
 	try {
-		for await (const message of query({ prompt: stream, options: sdkOptions })) {
-			yield mapSdkMessage(message);
-			if (message.type === "result") {
-				break;
+		try {
+			for await (const message of q) {
+				const event = mapSdkMessage(message);
+				if (event.type === "system_init" && event.sessionId) {
+					sessionId = event.sessionId;
+				}
+				if (event.type === "result") {
+					resultSent = true;
+					yield signal?.aborted ? { ...event, success: false, stopped: true } : event;
+					break;
+				}
+				yield event;
+			}
+		} catch (error) {
+			if (!signal?.aborted) {
+				throw error;
 			}
 		}
+		if (signal?.aborted && !resultSent) {
+			yield { type: "result", success: false, stopped: true, durationMs: Date.now() - startedAt, sessionId };
+		}
 	} finally {
+		signal?.removeEventListener("abort", onStop);
+		if (abortTimer) {
+			clearTimeout(abortTimer);
+		}
 		close();
 		try {
 			cleanupStagingDirs(touchedDirs, options.sandbox?.writeRoots ?? []);

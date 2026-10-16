@@ -17,6 +17,7 @@ export interface BpmsoftDesktopApi {
   clearApiKey: () => Promise<void>
   sendMessage: (prompt: string, projectPath: string, additionalDirectories?: string[], readRoot?: string) => Promise<void>
   newChat: () => Promise<void>
+  stopAgent: () => Promise<void>
   onAgentEvent: (callback: (event: AgentEvent) => void) => () => void
   onPermissionRequest: (callback: (request: AgentPermissionRequest) => void) => () => void
   respondToPermissionRequest: (id: string, approved: boolean) => Promise<void>

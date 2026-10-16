@@ -49,6 +49,8 @@ export interface RunCursorAgentQueryOptions {
 	crmTools?: CrmTool[];
 	/** Tools of the host app (built-in CRM browser and others), exposed to Cursor as custom tools; omit when none. */
 	appTools?: AppTool[];
+	/** Stops the turn: cancels the current Cursor run. */
+	signal?: AbortSignal;
 }
 
 /**
@@ -521,7 +523,8 @@ async function* runCursorAgentQueryUnsafe(options: RunCursorAgentQueryOptions): 
 		readRoots: [options.readRoot ?? options.cwd],
 		writeRoots: [options.cwd],
 		knowledgeDir,
-		requestPermission: options.requestToolPermission
+		requestPermission: options.requestToolPermission,
+		signal: options.signal
 	});
 	for (const localTool of localTools) {
 		customTools[localTool.name] = cursorAppTool(localTool);
@@ -557,42 +560,59 @@ async function* runCursorAgentQueryUnsafe(options: RunCursorAgentQueryOptions): 
 		let finished = false;
 		let errorText = "";
 		let durationMs: number | undefined;
-		for (let attempt = 1; attempt <= CURSOR_SEND_ATTEMPTS; attempt++) {
+		for (let attempt = 1; attempt <= CURSOR_SEND_ATTEMPTS && !options.signal?.aborted; attempt++) {
 			let produced = false;
 			try {
 				const run = await agent.send(message);
-				const seenCalls = new Set<string>();
-				let pendingText = "";
-				for await (const sdkMessage of run.stream()) {
-					usage = addCursorUsage(usage, sdkMessage);
-					for (const event of mapCursorMessage(sdkMessage, seenCalls)) {
-						produced = true;
-						if (event.type === "text") {
-							pendingText += event.text;
-							continue;
+				const cancelRun = () => {
+					run.cancel().catch(() => undefined);
+				};
+				if (options.signal?.aborted) {
+					cancelRun();
+				} else {
+					options.signal?.addEventListener("abort", cancelRun, { once: true });
+				}
+				try {
+					const seenCalls = new Set<string>();
+					let pendingText = "";
+					for await (const sdkMessage of run.stream()) {
+						usage = addCursorUsage(usage, sdkMessage);
+						for (const event of mapCursorMessage(sdkMessage, seenCalls)) {
+							produced = true;
+							if (event.type === "text") {
+								pendingText += event.text;
+								continue;
+							}
+							if (pendingText) {
+								yield { type: "text", text: pendingText };
+								pendingText = "";
+							}
+							yield event;
 						}
-						if (pendingText) {
-							yield { type: "text", text: pendingText };
-							pendingText = "";
-						}
-						yield event;
 					}
+					if (pendingText) {
+						yield { type: "text", text: pendingText };
+					}
+					const result = await run.wait();
+					finished = result.status === "finished";
+					errorText = finished ? "" : result.error?.message ?? "";
+					durationMs = result.durationMs;
+				} finally {
+					options.signal?.removeEventListener("abort", cancelRun);
 				}
-				if (pendingText) {
-					yield { type: "text", text: pendingText };
-				}
-				const result = await run.wait();
-				finished = result.status === "finished";
-				errorText = finished ? "" : result.error?.message ?? "";
-				durationMs = result.durationMs;
 			} catch (error) {
+				if (options.signal?.aborted) {
+					finished = false;
+					errorText = "";
+					break;
+				}
 				if (produced || !isTransientCursorError(cursorErrorMessage(error)) || attempt === CURSOR_SEND_ATTEMPTS) {
 					throw error;
 				}
 				finished = false;
 				errorText = cursorErrorMessage(error);
 			}
-			if (finished || produced || !isTransientCursorError(errorText) || attempt === CURSOR_SEND_ATTEMPTS) {
+			if (finished || produced || !isTransientCursorError(errorText) || attempt === CURSOR_SEND_ATTEMPTS || options.signal?.aborted) {
 				break;
 			}
 			yield {
@@ -601,15 +621,17 @@ async function* runCursorAgentQueryUnsafe(options: RunCursorAgentQueryOptions): 
 			};
 			await new Promise((resolve) => setTimeout(resolve, CURSOR_RETRY_DELAY_MS));
 		}
-		if (!finished && errorText) {
+		const stopped = Boolean(options.signal?.aborted);
+		if (!finished && errorText && !stopped) {
 			yield { type: "text", text: `Ошибка Cursor: ${errorText}` };
 		}
 		yield {
 			type: "result",
-			success: finished,
+			success: finished && !stopped,
 			durationMs: durationMs ?? Date.now() - startedAt,
 			sessionId: agent.agentId,
-			usage
+			usage,
+			...(stopped ? { stopped: true } : {})
 		};
 	} finally {
 		agent.close();

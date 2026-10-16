@@ -80,6 +80,14 @@ export function IconArrowUp(props: IconProps): React.JSX.Element {
   )
 }
 
+export function IconStop(props: IconProps): React.JSX.Element {
+  return (
+    <Svg {...props} filled>
+      <rect x="7" y="7" width="10" height="10" rx="1.5" />
+    </Svg>
+  )
+}
+
 export function IconChevronRight(props: IconProps): React.JSX.Element {
   return (
     <Svg {...props}>

@@ -21,6 +21,7 @@ const api = {
   sendMessage: (prompt: string, projectPath: string, additionalDirectories?: string[], readRoot?: string): Promise<void> =>
     ipcRenderer.invoke('agent:sendMessage', { prompt, projectPath, additionalDirectories, readRoot }),
   newChat: (): Promise<void> => ipcRenderer.invoke('agent:newChat'),
+  stopAgent: (): Promise<void> => ipcRenderer.invoke('agent:stop'),
   onAgentEvent: (callback: (event: AgentEvent) => void): (() => void) => {
     const listener = (_event: IpcRendererEvent, agentEvent: AgentEvent): void => callback(agentEvent)
     ipcRenderer.on('agent:event', listener)

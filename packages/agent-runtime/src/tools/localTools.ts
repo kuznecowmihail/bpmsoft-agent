@@ -20,6 +20,8 @@ export interface LocalToolsOptions {
 	/** For tests; default process.platform / os.homedir(). */
 	platform?: NodeJS.Platform;
 	homeDir?: string;
+	/** User stop: kills a running run_shell command. */
+	signal?: AbortSignal;
 }
 
 export const LOCAL_TOOL_NAMES = ["read_file", "list_dir", "glob_files", "grep_files", "write_file", "edit_file", "run_shell"];
@@ -57,6 +59,7 @@ interface ShellResult {
 	output: string;
 	exitCode: number | null;
 	timedOut: boolean;
+	stopped?: boolean;
 }
 
 /** Cuts a tool output to the limit and says how long it was. */
@@ -190,12 +193,17 @@ function mtimeOf(file: string): number {
  */
 export function runShellCommand(
 	command: string,
-	opts: { cwd: string; platform: NodeJS.Platform; seatbeltProfile?: string; timeoutMs: number }
+	opts: { cwd: string; platform: NodeJS.Platform; seatbeltProfile?: string; timeoutMs: number; signal?: AbortSignal }
 ): Promise<ShellResult> {
 	return new Promise((resolve) => {
-		const { cwd, platform, seatbeltProfile, timeoutMs } = opts;
+		const { cwd, platform, seatbeltProfile, timeoutMs, signal } = opts;
+		if (signal?.aborted) {
+			resolve({ output: "", exitCode: null, timedOut: false, stopped: true });
+			return;
+		}
 		let output = "";
 		let timedOut = false;
+		let stopped = false;
 		let settled = false;
 		let timer: NodeJS.Timeout | undefined;
 
@@ -207,7 +215,8 @@ export function runShellCommand(
 			if (timer) {
 				clearTimeout(timer);
 			}
-			resolve({ output, exitCode, timedOut });
+			signal?.removeEventListener("abort", onStop);
+			resolve({ output, exitCode, timedOut, stopped });
 		};
 
 		const collect = (chunk: string) => {
@@ -239,6 +248,13 @@ export function runShellCommand(
 				child.kill("SIGKILL");
 			}
 		};
+
+		const onStop = () => {
+			stopped = true;
+			killTree();
+			finish(null);
+		};
+		signal?.addEventListener("abort", onStop, { once: true });
 
 		child.stdout?.setEncoding("utf8");
 		child.stderr?.setEncoding("utf8");
@@ -568,16 +584,20 @@ export function createLocalTools(options: LocalToolsOptions): AppTool[] {
 				cwd,
 				platform,
 				seatbeltProfile: osSandbox ? buildSeatbeltProfile({ writeRoots: options.writeRoots, readRoots: policy.readRoots, homeDir }) : undefined,
-				timeoutMs
+				timeoutMs,
+				signal: options.signal
 			});
 			let text = result.output.trim() === "" ? "(нет вывода)" : truncate(result.output);
 			if (result.timedOut) {
 				text += `\n[команда прервана по таймауту ${timeoutMs} мс]`;
 			}
+			if (result.stopped) {
+				text += "\n[команда остановлена пользователем]";
+			}
 			if (result.exitCode !== 0) {
 				text += `\n[код выхода: ${result.exitCode}]`;
 			}
-			return { text, isError: result.timedOut || result.exitCode !== 0 };
+			return { text, isError: result.timedOut || result.stopped === true || result.exitCode !== 0 };
 		}
 	);
 

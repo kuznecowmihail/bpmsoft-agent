@@ -297,3 +297,15 @@ describe("localTools", () => {
 		});
 	});
 });
+
+describe("runShellCommand stop", () => {
+	it.skipIf(process.platform === "win32")("kills a running command when the user stops it", async () => {
+		const stop = new AbortController();
+		setTimeout(() => stop.abort(), 100);
+		const started = Date.now();
+		const result = await runShellCommand("sleep 5", { cwd: os.tmpdir(), platform: process.platform, timeoutMs: 10000, signal: stop.signal });
+
+		expect(Date.now() - started).toBeLessThan(2000);
+		expect(result.stopped).toBe(true);
+	});
+});

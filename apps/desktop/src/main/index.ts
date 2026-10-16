@@ -12,6 +12,7 @@ import {
   hasApiKey,
   clearApiKey,
   resetAgentSession,
+  stopAgent,
   resolvePermissionRequest,
   setCursorApiKey,
   hasCursorApiKey,
@@ -89,7 +90,10 @@ function createWindow(): void {
     mainWindow.show()
   })
 
-  mainWindow.on('closed', () => closeCrmBrowser())
+  mainWindow.on('closed', () => {
+    stopAgent()
+    closeCrmBrowser()
+  })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
     if (isExternalWebUrl(details.url)) {
@@ -195,6 +199,10 @@ app.whenReady().then(() => {
 
   ipcMain.handle('agent:newChat', () => {
     resetAgentSession()
+  })
+
+  ipcMain.handle('agent:stop', () => {
+    stopAgent()
   })
 
   // Milestone 9, slice 5: tool-permission approval loop (canUseTool).

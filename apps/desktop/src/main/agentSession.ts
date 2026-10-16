@@ -188,16 +188,25 @@ let currentSessionProject: string | undefined
 let currentSessionProvider: AgentProvider | undefined
 /** Start of the current chat: files in Pkg changed after it count as the agent's own. */
 let currentChatStartedAt: number | undefined
+/** The turn that is running now; its controller is aborted by the "Стоп" button. */
+let currentRun: AbortController | undefined
+/** The previous turn was stopped by the user: the next message carries a note about it. */
+let lastTurnStopped = false
+/** How long a stopped turn may still deliver events before the app stops waiting for it. */
+const STOP_GRACE_MS = 10000
+const STOPPED_TURN_NOTE = '(Предыдущий ход остановлен пользователем кнопкой «Стоп». Не продолжай прерванную работу сам: выполни сообщение ниже; если оно не о прерванной задаче — не возвращайся к ней.)'
 
 export function getCurrentSessionId(): string | undefined {
   return currentSessionId
 }
 
 export function resetAgentSession(): void {
+  stopAgent()
   currentSessionId = undefined
   currentSessionProject = undefined
   currentSessionProvider = undefined
   currentChatStartedAt = undefined
+  lastTurnStopped = false
   endChatLog()
 }
 
@@ -237,6 +246,28 @@ export function resolvePermissionRequest(id: string, approved: boolean): void {
   resolve(approved)
 }
 
+/** Declines every pending permission request (used when the turn is stopped). */
+export function rejectAllPendingPermissions(): void {
+  for (const resolve of pendingPermissionRequests.values()) {
+    resolve(false)
+  }
+  pendingPermissionRequests.clear()
+}
+
+/**
+ * Stops the running turn: aborts its SDK query and tools and declines pending
+ * permission requests. Returns false when no turn is running.
+ */
+export function stopAgent(): boolean {
+  if (!currentRun) {
+    return false
+  }
+  logChatRecord('stop_request', {})
+  currentRun.abort()
+  rejectAllPendingPermissions()
+  return true
+}
+
 /**
  * Runs one turn of the agent (Claude or Cursor, per app settings) and streams
  * every mapped event to the given window as it arrives, via the `agent:event`
@@ -250,6 +281,8 @@ export function resolvePermissionRequest(id: string, approved: boolean): void {
  * (Pkg) working directory. `readRoot` — the opened application folder: the
  * agent may read only there (and its knowledge directory) and write only under
  * `projectPath` (Pkg). Every turn is also written to the chat log (chatLog.ts).
+ * The turn can be stopped by `stopAgent()` (the "Стоп" button): the query is
+ * aborted, and a stopped turn ends with a `result` event marked `stopped`.
  */
 export async function sendAgentMessage(
   window: BrowserWindow,
@@ -258,6 +291,9 @@ export async function sendAgentMessage(
   additionalDirectories?: string[],
   readRoot?: string
 ): Promise<void> {
+  if (currentRun) {
+    throw new Error('Агент уже работает — дождитесь окончания или остановите его')
+  }
   const { provider, cursorModel, cursorModelParams, claudeModel, claudeEffort, dbAccessEnabled, dbConfirmQueries, crmActionsEnabled, crmConfirmActions, crmBrowserEnabled } = getAppSettings()
   if (provider === 'cursor' && !currentCursorApiKey) {
     throw new Error('Ключ Cursor не задан — укажите его в настройках')
@@ -272,101 +308,152 @@ export async function sendAgentMessage(
   ) {
     resetAgentSession()
   }
-  if (currentChatStartedAt === undefined) {
-    currentChatStartedAt = Date.now()
-  }
-  const chatSince = (): number => currentChatStartedAt ?? Date.now()
 
-  const requestToolPermission = (request: ToolPermissionRequest): Promise<boolean> => {
-    const { id, wait } = createPendingPermissionRequest()
-    logChatRecord('permission_request', { id, toolName: request.toolName, input: request.input })
-    window.webContents.send('agent:permissionRequest', { id, toolName: request.toolName, input: request.input })
-    return wait.then((approved) => {
-      logChatRecord('permission_response', { id, approved })
-      return approved
-    })
-  }
+  const controller = new AbortController()
+  currentRun = controller
+  try {
+    if (currentChatStartedAt === undefined) {
+      currentChatStartedAt = Date.now()
+    }
+    const chatSince = (): number => currentChatStartedAt ?? Date.now()
 
-  const dbTool =
-    dbAccessEnabled && readRoot
-      ? createCrmDbTool({
-          ...dbConnectionOptions(readRoot),
-          confirm: dbConfirmQueries ? (sql) => requestToolPermission({ toolName: 'crm_db_query', input: { sql } }) : undefined,
-          onQuery: (record) => logChatRecord('db_query', { ...record })
+    const requestToolPermission = (request: ToolPermissionRequest): Promise<boolean> => {
+      const { id, wait } = createPendingPermissionRequest()
+      logChatRecord('permission_request', { id, toolName: request.toolName, input: request.input })
+      window.webContents.send('agent:permissionRequest', { id, toolName: request.toolName, input: request.input })
+      return wait.then((approved) => {
+        logChatRecord('permission_response', { id, approved })
+        return approved
+      })
+    }
+
+    const dbTool =
+      dbAccessEnabled && readRoot
+        ? createCrmDbTool({
+            ...dbConnectionOptions(readRoot),
+            signal: controller.signal,
+            confirm: dbConfirmQueries ? (sql) => requestToolPermission({ toolName: 'crm_db_query', input: { sql } }) : undefined,
+            onQuery: (record) => logChatRecord('db_query', { ...record })
+          })
+        : undefined
+
+    const crmConn = crmActionsEnabled || crmBrowserEnabled ? crmConnection() : undefined
+    const crmTools = crmActionsEnabled && crmConn
+      ? createCrmTools({
+          connection: crmConn,
+          appRoot: readRoot,
+          signal: controller.signal,
+          ownSchemas: () => changedSchemaNames(projectPath, chatSince()),
+          lint: () => lintChanged(projectPath, chatSince()),
+          changedSince: (ms) => hasChangedFiles(projectPath, ms),
+          chatStartedAt: chatSince,
+          confirm: crmConfirmActions ? (action) => requestToolPermission({ toolName: 'crm_action', input: { action } }) : undefined,
+          onAction: (record) => {
+            logChatRecord('crm_action', { ...record })
+            if ((record.action === 'update' && record.success) || record.stopped) {
+              markCrmBrowserStale()
+            }
+          }
         })
       : undefined
-
-  const crmConn = crmActionsEnabled || crmBrowserEnabled ? crmConnection() : undefined
-  const crmTools = crmActionsEnabled && crmConn
-    ? createCrmTools({
-        connection: crmConn,
-        appRoot: readRoot,
-        ownSchemas: () => changedSchemaNames(projectPath, chatSince()),
-        lint: () => lintChanged(projectPath, chatSince()),
-        changedSince: (ms) => hasChangedFiles(projectPath, ms),
-        chatStartedAt: chatSince,
-        confirm: crmConfirmActions ? (action) => requestToolPermission({ toolName: 'crm_action', input: { action } }) : undefined,
-        onAction: (record) => {
-          logChatRecord('crm_action', { ...record })
-          if (record.action === 'update' && record.success) {
-            markCrmBrowserStale()
-          }
-        }
-      })
-    : undefined
-  const browserTools = crmBrowserEnabled && crmConn
-    ? createCrmBrowserTools({
-        connection: crmConn,
-        confirm: (action) => requestToolPermission({ toolName: 'crm_browser_click', input: { action } }),
-        onAction: (record) => logChatRecord('crm_browser', { ...record })
-      })
-    : undefined
-  const appTools = [...(browserTools ?? []), createPkgLintTool({ pkgRoot: projectPath, since: chatSince })]
-
-  startChatLogIfNeeded({ projectPath, readRoot })
-  logChatRecord('user_message', { text: prompt, resume: currentSessionId ?? null, provider, model: provider === 'cursor' ? { id: cursorModel, params: cursorModelParams } : { id: claudeModel || null, effort: claudeEffort || null }, dbAccess: Boolean(dbTool), crmActions: Boolean(crmTools), crmBrowser: Boolean(browserTools) })
-
-  const startedAt = Date.now()
-  const events =
-    provider === 'cursor'
-      ? runCursorAgentQuery({
-          apiKey: currentCursorApiKey as string,
-          prompt,
-          cwd: projectPath,
-          model: cursorModel,
-          modelParams: cursorModelParams,
-          resume: currentSessionId,
-          readRoot: readRoot ?? projectPath,
-          requestToolPermission,
-          dbTool,
-          crmTools,
-          appTools
+    const browserTools = crmBrowserEnabled && crmConn
+      ? createCrmBrowserTools({
+          connection: crmConn,
+          confirm: (action) => requestToolPermission({ toolName: 'crm_browser_click', input: { action } }),
+          onAction: (record) => logChatRecord('crm_browser', { ...record })
         })
-      : runBpmsoftAgentQuery({
-          apiKey: currentApiKey as string,
-          prompt,
-          cwd: projectPath,
-          model: claudeModel || undefined,
-          effort: claudeEffort || undefined,
-          resume: currentSessionId,
-          requestToolPermission,
-          additionalDirectories,
-          sandbox: { readRoots: [readRoot ?? projectPath], writeRoots: [projectPath] },
-          dbTool,
-          crmTools,
-          appTools
-        })
+      : undefined
+    const appTools = [...(browserTools ?? []), createPkgLintTool({ pkgRoot: projectPath, since: chatSince })]
 
-  try {
-    for await (const event of events) {
-      rememberSessionId(event, projectPath, provider)
-      logChatRecord('agent_event', { event })
+    startChatLogIfNeeded({ projectPath, readRoot })
+    // After a stopped turn the agent gets a note, so it does not resume the interrupted work by itself.
+    const afterStop = lastTurnStopped
+    const agentPrompt = afterStop ? `${STOPPED_TURN_NOTE}\n\n${prompt}` : prompt
+    lastTurnStopped = false
+    logChatRecord('user_message', { text: prompt, afterStop, resume: currentSessionId ?? null, provider, model: provider === 'cursor' ? { id: cursorModel, params: cursorModelParams } : { id: claudeModel || null, effort: claudeEffort || null }, dbAccess: Boolean(dbTool), crmActions: Boolean(crmTools), crmBrowser: Boolean(browserTools) })
+
+    const startedAt = Date.now()
+    const events =
+      provider === 'cursor'
+        ? runCursorAgentQuery({
+            apiKey: currentCursorApiKey as string,
+            prompt: agentPrompt,
+            cwd: projectPath,
+            model: cursorModel,
+            modelParams: cursorModelParams,
+            resume: currentSessionId,
+            readRoot: readRoot ?? projectPath,
+            requestToolPermission,
+            dbTool,
+            crmTools,
+            appTools,
+            signal: controller.signal
+          })
+        : runBpmsoftAgentQuery({
+            apiKey: currentApiKey as string,
+            prompt: agentPrompt,
+            cwd: projectPath,
+            model: claudeModel || undefined,
+            effort: claudeEffort || undefined,
+            resume: currentSessionId,
+            requestToolPermission,
+            additionalDirectories,
+            sandbox: { readRoots: [readRoot ?? projectPath], writeRoots: [projectPath] },
+            dbTool,
+            crmTools,
+            appTools,
+            signal: controller.signal
+          })
+
+    // After a stop the app stops waiting for the SDK after STOP_GRACE_MS, so the
+    // chat is never blocked by a query that does not finish; late events are dropped.
+    let detached = false
+    let resultSent = false
+    const send = (event: AgentEvent): void => {
+      if (detached) return
+      if (event.type === 'result') resultSent = true
       window.webContents.send('agent:event', event)
     }
-  } catch (error) {
-    logChatRecord('error', { message: (error as Error).message, stack: (error as Error).stack })
-    throw error
+    const consume = (async (): Promise<void> => {
+      for await (const event of events) {
+        rememberSessionId(event, projectPath, provider)
+        logChatRecord('agent_event', { event })
+        send(event)
+      }
+    })()
+    let graceTimer: NodeJS.Timeout | undefined
+    const graceOver = new Promise<'timeout'>((resolve) => {
+      const onAbort = (): void => {
+        graceTimer = setTimeout(() => resolve('timeout'), STOP_GRACE_MS)
+      }
+      if (controller.signal.aborted) onAbort()
+      else controller.signal.addEventListener('abort', onAbort, { once: true })
+    })
+    try {
+      const outcome = await Promise.race([consume.then(() => 'done' as const), graceOver])
+      if (outcome === 'timeout') {
+        logChatRecord('stop_timeout', { graceMs: STOP_GRACE_MS })
+        consume.catch(() => undefined)
+      }
+    } catch (error) {
+      if (!controller.signal.aborted) {
+        logChatRecord('error', { message: (error as Error).message, stack: (error as Error).stack })
+        throw error
+      }
+    } finally {
+      if (graceTimer) clearTimeout(graceTimer)
+      if (controller.signal.aborted) {
+        lastTurnStopped = true
+        if (!resultSent) {
+          send({ type: 'result', success: false, stopped: true, durationMs: Date.now() - startedAt, sessionId: currentSessionId })
+        }
+        detached = true
+      }
+      logChatRecord('turn_end', { elapsedMs: Date.now() - startedAt, sessionId: currentSessionId ?? null, stopped: controller.signal.aborted })
+    }
   } finally {
-    logChatRecord('turn_end', { elapsedMs: Date.now() - startedAt, sessionId: currentSessionId ?? null })
+    if (currentRun === controller) {
+      currentRun = undefined
+    }
   }
 }

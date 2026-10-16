@@ -7,6 +7,8 @@ import {
 	CRM_UPDATE_TOOL,
 	CrmActionRecord,
 	CrmConnection,
+	CrmSession,
+	CrmStoppedError,
 	CrmTool,
 	CrmToolsOptions,
 	FetchLike,
@@ -553,5 +555,34 @@ describe("CRM tools", () => {
 		expect(result.isError).toBe(true);
 		expect(result.text.startsWith("Компиляция не запускалась")).toBe(true);
 		expect(requests.some((request) => request.url.endsWith("/Build"))).toBe(false);
+	});
+
+	it("cuts a running CRM request short when the user stops it", async () => {
+		const fetchImpl = ((_url: string | URL | Request, init?: RequestInit) => new Promise<Response>((_resolve, reject) => {
+			init?.signal?.addEventListener("abort", () => reject(new DOMException("The operation was aborted.", "AbortError")));
+		})) as unknown as FetchLike;
+		const session = new CrmSession(connection, fetchImpl);
+		const stop = new AbortController();
+		setTimeout(() => stop.abort(), 10);
+
+		await expect(session.post("/ServiceModel/WorkspaceExplorerService.svc/Build", 5000, stop.signal)).rejects.toBeInstanceOf(CrmStoppedError);
+	});
+
+	it("returns the stopped result without CRM calls when the user stopped before the action", async () => {
+		const { fetchImpl, requests } = fakeCrm({});
+		const records: CrmActionRecord[] = [];
+		const stop = new AbortController();
+		stop.abort();
+		const result = await getTool(CRM_UPDATE_TOOL, {
+			connection,
+			fetchImpl,
+			signal: stop.signal,
+			onAction: (record) => records.push(record),
+		}).execute();
+
+		expect(result.isError).toBe(true);
+		expect(result.text.startsWith("Остановлено пользователем")).toBe(true);
+		expect(records[0].stopped).toBe(true);
+		expect(requests).toHaveLength(0);
 	});
 });

@@ -31,6 +31,8 @@ export interface AgentResultEvent {
 	numTurns?: number;
 	/** Tokens of the turn (input excludes cache reads). */
 	usage?: TokenUsage;
+	/** The turn was stopped by the user (stop button). */
+	stopped?: boolean;
 }
 
 export interface AgentSystemInitEvent {
