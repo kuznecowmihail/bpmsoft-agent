@@ -1,10 +1,10 @@
 {
-  "title": "Колонка-справочник на объекте и вывод на карточку",
+  "title": "Колонка-справочник у контакта и вывод на карточку",
   "provider": "cursor",
-  "task": "В объект {{entity}} добавь колонку-справочник {{prefix}}EvalSource (\"Источник (эвал)\") со справочником {{prefix}}EvalSourceLookup (\"Источник обращения (эвал)\", значения: Телефон, Почта, Сайт) и выведи поле на карточке {{page}}.",
-  "answers": [{ "when": "в как\\S* пакет", "text": "{{package}}" }, { "when": "Подтверждаете план", "text": "Делай" }],
+  "task": "В объект «Контакт» (Contact) добавь колонку-справочник {{prefix}}EvalSource («Источник (эвал)») со справочником {{prefix}}EvalSourceLookup («Источник контакта (эвал)», значения: Телефон, Почта, Сайт) и выведи поле на карточке контакта ContactPageV2.",
+  "answers": [{ "when": "в как\\S* пакет", "text": "{{package}}" }, { "when": "зависимост|связ\\S* пакет|совмест", "text": "Не связывать пакеты: делай только в {{package}}, зависимости пакета не меняй" }, { "when": "Подтверждаете план", "text": "Делай" }],
   "maxTurns": 8,
-  "teardownSql": "DO $$ BEGIN IF to_regclass('public.\"Sys{{prefix}}EvalSourceLookupLcz\"') IS NOT NULL THEN DELETE FROM \"Sys{{prefix}}EvalSourceLookupLcz\"; END IF; IF to_regclass('public.\"{{prefix}}EvalSourceLookup\"') IS NOT NULL THEN DELETE FROM \"{{prefix}}EvalSourceLookup\"; END IF; DELETE FROM \"Lookup\" WHERE \"Name\" = 'Источник обращения (эвал)'; END $$;",
+  "teardownSql": "DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'Contact' AND column_name = '{{prefix}}EvalSourceId') THEN ALTER TABLE \"Contact\" DROP COLUMN \"{{prefix}}EvalSourceId\"; END IF; DROP TABLE IF EXISTS \"Sys{{prefix}}EvalSourceLookupLcz\"; DROP TABLE IF EXISTS \"{{prefix}}EvalSourceLookup\"; DELETE FROM \"Lookup\" WHERE \"Name\" = 'Источник контакта (эвал)'; END $$;",
   "checks": [
     { "type": "lint_clean" },
     { "type": "crm_update_ok" },
@@ -12,12 +12,12 @@
     { "type": "tool_called", "name": "pkg_lint" },
     {
       "type": "db_rows",
-      "sql": "SELECT 1 FROM information_schema.columns WHERE table_name = '{{entity}}' AND column_name = '{{prefix}}EvalSourceId'",
+      "sql": "SELECT 1 FROM information_schema.columns WHERE table_name = 'Contact' AND column_name = '{{prefix}}EvalSourceId'",
       "min": 1
     },
     {
       "type": "db_rows",
-      "sql": "SELECT 1 FROM \"Lookup\" WHERE \"Name\" = 'Источник обращения (эвал)'",
+      "sql": "SELECT 1 FROM \"Lookup\" WHERE \"Name\" = 'Источник контакта (эвал)'",
       "min": 1
     }
   ]

@@ -1,12 +1,18 @@
 import * as fs from "fs";
 import * as path from "path";
 
-/** Local eval configuration (packages/evals/local.json, not committed). */
-export interface EvalConfig {
+/** Package the runner creates and resets when local.json has no "package". */
+export const DEFAULT_PACKAGE = "EvalPackage";
+/** Prefix of the runner's SQL scripts and case names when local.json has no "prefix". */
+export const DEFAULT_PREFIX = "Test";
+
+/** Local eval configuration as written in packages/evals/local.json (not committed). */
+export interface EvalConfigFile {
 	appRoot: string;
-	package: string;
-	prefix: string;
-	vars: Record<string, string>;
+	/** Package the runner creates and resets; default "EvalPackage". */
+	package?: string;
+	/** Prefix for names of the runner's SQL scripts and case data; default "Test". */
+	prefix?: string;
 	crm?: { url: string; user: string };
 	/**
 	 * true — connection from ConnectionStrings.config; object — same with overrides (password from BPMSOFT_EVAL_DB_PASSWORD).
@@ -14,13 +20,14 @@ export interface EvalConfig {
 	db?: boolean | { host?: string; port?: number; user?: string };
 	/** Default model per provider; --model overrides it. */
 	models?: { claude?: string; cursor?: string };
-	/** Packages rolled back to the last commit before each case; default [package]. */
-	resetPackages?: string[];
+	/** Packages the eval package depends on; default ProductCore. */
+	dependsOn?: Array<{ UId: string; PackageVersion?: string; Name: string }>;
 }
 
-/** Packages the runner resets before each case and checks for uncommitted changes. */
-export function packagesToReset(config: EvalConfig): string[] {
-	return config.resetPackages?.length ? config.resetPackages : [config.package];
+/** Resolved config: package and prefix always have values. */
+export interface EvalConfig extends EvalConfigFile {
+	package: string;
+	prefix: string;
 }
 
 export type EvalCheck =
@@ -55,6 +62,8 @@ export interface EvalCase {
 	teardownSql?: string;
 	/** PostgreSQL that prepares stand data before the agent starts (after teardownSql); runs through a temporary package SQL script. */
 	setupSql?: string;
+	/** Names of folders in packages/evals/fixtures/ copied into the eval package before the agent starts. */
+	fixtures?: string[];
 }
 
 /** Reads a JSON file, dropping a leading BOM. */
@@ -63,20 +72,23 @@ function readJson(file: string): Record<string, unknown> {
 	return JSON.parse(text) as Record<string, unknown>;
 }
 
-/** Loads and checks the local config; vars default to an empty object. */
+/** Loads and checks the local config; fills package and prefix with defaults. */
 export function loadConfig(file: string): EvalConfig {
 	const raw = readJson(file);
-	for (const name of ["appRoot", "package", "prefix"] as const) {
-		if (typeof raw[name] !== "string" || raw[name] === "") {
-			throw new Error(`Нет поля ${name} в ${file}`);
-		}
+	if (typeof raw.appRoot !== "string" || raw.appRoot === "") {
+		throw new Error(`Нет поля appRoot в ${file}`);
 	}
-	return { ...raw, vars: (raw.vars ?? {}) as Record<string, string> } as unknown as EvalConfig;
+	const config = raw as unknown as EvalConfigFile;
+	return {
+		...config,
+		package: config.package || DEFAULT_PACKAGE,
+		prefix: config.prefix || DEFAULT_PREFIX,
+	};
 }
 
-/** Replaces {{package}}, {{prefix}} and {{key}} from config.vars. Unknown names throw. */
+/** Replaces {{package}} and {{prefix}}. Unknown names throw. */
 export function substitute(text: string, config: EvalConfig): string {
-	const values: Record<string, string> = { ...config.vars, package: config.package, prefix: config.prefix };
+	const values: Record<string, string> = { package: config.package, prefix: config.prefix };
 	return text.replace(/\{\{(\w+)\}\}/g, (_match, name: string) => {
 		if (Object.prototype.hasOwnProperty.call(values, name)) {
 			return values[name];

@@ -1,11 +1,8 @@
 import * as fs from "fs";
 import * as path from "path";
-import { execFile } from "child_process";
-import { promisify } from "util";
 import type { CrmDbTool, CrmTool, LintReport } from "@bpmsoft-agent/agent-runtime";
 import type { EvalCheck } from "./caseFile";
-
-const execFileAsync = promisify(execFile);
+import { sha256 } from "./evalPackage";
 
 export interface CheckResult { check: EvalCheck; passed: boolean; detail: string }
 
@@ -26,10 +23,8 @@ export interface CheckContext {
 	crmTools?: CrmTool[];
 	dbTool?: CrmDbTool;
 	lint: () => LintReport;
-	/** Pkg folder (git repository of the packages). Needed by file_changed. */
-	pkgRoot?: string;
-	/** Name of the package folder inside pkgRoot. Needed by file_changed. */
-	packageName?: string;
+	/** Snapshot of the package taken before the agent starts (see snapshotPackage). Needed by file_changed. */
+	baseline?: Map<string, string>;
 	/** Time of the agent's last successful compile in the case (ms). */
 	compileVerifiedAt?: number;
 	/** Files of the reset packages changed at or after the given time (ms). */
@@ -204,23 +199,18 @@ async function evaluate(check: EvalCheck, ctx: CheckContext): Promise<{ passed: 
 			return { passed: false, detail: `нет совпадения с ${check.pattern} в ${check.path}` };
 		}
 		case "file_changed": {
-			if (!ctx.pkgRoot || !ctx.packageName) {
-				return { passed: false, detail: "нет git-контекста" };
+			if (!ctx.baseline) {
+				return { passed: false, detail: "нет исходного снимка пакета" };
 			}
-			const { stdout } = await execFileAsync("git", [
-				"-c",
-				"core.autocrlf=false",
-				"-C",
-				ctx.pkgRoot,
-				"status",
-				"--porcelain",
-				"--",
-				`${ctx.packageName}/${check.path}`,
-			]);
-			const changed = stdout.trim() !== "";
+			const file = path.join(ctx.packageDir, ...check.path.split("/"));
+			const before = ctx.baseline.get(check.path);
+			const exists = fs.existsSync(file) && fs.statSync(file).isFile();
+			const changed = exists
+				? before === undefined || before !== sha256(fs.readFileSync(file))
+				: before !== undefined;
 			return changed
 				? { passed: true, detail: `изменён: ${check.path}` }
-				: { passed: false, detail: `не изменён относительно коммита: ${check.path}` };
+				: { passed: false, detail: `не изменён относительно исходного состояния: ${check.path}` };
 		}
 		case "lint_clean": {
 			const report = ctx.lint();

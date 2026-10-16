@@ -3,10 +3,8 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import type { CrmDbTool, CrmTool, LintReport } from "@bpmsoft-agent/agent-runtime";
-import { execFileSync, spawnSync } from "child_process";
 import { runChecks, CheckContext, resolvePattern, toolMatches, RESULT_CHECK_TYPES } from "../src/checks";
-
-const hasGit = spawnSync("git", ["--version"]).status === 0;
+import { snapshotPackage } from "../src/evalPackage";
 
 let packageDir: string;
 
@@ -210,37 +208,46 @@ describe("runChecks", () => {
 });
 
 describe("file_changed", () => {
-	it.skipIf(!hasGit)("passes only when the file differs from the last commit", async () => {
-		const repo = fs.mkdtempSync(path.join(os.tmpdir(), "evals-git-"));
-		try {
-			fs.mkdirSync(path.join(repo, "P"), { recursive: true });
-			fs.writeFileSync(path.join(repo, "P", "a.txt"), "one", "utf8");
-			execFileSync("git", ["-C", repo, "init", "-q"]);
-			execFileSync("git", ["-C", repo, "add", "."]);
-			execFileSync("git", [
-				"-C", repo, "-c", "user.email=test@example.com", "-c", "user.name=test",
-				"-c", "commit.gpgsign=false", "commit", "-q", "-m", "init",
-			]);
-			const check = { type: "file_changed" as const, path: "a.txt" };
-			const ctx = baseContext({ pkgRoot: repo, packageName: "P" });
+	it("passes when a file differs from the baseline", async () => {
+		writePkgFile("Schemas/A/metadata.json", "one");
+		const baseline = snapshotPackage(packageDir);
+		const check = { type: "file_changed" as const, path: "Schemas/A/metadata.json" };
+		const ctx = baseContext({ baseline });
 
-			const clean = await runChecks([check], ctx);
-			expect(clean[0].passed).toBe(false);
-			expect(clean[0].detail).toBe("не изменён относительно коммита: a.txt");
+		const unchanged = await runChecks([check], ctx);
+		expect(unchanged[0].passed).toBe(false);
+		expect(unchanged[0].detail).toBe("не изменён относительно исходного состояния: Schemas/A/metadata.json");
 
-			fs.writeFileSync(path.join(repo, "P", "a.txt"), "two", "utf8");
-			const changed = await runChecks([check], ctx);
-			expect(changed[0].passed).toBe(true);
-			expect(changed[0].detail).toBe("изменён: a.txt");
-		} finally {
-			fs.rmSync(repo, { recursive: true, force: true });
-		}
+		writePkgFile("Schemas/A/metadata.json", "two");
+		const changed = await runChecks([check], ctx);
+		expect(changed[0].passed).toBe(true);
+		expect(changed[0].detail).toBe("изменён: Schemas/A/metadata.json");
 	});
 
-	it("fails without git context", async () => {
+	it("passes for a new file and for a file deleted after the baseline", async () => {
+		writePkgFile("a.txt", "one");
+		const baseline = snapshotPackage(packageDir);
+		const ctx = baseContext({ baseline });
+
+		writePkgFile("new.txt", "x");
+		const created = await runChecks([{ type: "file_changed", path: "new.txt" }], ctx);
+		expect(created[0].passed).toBe(true);
+
+		fs.rmSync(path.join(packageDir, "a.txt"));
+		const deleted = await runChecks([{ type: "file_changed", path: "a.txt" }], ctx);
+		expect(deleted[0].passed).toBe(true);
+	});
+
+	it("fails for a file that is absent in both the baseline and the package", async () => {
+		const baseline = snapshotPackage(packageDir);
+		const results = await runChecks([{ type: "file_changed", path: "gone.txt" }], baseContext({ baseline }));
+		expect(results[0].passed).toBe(false);
+	});
+
+	it("fails without a baseline", async () => {
 		const results = await runChecks([{ type: "file_changed", path: "a.txt" }], baseContext());
 		expect(results[0].passed).toBe(false);
-		expect(results[0].detail).toBe("нет git-контекста");
+		expect(results[0].detail).toBe("нет исходного снимка пакета");
 	});
 
 	it("is a result check type", () => {

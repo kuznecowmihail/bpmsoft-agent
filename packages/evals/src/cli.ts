@@ -8,10 +8,11 @@ import {
 	listChangedFiles,
 } from "@bpmsoft-agent/agent-runtime";
 import type { CrmDbTool } from "@bpmsoft-agent/agent-runtime";
-import { loadCase, loadConfig, packagesToReset } from "./caseFile";
+import { loadCase, loadConfig } from "./caseFile";
+import { ensureEvalPackage } from "./evalPackage";
 import { loadEnvFile } from "./envFile";
 import { renderReport } from "./report";
-import { dirtyFiles, createQueryFn, pkgRootOf, runCase } from "./runner";
+import { createQueryFn, pkgRootOf, runCase } from "./runner";
 import type { CaseRun, Provider } from "./runner";
 import { formatTokens } from "./report";
 
@@ -21,7 +22,6 @@ export interface CliOptions {
 	runs: number;
 	model?: string;
 	allowUnsandboxedShell: boolean;
-	discardChanges: boolean;
 }
 
 /** Returns the value of a flag at the given index or throws when it is missing. */
@@ -35,7 +35,7 @@ function valueAt(argv: string[], index: number, flag: string): string {
 
 /** Parses command-line flags of the eval runner. */
 export function parseArgs(argv: string[], platform: NodeJS.Platform = process.platform): CliOptions {
-	const options: CliOptions = { runs: 1, allowUnsandboxedShell: false, discardChanges: false };
+	const options: CliOptions = { runs: 1, allowUnsandboxedShell: false };
 	for (let i = 0; i < argv.length; i++) {
 		const flag = argv[i];
 		switch (flag) {
@@ -63,9 +63,6 @@ export function parseArgs(argv: string[], platform: NodeJS.Platform = process.pl
 				break;
 			case "--allow-unsandboxed-shell":
 				options.allowUnsandboxedShell = true;
-				break;
-			case "--discard-changes":
-				options.discardChanges = true;
 				break;
 			default:
 				throw new Error(`Неизвестный параметр ${flag}`);
@@ -102,13 +99,6 @@ async function main(): Promise<void> {
 	const cases = files.map((file) => loadCase(path.join(casesDir, file), config));
 
 	const pkgRoot = pkgRootOf(config);
-	const resetList = packagesToReset(config);
-	const dirty = await dirtyFiles(pkgRoot, resetList);
-	if (dirty.length > 0 && !options.discardChanges) {
-		throw new Error(
-			`Есть незакоммиченные изменения в ${resetList.join(", ")} — раннер их сотрёт. Закоммитьте их или запустите с --discard-changes:\n${dirty.slice(0, 10).join("\n")}`,
-		);
-	}
 	const runId = new Date().toISOString().replace(/[:.]/g, "-");
 	const resultsDir = path.join(evalsDir, "results", runId);
 
@@ -147,6 +137,24 @@ async function main(): Promise<void> {
 							: undefined,
 			})
 		: undefined;
+
+	const { created } = ensureEvalPackage(pkgRoot, config);
+	if (created) {
+		console.log(`Создан пакет ${config.package} в Pkg`);
+		const update = crmTools?.(() => {}, () => Date.now()).find((tool) => tool.name === "crm_update_from_fs");
+		if (update) {
+			const result = await update.execute();
+			if (result.isError) {
+				throw new Error(`Не удалось установить пакет ${config.package}: ${result.text.split("\n")[0]}`);
+			}
+		} else {
+			console.log(
+				`Предупреждение: CRM не подключена. Нажмите в CRM «Обновить из файловой системы», чтобы установить пакет ${config.package}.`,
+			);
+		}
+	} else {
+		console.log(`Пакет ${config.package} уже есть — запускаю кейсы`);
+	}
 
 	const runs: CaseRun[] = [];
 	for (const evalCase of cases) {

@@ -1,0 +1,10 @@
+{
+  "Descriptor": {
+    "UId": "961e8b26-0bdf-49b3-9db0-5c19603bb930",
+    "Name": "{{prefix}}EvalHelper",
+    "ModifiedOnUtc": "\/Date({{now}})\/",
+    "ManagerName": "SourceCodeSchemaManager",
+    "Caption": "Eval helper",
+    "DependsOn": []
+  }
+}

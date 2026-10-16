@@ -1,8 +1,5 @@
 import * as fs from "fs";
 import * as path from "path";
-import { randomUUID } from "crypto";
-import { execFile } from "child_process";
-import { promisify } from "util";
 import {
 	createPkgLintTool,
 	listChangedFiles,
@@ -22,12 +19,17 @@ import type {
 	TokenUsage,
 } from "@bpmsoft-agent/agent-runtime";
 import { chooseAnswer } from "./answers";
-import { packagesToReset } from "./caseFile";
 import type { EvalCase, EvalConfig } from "./caseFile";
 import { RESULT_CHECK_TYPES, runChecks } from "./checks";
 import type { CheckContext, CheckResult, TimelineEvent } from "./checks";
-
-const execFileAsync = promisify(execFile);
+import {
+	PRODUCT_CORE,
+	applyFixtures,
+	readPackageUid,
+	resetEvalPackage,
+	snapshotPackage,
+	writeSqlScript,
+} from "./evalPackage";
 
 export type Provider = "claude" | "cursor";
 
@@ -127,41 +129,6 @@ export function createQueryFn(config: EvalConfig, provider: Provider, model?: st
 	};
 }
 
-/** Forces LF bytes on checkout regardless of the user's global autocrlf setting. */
-const GIT_SAFE = ["-c", "core.autocrlf=false"];
-
-/** Returns the packages to their committed state: restores tracked files and removes new ones. */
-export async function resetPackage(pkgRoot: string, packages: string[]): Promise<void> {
-	await execFileAsync("git", [...GIT_SAFE, "-C", pkgRoot, "checkout", "--", ...packages]);
-	await execFileAsync("git", [...GIT_SAFE, "-C", pkgRoot, "clean", "-fd", "--", ...packages]);
-	const { stdout } = await execFileAsync("git", [
-		...GIT_SAFE,
-		"-C",
-		pkgRoot,
-		"status",
-		"--porcelain",
-		"--",
-		...packages,
-	]);
-	if (stdout.trim() !== "") {
-		throw new Error("Пакеты не вернулись в исходное состояние: " + stdout);
-	}
-}
-
-/** Lists uncommitted changes (porcelain lines) in the packages. */
-export async function dirtyFiles(pkgRoot: string, packages: string[]): Promise<string[]> {
-	const { stdout } = await execFileAsync("git", [
-		...GIT_SAFE,
-		"-C",
-		pkgRoot,
-		"status",
-		"--porcelain",
-		"--",
-		...packages,
-	]);
-	return stdout.split(/\r?\n/).filter((line) => line.trim() !== "");
-}
-
 /** Replaces the first occurrence, matching line endings of the file (CRLF or LF). */
 function applySetup(text: string, find: string, replace: string): string | undefined {
 	const eol = text.includes("\r\n") ? "\r\n" : "\n";
@@ -204,39 +171,6 @@ function firstLine(text: string): string {
 	return text.split("\n")[0];
 }
 
-/**
- * Writes a package SQL script `SqlScripts/<name>/` (descriptor.json and <name>.sql) for a teardown.
- * The descriptor is copied from the first sample SqlScripts/*\/descriptor.json of the package, so the fields stay as the platform writes them.
- */
-export function writeTeardownScript(packageDir: string, name: string, sql: string, now: number = Date.now()): string {
-	const sqlDir = path.join(packageDir, "SqlScripts");
-	const sampleDir = fs.existsSync(sqlDir)
-		? fs
-				.readdirSync(sqlDir, { withFileTypes: true })
-				.filter((entry) => entry.isDirectory())
-				.map((entry) => entry.name)
-				.sort()
-				.find((dir) => fs.existsSync(path.join(sqlDir, dir, "descriptor.json")))
-		: undefined;
-	if (sampleDir === undefined) {
-		throw new Error("teardownSql: в пакете нет образца SQL-скрипта (SqlScripts/*/descriptor.json)");
-	}
-	const sampleText = fs.readFileSync(path.join(sqlDir, sampleDir, "descriptor.json"), "utf8");
-	const bom = sampleText.startsWith("\uFEFF");
-	const parsed = JSON.parse(sampleText.replace(/^\uFEFF/, "")) as Record<string, unknown>;
-	const descriptor = (parsed.SqlScript ?? parsed) as Record<string, unknown>;
-	descriptor.Name = name;
-	descriptor.UId = randomUUID();
-	descriptor.ModifiedOnUtc = `/Date(${now})/`;
-	const folder = path.join(sqlDir, name);
-	fs.mkdirSync(folder, { recursive: true });
-	// BPMSoft samples escape the slashes of the date: "\/Date(<ms>)\/".
-	const json = JSON.stringify(parsed, null, 2).replace(`"/Date(${now})/"`, `"\\/Date(${now})\\/"`);
-	fs.writeFileSync(path.join(folder, "descriptor.json"), (bom ? "\uFEFF" : "") + json, "utf8");
-	fs.writeFileSync(path.join(folder, `${name}.sql`), sql, "utf8");
-	return folder;
-}
-
 /** Runs one case once: resets the package, applies setup, runs turns, then checks. */
 export async function runCase(
 	evalCase: EvalCase,
@@ -248,7 +182,12 @@ export async function runCase(
 		resultsDir: string;
 		crmTools?: (onAction: (r: CrmActionRecord) => void, ownSince: () => number) => CrmTool[] | undefined;
 		dbTool?: CrmDbTool;
-		reset?: (pkgRoot: string, packages: string[]) => Promise<void>;
+		/** Empties the eval package before and after the case. Default resetEvalPackage. */
+		reset?: (packageDir: string) => void | Promise<void>;
+		/** Folder with fixtures (packages/evals/fixtures). Default: fixtures next to src. */
+		fixturesDir?: string;
+		/** UId of the eval package for fixtures. Default: read from the package descriptor.json. */
+		packageUId?: string;
 		/** Pause before each CRM update, ms. Default 3000. */
 		settleMs?: number;
 		/** Pause implementation, for tests. Default: setTimeout. */
@@ -261,6 +200,8 @@ export async function runCase(
 	const packageDir = path.join(pkgRoot, config.package);
 	const settleMs = deps.settleMs ?? DEFAULT_SETTLE_MS;
 	const sleep = deps.sleep ?? defaultSleep;
+	const reset = deps.reset ?? ((dir: string) => resetEvalPackage(dir, config.dependsOn ?? [PRODUCT_CORE]));
+	const fixturesDir = deps.fixturesDir ?? path.join(__dirname, "..", "fixtures");
 	const toolNames: string[] = [];
 	/** Prompts, agent texts and tool calls of the turns in order, for checks. */
 	const timeline: TimelineEvent[] = [];
@@ -309,9 +250,9 @@ export async function runCase(
 			return;
 		}
 		const scriptName = `${config.prefix}${isSetup ? "EvalSetup" : "EvalTeardown"}`;
-		writeTeardownScript(packageDir, scriptName, sql);
+		writeSqlScript(packageDir, scriptName, sql);
 		const first = await updateWithRetry(update, sleep, settleMs);
-		await (deps.reset ?? resetPackage)(pkgRoot, packagesToReset(config));
+		await reset(packageDir);
 		const second = await updateWithRetry(update, sleep, settleMs);
 		const isError = first.isError || second.isError;
 		if (isSetup) {
@@ -328,13 +269,22 @@ export async function runCase(
 	};
 
 	try {
-		await (deps.reset ?? resetPackage)(pkgRoot, packagesToReset(config));
+		await reset(packageDir);
 		crmTools = deps.crmTools?.(onAction, () => since);
 		if (evalCase.teardownSql) {
 			await runSql(evalCase.teardownSql, "before");
 		}
 		if (evalCase.setupSql) {
 			await runSql(evalCase.setupSql, "setup");
+		}
+		if (evalCase.fixtures && evalCase.fixtures.length > 0) {
+			const packageUId = deps.packageUId ?? readPackageUid(packageDir);
+			applyFixtures(fixturesDir, evalCase.fixtures, packageDir, {
+				package: config.package,
+				prefix: config.prefix,
+				packageUId,
+				now: String(Date.now()),
+			});
 		}
 
 		for (const setup of evalCase.setup ?? []) {
@@ -361,7 +311,7 @@ export async function runCase(
 			since = Date.now();
 		}
 
-		const resetPackages = packagesToReset(config);
+		const baseline = snapshotPackage(packageDir);
 		const ctx: CheckContext = {
 			packageDir,
 			toolNames,
@@ -369,15 +319,12 @@ export async function runCase(
 			crmTools,
 			dbTool: deps.dbTool,
 			lint: () => lintChanged(pkgRoot, since),
-			pkgRoot,
-			packageName: config.package,
+			baseline,
 			get compileVerifiedAt(): number | undefined {
 				return lastCompileOkAt;
 			},
 			changedAfter: (ms: number) =>
-				listChangedFiles(pkgRoot, ms + 1).filter((file) =>
-					resetPackages.some((pkg) => file.startsWith(path.join(pkgRoot, pkg) + path.sep)),
-				),
+				listChangedFiles(pkgRoot, ms + 1).filter((file) => file.startsWith(packageDir + path.sep)),
 		};
 
 		// Preflight: the case is an unimplemented task. A result check that already passes means the task is done on the stand.
@@ -463,18 +410,9 @@ export async function runCase(
 		log("error", { message: error });
 	}
 
-	// Always runs: the case's DB data is removed, the packages go back to the baseline and CRM is updated, so the stand ends at the baseline.
+	// Always runs: the eval package is emptied and CRM is updated (the agent's schemas go away), then the teardown removes the case's DB data.
 	try {
-		if (evalCase.teardownSql) {
-			await runSql(evalCase.teardownSql, "after");
-		}
-	} catch (e) {
-		const message = e instanceof Error ? e.message : String(e);
-		log("teardown_error", { message });
-		error = error ? `${error}; уборка: ${message}` : `уборка: ${message}`;
-	}
-	try {
-		await (deps.reset ?? resetPackage)(pkgRoot, packagesToReset(config));
+		await reset(packageDir);
 		const update = crmTools?.find((tool) => tool.name === "crm_update_from_fs");
 		if (update) {
 			const result = await updateWithRetry(update, sleep, settleMs);
@@ -487,6 +425,15 @@ export async function runCase(
 	} catch (e) {
 		const message = e instanceof Error ? e.message : String(e);
 		log("final_reset_error", { message });
+		error = error ? `${error}; уборка: ${message}` : `уборка: ${message}`;
+	}
+	try {
+		if (evalCase.teardownSql) {
+			await runSql(evalCase.teardownSql, "after");
+		}
+	} catch (e) {
+		const message = e instanceof Error ? e.message : String(e);
+		log("teardown_error", { message });
 		error = error ? `${error}; уборка: ${message}` : `уборка: ${message}`;
 	}
 

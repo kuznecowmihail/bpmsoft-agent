@@ -1,0 +1,16 @@
+{
+  "MetaData": {
+    "Schema": {
+      "ManagerName": "SourceCodeSchemaManager",
+      "UId": "961e8b26-0bdf-49b3-9db0-5c19603bb930",
+      "A2": "{{prefix}}EvalHelper",
+      "A5": "ace27071-854f-471e-962e-74752b89c020",
+      "B1": [],
+      "B2": [],
+      "B3": [],
+      "B6": "{{packageUId}}",
+      "B8": "1.9.0.17103",
+      "HD1": "50e3acc0-26fc-4237-a095-849a1d534bd3"
+    }
+  }
+}

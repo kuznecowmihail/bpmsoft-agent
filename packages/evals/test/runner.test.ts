@@ -2,10 +2,10 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
-import { execFileSync, spawnSync } from "child_process";
 import type { AgentEvent, CrmActionRecord, CrmTool } from "@bpmsoft-agent/agent-runtime";
 import type { EvalCase, EvalConfig } from "../src/caseFile";
-import { asksUser, buildQueryArgs, createQueryFn, dirtyFiles, pkgRootOf, resetPackage, runCase, writeTeardownScript } from "../src/runner";
+import { EVAL_PACKAGE_MARKER } from "../src/evalPackage";
+import { asksUser, buildQueryArgs, createQueryFn, pkgRootOf, runCase } from "../src/runner";
 import type { QueryArgs, QueryFn } from "../src/runner";
 
 let tmpDir: string;
@@ -18,8 +18,6 @@ afterEach(() => {
 	fs.rmSync(tmpDir, { recursive: true, force: true });
 });
 
-const hasGit = spawnSync("git", ["--version"]).status === 0;
-
 /** Creates a fake app root with one schema in the test package. */
 function makeApp(): { config: EvalConfig; pkgRoot: string; packageDir: string; resultsDir: string } {
 	const appRoot = path.join(tmpDir, "app");
@@ -27,7 +25,9 @@ function makeApp(): { config: EvalConfig; pkgRoot: string; packageDir: string; r
 	const packageDir = path.join(pkgRoot, "TestPkg");
 	fs.mkdirSync(path.join(packageDir, "Schemas", "TestA"), { recursive: true });
 	fs.writeFileSync(path.join(packageDir, "Schemas", "TestA", "metadata.json"), "{}", "utf8");
-	const config: EvalConfig = { appRoot, package: "TestPkg", prefix: "Test", vars: {} };
+	const descriptor = { Descriptor: { UId: "11111111-2222-3333-4444-555555555555", Name: "TestPkg", Description: EVAL_PACKAGE_MARKER } };
+	fs.writeFileSync(path.join(packageDir, "descriptor.json"), JSON.stringify(descriptor), "utf8");
+	const config: EvalConfig = { appRoot, package: "TestPkg", prefix: "Test" };
 	return { config, pkgRoot, packageDir, resultsDir: path.join(tmpDir, "results") };
 }
 
@@ -73,11 +73,11 @@ function makeCase(overrides: Partial<EvalCase> = {}): EvalCase {
 	};
 }
 
-const noReset = async (_pkgRoot: string, _packages: string[]): Promise<void> => {};
+const noReset = async (_packageDir: string): Promise<void> => {};
 
 describe("buildQueryArgs", () => {
 	it("gives the claude sandbox read access to the app and write access to Pkg", () => {
-		const config: EvalConfig = { appRoot: "/app", package: "TestPkg", prefix: "Test", vars: {} };
+		const config: EvalConfig = { appRoot: "/app", package: "TestPkg", prefix: "Test" };
 		const pkgRoot = pkgRootOf(config);
 		const args = buildQueryArgs(config, "claude") as {
 			cwd: string;
@@ -89,7 +89,7 @@ describe("buildQueryArgs", () => {
 	});
 
 	it("gives the cursor agent the app root as readRoot and Pkg as cwd", () => {
-		const config: EvalConfig = { appRoot: "/app", package: "TestPkg", prefix: "Test", vars: {} };
+		const config: EvalConfig = { appRoot: "/app", package: "TestPkg", prefix: "Test" };
 		const args = buildQueryArgs(config, "cursor") as { cwd: string; readRoot: string };
 		expect(args.readRoot).toBe(config.appRoot);
 		expect(args.cwd).toBe(pkgRootOf(config));
@@ -296,68 +296,6 @@ describe("runCase answers from rules and recommendations", () => {
 	});
 });
 
-describe("resetPackage", () => {
-	it.skipIf(!hasGit)("restores tracked files and removes new ones", async () => {
-		const repo = path.join(tmpDir, "repo");
-		fs.mkdirSync(path.join(repo, "TestPkg"), { recursive: true });
-		execFileSync("git", ["-C", repo, "init"]);
-		fs.writeFileSync(path.join(repo, "TestPkg", "a.txt"), "one", "utf8");
-		execFileSync("git", ["-C", repo, "add", "."]);
-		execFileSync("git", [
-			"-C",
-			repo,
-			"-c",
-			"user.email=test@example.com",
-			"-c",
-			"user.name=test",
-			"-c",
-			"commit.gpgsign=false",
-			"commit",
-			"-m",
-			"init",
-		]);
-
-		fs.writeFileSync(path.join(repo, "TestPkg", "a.txt"), "two", "utf8");
-		fs.writeFileSync(path.join(repo, "TestPkg", "new.txt"), "x", "utf8");
-
-		await resetPackage(repo, ["TestPkg"]);
-
-		expect(fs.readFileSync(path.join(repo, "TestPkg", "a.txt"), "utf8")).toBe("one");
-		expect(fs.existsSync(path.join(repo, "TestPkg", "new.txt"))).toBe(false);
-	});
-
-	it.skipIf(!hasGit)("resets several packages with LF forced despite core.autocrlf", async () => {
-		const repo = path.join(tmpDir, "repo");
-		fs.mkdirSync(path.join(repo, "P1"), { recursive: true });
-		fs.mkdirSync(path.join(repo, "P2"), { recursive: true });
-		execFileSync("git", ["init", repo]);
-		execFileSync("git", ["-C", repo, "config", "user.email", "test@example.com"]);
-		execFileSync("git", ["-C", repo, "config", "user.name", "test"]);
-		execFileSync("git", ["-C", repo, "config", "commit.gpgsign", "false"]);
-		execFileSync("git", ["-C", repo, "config", "core.autocrlf", "true"]);
-		fs.writeFileSync(path.join(repo, "P1", "a.txt"), "x\ny\n", "utf8");
-		fs.writeFileSync(path.join(repo, "P2", "b.txt"), "x\ny\n", "utf8");
-		execFileSync("git", ["-C", repo, "add", "."]);
-		execFileSync("git", ["-C", repo, "commit", "-m", "init"]);
-
-		fs.writeFileSync(path.join(repo, "P1", "a.txt"), "changed\n", "utf8");
-		fs.writeFileSync(path.join(repo, "P2", "b.txt"), "changed\n", "utf8");
-		fs.writeFileSync(path.join(repo, "P2", "new.txt"), "x", "utf8");
-
-		await resetPackage(repo, ["P1", "P2"]);
-
-		expect(fs.readFileSync(path.join(repo, "P1", "a.txt"), "utf8")).toBe("x\ny\n");
-		expect(fs.readFileSync(path.join(repo, "P2", "b.txt"), "utf8")).toBe("x\ny\n");
-		expect(fs.existsSync(path.join(repo, "P2", "new.txt"))).toBe(false);
-		expect(await dirtyFiles(repo, ["P1", "P2"])).toEqual([]);
-
-		fs.writeFileSync(path.join(repo, "P2", "b.txt"), "again\n", "utf8");
-		const dirty = await dirtyFiles(repo, ["P1", "P2"]);
-		expect(dirty.length).toBe(1);
-		expect(dirty[0]).toContain("b.txt");
-	});
-});
-
 describe("createQueryFn", () => {
 	it("throws for cursor without a model", () => {
 		const { config } = makeApp();
@@ -405,7 +343,7 @@ describe("runCase baseline update", () => {
 describe("runCase cleanup", () => {
 	it("resets the packages at start and end and updates CRM at baseline and at the end", async () => {
 		const { config, packageDir, resultsDir } = makeApp();
-		const resets: string[][] = [];
+		const resets: string[] = [];
 		let updates = 0;
 		const update: CrmTool = {
 			name: "crm_update_from_fs",
@@ -424,8 +362,8 @@ describe("runCase cleanup", () => {
 		const run = await runCase(makeCase(), config, "claude", 1, {
 			query: fakeQuery(script, [], createNew),
 			resultsDir,
-			reset: async (_pkgRoot, packages) => {
-				resets.push(packages);
+			reset: async (dir) => {
+				resets.push(dir);
 			},
 			crmTools: () => [update],
 			settleMs: 0,
@@ -468,13 +406,13 @@ describe("runCase cleanup", () => {
 			reset: async () => {
 				calls++;
 				if (calls === 2) {
-					throw new Error("git недоступен");
+					throw new Error("сбой очистки пакета");
 				}
 			},
 		});
 
 		expect(run.error).toContain("уборка:");
-		expect(run.error).toContain("git недоступен");
+		expect(run.error).toContain("сбой очистки пакета");
 	});
 
 	it("adds a failed final CRM update to CaseRun.error", async () => {
@@ -592,54 +530,9 @@ describe("runCase CRM update settle pause and retry", () => {
 	});
 });
 
-/** Writes a sample SqlScripts folder with a BOM, as the platform writes it. */
-function writeSqlSample(packageDir: string): void {
-	const dir = path.join(packageDir, "SqlScripts", "S1");
-	fs.mkdirSync(dir, { recursive: true });
-	const descriptor = {
-		SqlScript: {
-			UId: "11111111-2222-3333-4444-555555555555",
-			Name: "S1",
-			DBEngineType: 2,
-			InstallType: 1,
-			ModifiedOnUtc: "/Date(1)/",
-			DependsOn: [],
-		},
-	};
-	fs.writeFileSync(path.join(dir, "descriptor.json"), "﻿" + JSON.stringify(descriptor, null, 2), "utf8");
-}
-
-describe("writeTeardownScript", () => {
-	it("writes a script folder with a new name, UId and ModifiedOnUtc, copying the sample fields and BOM", () => {
-		const packageDir = path.join(tmpDir, "TestPkg");
-		writeSqlSample(packageDir);
-		const folder = writeTeardownScript(packageDir, "TestEvalTeardown", "DELETE FROM x;", 1700000000000);
-
-		expect(folder).toBe(path.join(packageDir, "SqlScripts", "TestEvalTeardown"));
-		const raw = fs.readFileSync(path.join(folder, "descriptor.json"), "utf8");
-		expect(raw.startsWith("﻿")).toBe(true);
-		const body = JSON.parse(raw.replace(/^﻿/, "")) as { SqlScript: Record<string, unknown> };
-		expect(body.SqlScript.Name).toBe("TestEvalTeardown");
-		expect(body.SqlScript.UId).not.toBe("11111111-2222-3333-4444-555555555555");
-		expect(body.SqlScript.UId).toMatch(/^[0-9a-f-]{36}$/);
-		expect(raw).toContain(String.raw`\/Date(1700000000000)\/`);
-		expect(body.SqlScript.ModifiedOnUtc).toBe("/Date(1700000000000)/");
-		expect(body.SqlScript.DBEngineType).toBe(2);
-		expect(body.SqlScript.InstallType).toBe(1);
-		expect(fs.readFileSync(path.join(folder, "TestEvalTeardown.sql"), "utf8")).toBe("DELETE FROM x;");
-	});
-
-	it("throws when the package has no sample SQL script", () => {
-		const packageDir = path.join(tmpDir, "TestPkg");
-		fs.mkdirSync(packageDir, { recursive: true });
-		expect(() => writeTeardownScript(packageDir, "TestEvalTeardown", "SELECT 1;")).toThrow("нет образца");
-	});
-});
-
 describe("runCase teardown", () => {
 	it("runs the teardown before the baseline and after the turns, with the script present only in the first update of each teardown", async () => {
 		const { config, packageDir, resultsDir } = makeApp();
-		writeSqlSample(packageDir);
 		const scriptDir = path.join(packageDir, "SqlScripts", "TestEvalTeardown");
 		const events: string[] = [];
 		const seenSql: string[] = [];
@@ -675,9 +568,9 @@ describe("runCase teardown", () => {
 			"reset",
 			"update:plain",
 			"update:plain",
-			"update:script",
 			"reset",
 			"update:plain",
+			"update:script",
 			"reset",
 			"update:plain",
 		]);
@@ -686,7 +579,6 @@ describe("runCase teardown", () => {
 
 	it("skips the teardown when the case has no teardownSql", async () => {
 		const { config, packageDir, resultsDir } = makeApp();
-		writeSqlSample(packageDir);
 		let updates = 0;
 		const update: CrmTool = {
 			name: "crm_update_from_fs",
@@ -712,7 +604,6 @@ describe("runCase teardown", () => {
 describe("runCase setupSql", () => {
 	it("runs setupSql after the teardown and before the baseline update", async () => {
 		const { config, packageDir, resultsDir } = makeApp();
-		writeSqlSample(packageDir);
 		const events: string[] = [];
 		const update: CrmTool = {
 			name: "crm_update_from_fs",
@@ -753,9 +644,9 @@ describe("runCase setupSql", () => {
 			"reset",
 			"update:plain",
 			"update:plain",
-			"update:TestEvalTeardown",
 			"reset",
 			"update:plain",
+			"update:TestEvalTeardown",
 			"reset",
 			"update:plain",
 		]);
@@ -764,7 +655,6 @@ describe("runCase setupSql", () => {
 
 	it("fails the case when setupSql has no CRM tools", async () => {
 		const { config, packageDir, resultsDir } = makeApp();
-		writeSqlSample(packageDir);
 		const seen: QueryArgs[] = [];
 		const run = await runCase(makeCase({ setupSql: "SELECT 1;", checks: [] }), config, "claude", 1, {
 			query: fakeQuery(script, seen),
@@ -780,7 +670,6 @@ describe("runCase setupSql", () => {
 
 	it("stops the case with setupSql error and still runs the cleanup", async () => {
 		const { config, packageDir, resultsDir } = makeApp();
-		writeSqlSample(packageDir);
 		const seen: QueryArgs[] = [];
 		const update: CrmTool = {
 			name: "crm_update_from_fs",

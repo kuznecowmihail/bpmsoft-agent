@@ -40,8 +40,7 @@ describe("parseArgs", () => {
 		expect(options.allowUnsandboxedShell).toBe(true);
 	});
 
-	it("parses discard-changes", () => {
-		expect(parseArgs(["--discard-changes"], "darwin").discardChanges).toBe(true);
-		expect(parseArgs([], "darwin").discardChanges).toBe(false);
+	it("rejects the removed discard-changes flag", () => {
+		expect(() => parseArgs(["--discard-changes"], "darwin")).toThrow("Неизвестный параметр --discard-changes");
 	});
 });

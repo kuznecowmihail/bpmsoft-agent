@@ -1,12 +1,15 @@
 {
-  "title": "Подсчёт записей по статусам через SQL-скрипт",
+  "title": "Подсчёт активностей по статусам через SQL-скрипт",
   "provider": "claude",
-  "task": "Посчитай по базе, сколько записей {{entity}} в каждом статусе, и заполни в справочнике статусов колонку \"Описание\" текстом вида \"Записей: N\" — через SQL-скрипт пакета с именем {{prefix}}EvalStatusDescription.",
+  "task": "Посчитай по базе, сколько активностей (Activity) в каждом статусе, и заполни в справочнике статусов активностей колонку «Описание» текстом вида «Записей: N» — через SQL-скрипт пакета с именем {{prefix}}EvalStatusDescription.",
   "answers": [{ "when": "в как\\S* пакет", "text": "{{package}}" }, { "when": "Подтверждаете план", "text": "Делай" }],
   "maxTurns": 8,
+  "setupSql": "DO $$ BEGIN CREATE TABLE IF NOT EXISTS \"{{prefix}}EvalStatusBackup\" AS SELECT \"Id\", \"Description\" FROM \"ActivityStatus\"; IF to_regclass('public.\"SysActivityStatusLcz\"') IS NOT NULL THEN CREATE TABLE IF NOT EXISTS \"{{prefix}}EvalStatusLczBackup\" AS SELECT \"Id\", \"Description\" FROM \"SysActivityStatusLcz\"; END IF; END $$;",
+  "teardownSql": "DO $$ BEGIN IF to_regclass('public.\"{{prefix}}EvalStatusBackup\"') IS NOT NULL THEN UPDATE \"ActivityStatus\" s SET \"Description\" = b.\"Description\" FROM \"{{prefix}}EvalStatusBackup\" b WHERE s.\"Id\" = b.\"Id\"; DROP TABLE \"{{prefix}}EvalStatusBackup\"; END IF; IF to_regclass('public.\"{{prefix}}EvalStatusLczBackup\"') IS NOT NULL THEN UPDATE \"SysActivityStatusLcz\" s SET \"Description\" = b.\"Description\" FROM \"{{prefix}}EvalStatusLczBackup\" b WHERE s.\"Id\" = b.\"Id\"; DROP TABLE \"{{prefix}}EvalStatusLczBackup\"; END IF; END $$;",
   "checks": [
     { "type": "tool_called", "name": "crm_db_query" },
     { "type": "file_exists", "path": "SqlScripts/{{prefix}}EvalStatusDescription/descriptor.json" },
-    { "type": "crm_update_ok" }
+    { "type": "crm_update_ok" },
+    { "type": "db_rows", "sql": "SELECT 1 WHERE EXISTS (SELECT 1 FROM \"ActivityStatus\" WHERE \"Description\" ~ '^(Записей|Records): [0-9]+') OR EXISTS (SELECT 1 FROM \"SysActivityStatusLcz\" WHERE \"Description\" ~ '^(Записей|Records): [0-9]+')", "min": 1 }
   ]
 }

@@ -1,10 +1,11 @@
 {
   "title": "Поиск и исправление ошибки компиляции",
   "provider": "cursor",
+  "fixtures": ["source-code-helper"],
   "setup": [
     {
       "type": "replace_in_file",
-      "path": "Schemas/{{helperCs}}/{{helperCs}}.cs",
+      "path": "Schemas/{{prefix}}EvalHelper/{{prefix}}EvalHelper.cs",
       "find": "return ",
       "replace": "retrun "
     }
@@ -15,6 +16,6 @@
   "checks": [
     { "type": "tool_called", "name": "crm_compile" },
     { "type": "crm_compile_ok" },
-    { "type": "file_contains", "path": "Schemas/{{helperCs}}/{{helperCs}}.cs", "pattern": "^(?![\\s\\S]*retrun )" }
+    { "type": "file_contains", "path": "Schemas/{{prefix}}EvalHelper/{{prefix}}EvalHelper.cs", "pattern": "^(?![\\s\\S]*retrun )" }
   ]
 }
