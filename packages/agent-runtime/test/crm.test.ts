@@ -319,4 +319,239 @@ describe("CRM tools", () => {
 		expect(text).toContain("new day line");
 		expect(text).not.toContain("old start line");
 	});
+
+	/** One tool instance: the fix loop lives in createCrmTools, so repeated calls share it. */
+	function sharedTool(name: string, options: CrmToolsOptions): CrmTool {
+		const tool = createCrmTools(options).find((item) => item.name === name);
+		if (!tool) {
+			throw new Error(`no tool ${name}`);
+		}
+		return tool;
+	}
+
+	it("stops compile attempts at the checkpoint and blocks the next call without a CRM request", async () => {
+		let builds = 0;
+		const { fetchImpl, requests } = fakeCrm({
+			"/ServiceModel/AuthService.svc/Login": () => loginResponse(),
+			"/ServiceModel/WorkspaceExplorerService.svc/Build": () => {
+				builds++;
+				return jsonResponse({
+					message: null,
+					errors: [{ line: 111, column: 15, errorNumber: "CS0029", errorText: `text ${builds}`, warning: false, fileName: "TestTicketService.cs" }],
+					buildResult: 1,
+					success: false,
+				});
+			},
+		});
+		const records: CrmActionRecord[] = [];
+		const compile = sharedTool(CRM_COMPILE_TOOL, { connection, fetchImpl, onAction: (record) => records.push(record) });
+
+		let last = { text: "", isError: false };
+		for (let i = 0; i < 5; i++) {
+			last = await compile.execute();
+		}
+		expect(last.text).toContain("контрольная точка");
+
+		const requestsBefore = requests.length;
+		const blocked = await compile.execute();
+		expect(blocked.isError).toBe(true);
+		expect(blocked.text).toContain("Контрольная точка уже достигнута");
+		expect(requests).toHaveLength(requestsBefore);
+		expect(records[records.length - 1].blocked).toBe(true);
+	});
+
+	it("does not count rejected logins toward the checkpoint", async () => {
+		const { fetchImpl } = fakeCrm({
+			"/ServiceModel/AuthService.svc/Login": () => jsonResponse({ Code: 1, Message: "Неверный логин" }),
+		});
+		const update = sharedTool(CRM_UPDATE_TOOL, { connection, fetchImpl });
+		for (let i = 0; i < 6; i++) {
+			const result = await update.execute();
+			expect(result.text).not.toContain("Неудачная попытка");
+		}
+	});
+
+	it("runs lint before update: lint errors stop the update without CRM calls or confirmation", async () => {
+		const { fetchImpl, requests } = fakeCrm({});
+		let confirmed = false;
+		const update = sharedTool(CRM_UPDATE_TOOL, {
+			connection,
+			fetchImpl,
+			confirm: async () => {
+				confirmed = true;
+				return true;
+			},
+			lint: () => ({ ok: false, text: "ОШИБКА x" }),
+		});
+
+		const first = await update.execute();
+		expect(requests).toHaveLength(0);
+		expect(confirmed).toBe(false);
+		expect(first.isError).toBe(true);
+		expect(first.text).toContain("ОШИБКА x");
+		expect(first.text).toContain("Неудачная попытка 1 из 5");
+
+		let last = first;
+		for (let i = 1; i < 5; i++) {
+			last = await update.execute();
+		}
+		expect(last.text).toMatch(/контрольная точка/i);
+		expect(requests).toHaveLength(0);
+	});
+
+	it("notices a compile error in a schema that this chat did not change", async () => {
+		const { fetchImpl } = fakeCrm({
+			"/ServiceModel/AuthService.svc/Login": () => loginResponse(),
+			"/ServiceModel/WorkspaceExplorerService.svc/Build": () => jsonResponse({
+				message: null,
+				errors: [{ line: 5, column: 3, errorNumber: "CS0103", errorText: "name does not exist", warning: false, fileName: "/app/Pkg/TestTicketService.cs" }],
+				buildResult: 1,
+				success: false,
+			}),
+		});
+		const compile = sharedTool(CRM_COMPILE_TOOL, { connection, fetchImpl, ownSchemas: () => new Set(["Other"]) });
+		const result = await compile.execute();
+
+		expect(result.isError).toBe(true);
+		expect(result.text).toContain("Исправить ошибку в TestTicketService?");
+	});
+
+	it("shares one running compile between duplicate concurrent calls: one Build request, one onAction", async () => {
+		const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+		let builds = 0;
+		const { fetchImpl } = fakeCrm({
+			"/ServiceModel/AuthService.svc/Login": () => loginResponse(),
+			"/ServiceModel/WorkspaceExplorerService.svc/Build": async () => {
+				builds++;
+				await delay(20);
+				return jsonResponse(buildFailed);
+			},
+		});
+		const records: CrmActionRecord[] = [];
+		const compile = sharedTool(CRM_COMPILE_TOOL, { connection, fetchImpl, onAction: (record) => records.push(record) });
+
+		const [first, second] = await Promise.all([compile.execute(), compile.execute()]);
+
+		expect(builds).toBe(1);
+		expect(second).toBe(first);
+		expect(first.isError).toBe(true);
+		expect(records.filter((record) => record.action === "compile")).toHaveLength(1);
+	});
+
+	it("serializes update and compile: the Build request starts after LoadPackagesToDB has finished", async () => {
+		const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+		const events: string[] = [];
+		const { fetchImpl } = fakeCrm({
+			"/ServiceModel/AuthService.svc/Login": () => loginResponse(),
+			"/ServiceModel/AppInstallerService.svc/LoadPackagesToDB": async () => {
+				events.push("load-start");
+				await delay(20);
+				events.push("load-end");
+				return jsonResponse(emptyUpdate);
+			},
+			"/ServiceModel/WorkspaceExplorerService.svc/Build": () => {
+				events.push("build-start");
+				return jsonResponse(buildFailed);
+			},
+		});
+		const tools = createCrmTools({ connection, fetchImpl });
+		const update = tools.find((item) => item.name === CRM_UPDATE_TOOL);
+		const compile = tools.find((item) => item.name === CRM_COMPILE_TOOL);
+		if (!update || !compile) {
+			throw new Error("CRM tools missing");
+		}
+
+		await Promise.all([update.execute(), compile.execute()]);
+
+		expect(events).toEqual(["load-start", "load-end", "build-start"]);
+	});
+
+	it("puts the lint error line without the prefix into the update record", async () => {
+		const records: CrmActionRecord[] = [];
+		const { fetchImpl, requests } = fakeCrm({});
+		const update = sharedTool(CRM_UPDATE_TOOL, {
+			connection,
+			fetchImpl,
+			onAction: (record) => records.push(record),
+			lint: () => ({ ok: false, text: "pkg_lint: проверено схем: 1\n== X\nОШИБКА descriptor.json: JSON не разбирается" }),
+		});
+		await update.execute();
+
+		expect(requests).toHaveLength(0);
+		expect(records[0].error).toBe("descriptor.json: JSON не разбирается");
+	});
+
+	it("updates before compile when Pkg changed and no update ran in this turn", async () => {
+		const { fetchImpl, requests } = fakeCrm({
+			"/ServiceModel/AuthService.svc/Login": () => loginResponse(),
+			"/ServiceModel/AppInstallerService.svc/LoadPackagesToDB": () => jsonResponse(emptyUpdate),
+			"/ServiceModel/WorkspaceExplorerService.svc/Build": () => jsonResponse(buildFailed),
+		});
+		const compile = getTool(CRM_COMPILE_TOOL, { connection, fetchImpl, changedSince: () => true });
+		const result = await compile.execute();
+
+		const paths = requests.map((request) => new URL(request.url).pathname).filter((p) => !p.endsWith("/Login"));
+		expect(paths).toEqual([
+			"/ServiceModel/AppInstallerService.svc/LoadPackagesToDB",
+			"/ServiceModel/WorkspaceExplorerService.svc/Build",
+		]);
+		expect(result.text).toContain("Перед компиляцией выполнено обновление");
+	});
+
+	it("compiles without update when Pkg did not change", async () => {
+		const { fetchImpl, requests } = fakeCrm({
+			"/ServiceModel/AuthService.svc/Login": () => loginResponse(),
+			"/ServiceModel/AppInstallerService.svc/LoadPackagesToDB": () => jsonResponse(emptyUpdate),
+			"/ServiceModel/WorkspaceExplorerService.svc/Build": () => jsonResponse(buildFailed),
+		});
+		const compile = getTool(CRM_COMPILE_TOOL, { connection, fetchImpl, changedSince: () => false });
+		await compile.execute();
+
+		const paths = requests.map((request) => new URL(request.url).pathname).filter((p) => !p.endsWith("/Login"));
+		expect(paths).toEqual(["/ServiceModel/WorkspaceExplorerService.svc/Build"]);
+	});
+
+	it("skips the automatic update when the last successful update in this tools instance is newer than the changes", async () => {
+		const { fetchImpl, requests } = fakeCrm({
+			"/ServiceModel/AuthService.svc/Login": () => loginResponse(),
+			"/ServiceModel/AppInstallerService.svc/LoadPackagesToDB": () => jsonResponse(emptyUpdate),
+			"/ServiceModel/WorkspaceExplorerService.svc/Build": () => jsonResponse(buildFailed),
+		});
+		const tools = createCrmTools({ connection, fetchImpl, changedSince: (ms) => ms < Date.now() - 60000 });
+		const update = tools.find((item) => item.name === CRM_UPDATE_TOOL);
+		const compile = tools.find((item) => item.name === CRM_COMPILE_TOOL);
+		if (!update || !compile) {
+			throw new Error("CRM tools missing");
+		}
+		await update.execute();
+		await compile.execute();
+
+		const paths = requests.map((request) => new URL(request.url).pathname).filter((p) => !p.endsWith("/Login"));
+		expect(paths).toEqual([
+			"/ServiceModel/AppInstallerService.svc/LoadPackagesToDB",
+			"/ServiceModel/WorkspaceExplorerService.svc/Build",
+		]);
+	});
+
+	it("does not compile when the automatic update fails", async () => {
+		const { fetchImpl, requests } = fakeCrm({
+			"/ServiceModel/AuthService.svc/Login": () => loginResponse(),
+			"/ServiceModel/AppInstallerService.svc/LoadPackagesToDB": () => jsonResponse({
+				changes: [],
+				errors: [{
+					workspaceItem: { name: "TestProc", typeName: "Schema" },
+					errorInfo: { errorCode: "FormatException", message: "bad" },
+				}],
+				success: true,
+				errorInfo: null,
+			}),
+			"/ServiceModel/WorkspaceExplorerService.svc/Build": () => jsonResponse(buildFailed),
+		});
+		const compile = getTool(CRM_COMPILE_TOOL, { connection, fetchImpl, changedSince: () => true });
+		const result = await compile.execute();
+
+		expect(result.isError).toBe(true);
+		expect(result.text.startsWith("Компиляция не запускалась")).toBe(true);
+		expect(requests.some((request) => request.url.endsWith("/Build"))).toBe(false);
+	});
 });

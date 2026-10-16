@@ -1,4 +1,5 @@
 import type { AgentEvent } from '@bpmsoft-agent/agent-runtime'
+import { formatUsage } from '../../shared/usage'
 
 export type ChatRole = 'user' | 'agent-text' | 'agent-tool' | 'agent-result' | 'agent-other'
 
@@ -116,6 +117,9 @@ export function describeToolCall(name: string, input: unknown): string {
   }
   if (name === 'crm_action') {
     return 'Действие в CRM'
+  }
+  if (bare === 'pkg_lint') {
+    return 'Проверяет изменённые схемы (pkg_lint)'
   }
   switch (bare) {
     case 'crm_browser_open': {
@@ -267,6 +271,9 @@ export function agentEventToLog(event: AgentEvent): LogEvent {
     const parts = [`Ход завершён ${event.success ? 'успешно' : 'с ошибкой'} за ${(event.durationMs / 1000).toFixed(1)} с`]
     if (event.totalCostUsd != null) {
       parts.push(`$${event.totalCostUsd.toFixed(3)}`)
+    }
+    if (event.usage) {
+      parts.push(formatUsage(event.usage))
     }
     if (event.numTurns != null) {
       parts.push(`шагов: ${event.numTurns}`)

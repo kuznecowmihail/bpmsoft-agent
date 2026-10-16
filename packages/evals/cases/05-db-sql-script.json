@@ -1,0 +1,12 @@
+{
+  "title": "Подсчёт записей по статусам через SQL-скрипт",
+  "provider": "claude",
+  "task": "Посчитай по базе, сколько записей {{entity}} в каждом статусе, и заполни в справочнике статусов колонку \"Описание\" текстом вида \"Записей: N\" — через SQL-скрипт пакета с именем {{prefix}}EvalStatusDescription.",
+  "answers": [{ "when": "в как\\S* пакет", "text": "{{package}}" }, { "when": "Подтверждаете план", "text": "Делай" }],
+  "maxTurns": 8,
+  "checks": [
+    { "type": "tool_called", "name": "crm_db_query" },
+    { "type": "file_exists", "path": "SqlScripts/{{prefix}}EvalStatusDescription/descriptor.json" },
+    { "type": "crm_update_ok" }
+  ]
+}

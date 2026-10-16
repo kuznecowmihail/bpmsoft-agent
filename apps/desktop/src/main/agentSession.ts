@@ -1,5 +1,5 @@
 import type { BrowserWindow } from 'electron'
-import { runBpmsoftAgentQuery, runCursorAgentQuery, createCrmDbTool, testCrmDbConnection, createCrmTools, testCrmConnection } from '@bpmsoft-agent/agent-runtime'
+import { runBpmsoftAgentQuery, runCursorAgentQuery, createCrmDbTool, testCrmDbConnection, createCrmTools, testCrmConnection, createPkgLintTool, lintChanged, changedSchemaNames, listChangedFiles } from '@bpmsoft-agent/agent-runtime'
 import type { AgentEvent, ToolPermissionRequest, CrmDbToolOptions, CrmConnection } from '@bpmsoft-agent/agent-runtime'
 import { join } from 'path'
 import { saveSecret, loadSecret, clearSecret } from './secureStore'
@@ -186,6 +186,8 @@ export async function testCrm(): Promise<string> {
 let currentSessionId: string | undefined
 let currentSessionProject: string | undefined
 let currentSessionProvider: AgentProvider | undefined
+/** Start of the current chat: files in Pkg changed after it count as the agent's own. */
+let currentChatStartedAt: number | undefined
 
 export function getCurrentSessionId(): string | undefined {
   return currentSessionId
@@ -195,6 +197,7 @@ export function resetAgentSession(): void {
   currentSessionId = undefined
   currentSessionProject = undefined
   currentSessionProvider = undefined
+  currentChatStartedAt = undefined
   endChatLog()
 }
 
@@ -269,6 +272,10 @@ export async function sendAgentMessage(
   ) {
     resetAgentSession()
   }
+  if (currentChatStartedAt === undefined) {
+    currentChatStartedAt = Date.now()
+  }
+  const chatSince = (): number => currentChatStartedAt ?? Date.now()
 
   const requestToolPermission = (request: ToolPermissionRequest): Promise<boolean> => {
     const { id, wait } = createPendingPermissionRequest()
@@ -294,6 +301,10 @@ export async function sendAgentMessage(
     ? createCrmTools({
         connection: crmConn,
         appRoot: readRoot,
+        ownSchemas: () => changedSchemaNames(projectPath, chatSince()),
+        lint: () => lintChanged(projectPath, chatSince()),
+        changedSince: (ms) => listChangedFiles(projectPath, ms).length > 0,
+        chatStartedAt: chatSince,
         confirm: crmConfirmActions ? (action) => requestToolPermission({ toolName: 'crm_action', input: { action } }) : undefined,
         onAction: (record) => {
           logChatRecord('crm_action', { ...record })
@@ -303,16 +314,17 @@ export async function sendAgentMessage(
         }
       })
     : undefined
-  const appTools = crmBrowserEnabled && crmConn
+  const browserTools = crmBrowserEnabled && crmConn
     ? createCrmBrowserTools({
         connection: crmConn,
         confirm: crmConfirmActions ? (action) => requestToolPermission({ toolName: 'crm_browser_click', input: { action } }) : undefined,
         onAction: (record) => logChatRecord('crm_browser', { ...record })
       })
     : undefined
+  const appTools = [...(browserTools ?? []), createPkgLintTool({ pkgRoot: projectPath, since: chatSince })]
 
   startChatLogIfNeeded({ projectPath, readRoot })
-  logChatRecord('user_message', { text: prompt, resume: currentSessionId ?? null, provider, model: provider === 'cursor' ? { id: cursorModel, params: cursorModelParams } : { id: claudeModel || null, effort: claudeEffort || null }, dbAccess: Boolean(dbTool), crmActions: Boolean(crmTools), crmBrowser: Boolean(appTools) })
+  logChatRecord('user_message', { text: prompt, resume: currentSessionId ?? null, provider, model: provider === 'cursor' ? { id: cursorModel, params: cursorModelParams } : { id: claudeModel || null, effort: claudeEffort || null }, dbAccess: Boolean(dbTool), crmActions: Boolean(crmTools), crmBrowser: Boolean(browserTools) })
 
   const startedAt = Date.now()
   const events =

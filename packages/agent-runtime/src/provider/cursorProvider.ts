@@ -1,7 +1,7 @@
 import { Agent, Cursor } from "@cursor/sdk";
 import type { AgentOptions, SDKAgent, SDKCustomTool, SDKMessage, ToolName } from "@cursor/sdk";
 import * as path from "path";
-import type { AgentEvent } from "./messageMapper";
+import type { AgentEvent, TokenUsage } from "./messageMapper";
 import type { ToolPermissionRequest } from "./anthropicProvider";
 import { buildBpmsoftSystemPrompt } from "./systemPrompt";
 import type { CrmDbTool } from "../db/crmDbTool";
@@ -78,11 +78,13 @@ export function buildCursorSafetyRules(readRoot: string, writeRoot: string, know
 		"РЕЖИМ CURSOR. Встроенных инструментов чтения, поиска, правки и терминала в этой среде нет — работай только инструментами приложения:",
 		"- read_file, list_dir, glob_files, grep_files — чтение и поиск (вместо Read, LS, Glob, Grep); где в инструкциях сказано «инструмент Read» — это read_file.",
 		"- write_file — создать или перезаписать файл; edit_file — точная замена фрагмента (вместо инструмента правки); run_shell — команда bash в папке Pkg (date, node со скриптами из каталога знаний, perl -pi и т.п.).",
-		"- Правь файлы только write_file и edit_file; читай read_file и grep_files. Команды для правки текста (python, python3, ruby, php, sed -i, perl -i, node -e) не используй: они дольше, ломают кодировку и часть из них каждый раз требует подтверждения пользователя. run_shell — для date, uuidgen, node --check, скриптов проверок из каталога знаний и чтения логов стенда.",
-		"- Порядок работы из инструкций обязателен, даже если задача кажется простой: 1) пакет — если пользователь не назвал пакет, а в Pkg их несколько, сначала спроси, в каком пакете работать, и не выбирай за него, даже если найдёшь подходящие схемы; 2) вопросы по требованиям с вариантами ответов; 3) план с AC/CC/DoD и остановка до подтверждения пользователя. Только после этого — изменения файлов.",
+		"- Правь файлы только write_file и edit_file; читай read_file и grep_files. Команды для правки текста (python, python3, ruby, php, sed -i, perl -i, node -e) не используй: они дольше, ломают кодировку и часть из них каждый раз требует подтверждения пользователя. run_shell — для date, uuidgen (идентификаторы — только uuidgen, не python), node --check, скриптов проверок из каталога знаний и чтения логов стенда.",
+		"- Порядок работы из инструкций обязателен, даже если задача кажется простой: 1) пакет — если пользователь не назвал пакет, а в Pkg их несколько, сначала спроси, в каком пакете работать, и не выбирай за него, даже если найдёшь подходящие схемы; 2) вопросы по требованиям с вариантами ответов; 3) план с AC/CC/DoD и остановка до подтверждения пользователя: сообщение с планом всегда заканчивай блоком <choices> с вопросом «Подтверждаете план?» и вариантами «Делай» и «Нужны правки» — без этого блока у пользователя нет кнопок и план выглядит незаконченным. Только после подтверждения — изменения файлов.",
 		`- Читать можно только папку приложения ${readRoot} и каталог знаний ${knowledgeDir}, изменять — только ${writeRoot}. Приложение проверяет каждый путь и отклоняет остальные; команды выполняются без сети.`,
 		"- Не читай файлы с секретами: ConnectionStrings.config, *.pfx, *.p12, *.pem, *.key — даже внутри папки приложения. Тип СУБД бери из DBEngineType существующих SQL-скриптов в Pkg; если их нет — спроси у пользователя.",
 		"- Удаление файлов и папок, перемещение с перезаписью и команды git, меняющие состояние (checkout, reset, restore, stash, add, commit и т.п.), — только после явного согласия пользователя в чате: перечисли, что удалишь или изменишь, и дождись ответа. Такие команды run_shell приложение ещё раз показывает пользователю на подтверждение.",
+		"- Удаление и массовое изменение данных (SQL-скрипт с DELETE или UPDATE) — только после вопроса пользователю блоком <choices>, даже если это очевидные дубли или мусор, найденный по ходу работы: сначала опиши находку и спроси, скрипт пиши после ответа.",
+		"- Найденные в данных дубли, записи вне пакета и мусор не скрывай: сообщи о них до плана или в плане и спроси блоком <choices>, что с ними делать; молча пропускать находку нельзя.",
 		"- Сеть, установка пакетов и сторонние программы не нужны — не используй их."
 	].join("\n");
 }
@@ -93,7 +95,7 @@ const CURSOR_FOLLOW_UP_REMINDER = [
 	"Новая задача или любая правка файлов, даже маленькая: пакет, вопросы, затем план (AC/CC/DoD, схемы, как проверить) и остановка до явного подтверждения пользователя («делай», «да», «подтверждаю»).",
 	"Ответы пользователя на твои вопросы — не подтверждение плана: после них покажи план и остановись.",
 	"Без подтверждённого плана файлы в Pkg не меняй.",
-	"Вопросы с вариантами и подтверждение плана — блоком <choices> в конце сообщения (формат — в инструкциях первого сообщения).",
+	"Вопросы с вариантами — блоком <choices> в конце сообщения (формат — в инструкциях первого сообщения). Сообщение с планом всегда заканчивается блоком <choices> с вопросом «Подтверждаете план?» и вариантами «Делай» и «Нужны правки».",
 	"Исключение — исправление ошибки в только что сделанном по подтверждённому плану: исправляй сразу, без нового плана, если объём задачи не меняется.",
 	"</reminder>"
 ].join("\n");
@@ -208,6 +210,9 @@ export function normalizeCursorToolCall(name: string, args: unknown): { name: st
 		if (browserTool) {
 			return { name: browserTool[0], input: wrappedToolArguments(args) };
 		}
+	}
+	if (name === "pkg_lint" || (/mcp/i.test(name) && JSON.stringify(args ?? null).includes("pkg_lint"))) {
+		return { name: "pkg_lint", input: name === "pkg_lint" ? record(args) : wrappedToolArguments(args) };
 	}
 	for (const toolName of ["crm_update_from_fs", "crm_compile"]) {
 		if (name === toolName || (/mcp/i.test(name) && JSON.stringify(args ?? null).includes(toolName))) {
@@ -428,6 +433,25 @@ export function cursorErrorMessage(error: unknown): string {
 }
 
 /**
+ * Adds the tokens of one Cursor `usage` message (one per run) to the turn total.
+ * Other messages leave the total unchanged.
+ */
+export function addCursorUsage(total: TokenUsage | undefined, message: unknown): TokenUsage | undefined {
+	const r = record(message);
+	if (r.type !== "usage") {
+		return total;
+	}
+	const u = record(r.usage);
+	const sum: TokenUsage = total ?? { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 };
+	return {
+		inputTokens: sum.inputTokens + (typeof u.inputTokens === "number" ? u.inputTokens : 0),
+		outputTokens: sum.outputTokens + (typeof u.outputTokens === "number" ? u.outputTokens : 0),
+		cacheReadTokens: sum.cacheReadTokens + (typeof u.cacheReadTokens === "number" ? u.cacheReadTokens : 0),
+		cacheWriteTokens: sum.cacheWriteTokens + (typeof u.cacheWriteTokens === "number" ? u.cacheWriteTokens : 0)
+	};
+}
+
+/**
  * Converts one Cursor stream message to AgentEvents. Tool results are shaped like
  * Claude SDK user messages with `tool_result` blocks, so the UI and logs treat them
  * the same way. `seenCalls` remembers which tool calls already produced a `tool_use`.
@@ -460,7 +484,7 @@ export function mapCursorMessage(message: SDKMessage, seenCalls: Set<string>): A
 		}
 		return events;
 	}
-	if (message.type === "thinking" || message.type === "user" || message.type === "system") {
+	if (message.type === "thinking" || message.type === "user" || message.type === "system" || message.type === "usage") {
 		return [];
 	}
 	return [{ type: "other", raw: message }];
@@ -517,6 +541,7 @@ async function* runCursorAgentQueryUnsafe(options: RunCursorAgentQueryOptions): 
 		}
 	};
 	const startedAt = Date.now();
+	let usage: TokenUsage | undefined;
 	const agent: SDKAgent = options.resume
 		? await Agent.resume(options.resume, agentOptions)
 		: await Agent.create(agentOptions);
@@ -539,6 +564,7 @@ async function* runCursorAgentQueryUnsafe(options: RunCursorAgentQueryOptions): 
 				const seenCalls = new Set<string>();
 				let pendingText = "";
 				for await (const sdkMessage of run.stream()) {
+					usage = addCursorUsage(usage, sdkMessage);
 					for (const event of mapCursorMessage(sdkMessage, seenCalls)) {
 						produced = true;
 						if (event.type === "text") {
@@ -582,7 +608,8 @@ async function* runCursorAgentQueryUnsafe(options: RunCursorAgentQueryOptions): 
 			type: "result",
 			success: finished,
 			durationMs: durationMs ?? Date.now() - startedAt,
-			sessionId: agent.agentId
+			sessionId: agent.agentId,
+			usage
 		};
 	} finally {
 		agent.close();

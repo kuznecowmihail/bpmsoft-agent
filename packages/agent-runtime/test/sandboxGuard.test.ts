@@ -910,3 +910,10 @@ describe("sandboxGuard", () => {
 		});
 	});
 });
+
+describe("pkg_lint auto-approval", () => {
+	it("auto-approves the pkg_lint tool with and without the app prefix", () => {
+		expect(isAutoApprovedToolCall("mcp__app__pkg_lint", {})).toBe(true);
+		expect(isAutoApprovedToolCall("pkg_lint", {})).toBe(true);
+	});
+});

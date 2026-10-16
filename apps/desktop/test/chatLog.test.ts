@@ -198,6 +198,18 @@ describe('chatLog', () => {
       expect(result).toContain('- fact')
       expect(result).not.toContain('line 1')
     })
+
+    it('stops before the <choices> block', () => {
+      const text =
+        'Итог\n\n**Наблюдения для базы знаний**\n- факт 1\n- факт 2\n\n<choices>\n? Обновить CRM сейчас?\n* Обнови\n</choices>'
+      const result = extractKnowledgeNotes(text)
+      expect(result).toBe('**Наблюдения для базы знаний**\n- факт 1\n- факт 2')
+    })
+
+    it('returns null when only <choices> follows the heading', () => {
+      const text = 'Итог\n\n**Наблюдения для базы знаний**\n\n<choices>\n? Обновить CRM сейчас?\n* Обнови\n</choices>'
+      expect(extractKnowledgeNotes(text)).toBeNull()
+    })
   })
 
   describe('renderMarkdown', () => {

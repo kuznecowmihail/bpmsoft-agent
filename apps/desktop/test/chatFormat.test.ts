@@ -718,3 +718,10 @@ Some text between blocks
     })
   })
 })
+
+describe('describeToolCall pkg_lint', () => {
+  it('describes the pkg_lint tool with and without the app prefix', () => {
+    expect(describeToolCall('mcp__app__pkg_lint', {})).toBe('Проверяет изменённые схемы (pkg_lint)')
+    expect(describeToolCall('pkg_lint', {})).toBe('Проверяет изменённые схемы (pkg_lint)')
+  })
+})

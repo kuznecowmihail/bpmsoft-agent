@@ -57,10 +57,36 @@ describe("buildBpmsoftSystemPrompt", () => {
 		expect(prompt).toContain("browser-check.md");
 	});
 
+	it("tells the agent to report data anomalies instead of hiding them", () => {
+		expect(buildBpmsoftSystemPrompt("/kn")).toContain("Аномалии в данных, найденные по ходу работы");
+	});
+
 	it("contains no backtick characters in any variant", () => {
 		expect(buildBpmsoftSystemPrompt("/kn")).not.toContain("`");
 		expect(buildBpmsoftSystemPrompt("/kn", { dbQuery: true })).not.toContain("`");
 		expect(buildBpmsoftSystemPrompt("/kn", { crmActions: true })).not.toContain("`");
 		expect(buildBpmsoftSystemPrompt("/kn", { crmBrowser: true })).not.toContain("`");
+	});
+});
+
+describe("buildBpmsoftSystemPrompt pkg_lint and fix loop", () => {
+	it("describes the fix loop and checkpoint when crmActions is enabled", () => {
+		const prompt = buildBpmsoftSystemPrompt("/kn", { crmActions: true });
+		expect(prompt).toContain("Продолжай исправлять");
+		expect(prompt).toContain("контрольной точке");
+	});
+
+	it("does not describe the fix loop without crmActions", () => {
+		const prompt = buildBpmsoftSystemPrompt("/kn");
+		expect(prompt).not.toContain("Продолжай исправлять");
+	});
+
+	it("always mentions pkg_lint", () => {
+		expect(buildBpmsoftSystemPrompt("/kn")).toContain("pkg_lint");
+		expect(buildBpmsoftSystemPrompt("/kn", { crmActions: true })).toContain("pkg_lint");
+	});
+
+	it("requires confirmation before deleting or mass-changing data, including extra duplicates", () => {
+		expect(buildBpmsoftSystemPrompt("/kn")).toContain("в том числе «лишних» записей и дублей");
 	});
 });

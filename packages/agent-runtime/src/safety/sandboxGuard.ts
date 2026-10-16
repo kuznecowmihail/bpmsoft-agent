@@ -39,6 +39,9 @@ export const CRM_STAND_TOOL_NAMES = new Set(["mcp__crm__crm_update_from_fs", "mc
 /** Built-in CRM browser tools: read the page in the app's own window; clicks ask the user themselves. */
 export const CRM_BROWSER_TOOL_PATTERN = /^(mcp__app__)?crm_browser_[a-z_]+$/;
 
+/** Package lint tool: reads Pkg and the knowledge scripts only. */
+export const PKG_LINT_TOOL_PATTERN = /^(mcp__app__)?pkg_lint$/;
+
 /** True when file path contains secrets (credentials, certificates, private keys). */
 export function isSecretFile(p: string): boolean {
 	return SECRET_FILE_PATTERN.test(p.trim());
@@ -250,6 +253,7 @@ function shellAutoApproved(command: string, shell: ShellApprovalOptions): boolea
 export function isAutoApprovedToolCall(toolName: string, input: Record<string, unknown>, shell?: ShellApprovalOptions): boolean {
 	if (CRM_STAND_TOOL_NAMES.has(toolName)) { return true; }
 	if (CRM_BROWSER_TOOL_PATTERN.test(toolName)) { return true; }
+	if (PKG_LINT_TOOL_PATTERN.test(toolName)) { return true; }
 	// Bash commands need special handling: check for destructive/risky operations BEFORE
 	// isReadOnlyToolCall, which doesn't know about -delete or git state changes.
 	if (toolName === "Bash") {

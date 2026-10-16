@@ -804,4 +804,8 @@ const main = () => {
   process.exit(totalErrors > 0 ? 1 : 0);
 };
 
-main();
+if (require.main === module) {
+  main();
+}
+
+module.exports = { validateProcess, getProcessFolders };

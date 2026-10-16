@@ -11,6 +11,14 @@ export interface AgentToolUseEvent {
 	input: unknown;
 }
 
+/** Tokens of one turn, summed over its model calls. */
+export interface TokenUsage {
+	inputTokens: number;
+	outputTokens: number;
+	cacheReadTokens: number;
+	cacheWriteTokens: number;
+}
+
 export interface AgentResultEvent {
 	type: "result";
 	success: boolean;
@@ -21,6 +29,8 @@ export interface AgentResultEvent {
 	totalCostUsd?: number;
 	/** Number of model turns in this query. */
 	numTurns?: number;
+	/** Tokens of the turn (input excludes cache reads). */
+	usage?: TokenUsage;
 }
 
 export interface AgentSystemInitEvent {
@@ -66,13 +76,22 @@ export function mapSdkMessage(message: SDKMessage): AgentEvent {
 	}
 
 	if (message.type === "result") {
+		const u = message.usage;
 		return {
 			type: "result",
 			success: message.subtype === "success",
 			durationMs: message.duration_ms,
 			sessionId: message.session_id,
 			totalCostUsd: message.total_cost_usd,
-			numTurns: message.num_turns
+			numTurns: message.num_turns,
+			usage: u
+				? {
+					inputTokens: u.input_tokens ?? 0,
+					outputTokens: u.output_tokens ?? 0,
+					cacheReadTokens: u.cache_read_input_tokens ?? 0,
+					cacheWriteTokens: u.cache_creation_input_tokens ?? 0
+				}
+				: undefined
 		};
 	}
 

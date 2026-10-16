@@ -15,5 +15,8 @@ tasks_for_test_6.md
 tasks_for_test_7.md
 tasks_for_test_8.md
 tasks_for_test_9.md
+tasks_for_test_10.md
 .crm.local.env
 release/
+packages/evals/local.json
+packages/evals/results/

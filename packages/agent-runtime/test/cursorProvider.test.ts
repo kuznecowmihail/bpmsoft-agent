@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isTransientCursorError, normalizeCursorToolCall, mapCursorMessage, buildCursorFirstMessage, buildCursorFollowUpMessage, buildCursorSafetyRules, cursorErrorMessage, cursorRecommendationRank, expandCursorModels } from "../src/provider/cursorProvider";
+import { isTransientCursorError, normalizeCursorToolCall, mapCursorMessage, buildCursorFirstMessage, buildCursorFollowUpMessage, buildCursorSafetyRules, cursorErrorMessage, cursorRecommendationRank, expandCursorModels, addCursorUsage } from "../src/provider/cursorProvider";
 import type { SDKMessage } from "@cursor/sdk";
 
 describe("cursorProvider", () => {
@@ -218,6 +218,18 @@ describe("cursorProvider", () => {
 		});
 	});
 
+	describe("normalizeCursorToolCall (pkg lint tool)", () => {
+		it("maps an MCP-wrapped pkg_lint call with nested args", () => {
+			const result = normalizeCursorToolCall("mcp", { providerIdentifier: "custom-user-tools", toolName: "pkg_lint", args: { schema: "TestA" } });
+			expect(result.name).toBe("pkg_lint");
+			expect(result.input.schema).toBe("TestA");
+		});
+
+		it("maps a direct pkg_lint custom tool call", () => {
+			expect(normalizeCursorToolCall("pkg_lint", {})).toEqual({ name: "pkg_lint", input: {} });
+		});
+	});
+
 	describe("normalizeCursorToolCall (local tools)", () => {
 		it("maps a direct read_file call to Read", () => {
 			expect(normalizeCursorToolCall("read_file", { path: "/a/b.json" })).toEqual({
@@ -406,9 +418,19 @@ describe("cursorProvider", () => {
 			expect(result.endsWith("\n\nСделай метод")).toBe(true);
 			expect(result).not.toContain("<instructions>");
 		});
+
+		it("asks for plan confirmation with choices", () => {
+			const result = buildCursorFollowUpMessage("x");
+
+			expect(result).toContain("Подтверждаете план?");
+		});
 	});
 
 	describe("buildCursorSafetyRules", () => {
+		it("forbids silently skipping data anomalies", () => {
+			expect(buildCursorSafetyRules("/app", "/app/Pkg", "/kn")).toContain("молча пропускать находку нельзя");
+		});
+
 		it("contains all three path arguments", () => {
 			const readRoot = "/path/to/read";
 			const writeRoot = "/path/to/write";
@@ -449,6 +471,19 @@ describe("cursorProvider", () => {
 
 			expect(result).toContain("write_file и edit_file");
 			expect(result).toContain("python");
+			expect(result).toContain("не python");
+		});
+
+		it("requires a plan message to end with a choices block asking for confirmation", () => {
+			const result = buildCursorSafetyRules("/app", "/app/Pkg", "/kn");
+
+			expect(result).toContain("Подтверждаете план?");
+		});
+
+		it("requires a question before deleting or mass-changing data, even for obvious duplicates", () => {
+			const result = buildCursorSafetyRules("/app", "/app/Pkg", "/kn");
+
+			expect(result).toContain("даже если это очевидные дубли");
 		});
 
 		it("contains read, write and knowledge paths and no Delete instruction", () => {
@@ -690,6 +725,26 @@ describe("cursorProvider", () => {
 			const result = expandCursorModels(input);
 			expect(result).toHaveLength(2);
 			expect(result[1].name).toBe("Claude Opus 5.5 Extended");
+		});
+	});
+
+	describe("addCursorUsage", () => {
+		it("sums usage messages of one turn", () => {
+			const first = { type: "usage", agent_id: "a", run_id: "r1", usage: { inputTokens: 100, outputTokens: 10, cacheReadTokens: 50, cacheWriteTokens: 5 } };
+			const second = { type: "usage", agent_id: "a", run_id: "r2", usage: { inputTokens: 200, outputTokens: 20, cacheReadTokens: 0 } };
+			const total = addCursorUsage(addCursorUsage(undefined, first), second);
+			expect(total).toEqual({ inputTokens: 300, outputTokens: 30, cacheReadTokens: 50, cacheWriteTokens: 5 });
+		});
+
+		it("ignores messages that are not usage", () => {
+			const total = { inputTokens: 1, outputTokens: 2, cacheReadTokens: 3, cacheWriteTokens: 4 };
+			expect(addCursorUsage(total, { type: "assistant", message: { content: [] } })).toEqual(total);
+			expect(addCursorUsage(undefined, { type: "thinking" })).toBeUndefined();
+		});
+
+		it("maps a usage message to no events", () => {
+			const message = { type: "usage", agent_id: "a", run_id: "r", usage: { inputTokens: 1, outputTokens: 1, cacheReadTokens: 0, cacheWriteTokens: 0 } } as unknown as SDKMessage;
+			expect(mapCursorMessage(message, new Set())).toEqual([]);
 		});
 	});
 });

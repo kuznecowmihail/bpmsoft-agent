@@ -183,6 +183,7 @@ Age: {
 | Колонки реестра нового раздела по умолчанию (переопределение `getDefaultSectionGridProfile`) | ClientUnit | ✅ подтверждено 06.10.2026 (`TestTicketSection`), см. `client-schemas-edit.md` |
 | Редактируемая деталь (`ConfigurationGrid`, запреты по строке) | ClientUnit | ✅ подтверждено 06.10.2026 (`TestTicketCommentDetail`), см. `client-schemas-edit.md` |
 | Деталь только для просмотра (без добавления, изменения, копирования, удаления) | ClientUnit | ✅ подтверждено 07.10.2026 (`TestTicketPriorityLogDetail`), см. `client-schemas-edit.md` |
+| Подсказка у поля карточки (`tip` с `bindTo` на строку ресурсов) | ClientUnit | ✅ подтверждено записью в CRM (15.10.2026), рецепт — `client-schemas-edit.md` |
 
 ## Расширение — новые типы схем
 Этот же формат `metadata.json` встречается и у других менеджеров схем:

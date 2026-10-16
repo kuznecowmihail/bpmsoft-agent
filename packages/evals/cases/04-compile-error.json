@@ -1,0 +1,20 @@
+{
+  "title": "Поиск и исправление ошибки компиляции",
+  "provider": "cursor",
+  "setup": [
+    {
+      "type": "replace_in_file",
+      "path": "Schemas/{{helperCs}}/{{helperCs}}.cs",
+      "find": "return ",
+      "replace": "retrun "
+    }
+  ],
+  "task": "Конфигурация перестала компилироваться. Найди причину, исправь и скомпилируй.",
+  "answers": [],
+  "maxTurns": 4,
+  "checks": [
+    { "type": "tool_called", "name": "crm_compile" },
+    { "type": "crm_compile_ok" },
+    { "type": "file_contains", "path": "Schemas/{{helperCs}}/{{helperCs}}.cs", "pattern": "^(?![\\s\\S]*retrun )" }
+  ]
+}

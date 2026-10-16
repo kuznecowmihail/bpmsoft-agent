@@ -1,5 +1,6 @@
 import { appendFileSync, existsSync, mkdirSync } from 'fs'
 import { basename, join } from 'path'
+import { formatUsage } from '../shared/usage'
 
 let logDir: string | undefined
 let current: { jsonlPath: string; mdPath: string; projectPath: string } | undefined
@@ -103,7 +104,12 @@ export function extractKnowledgeNotes(text: string): string | null {
   if (startIndex === -1) {
     return null
   }
-  const result = lines.slice(startIndex).join('\n').trim()
+  const choicesIndex = lines.findIndex((line, i) => i > startIndex && line.trim() === '<choices>')
+  const body = lines.slice(startIndex, choicesIndex === -1 ? undefined : choicesIndex)
+  while (body.length > 0 && body[body.length - 1].trim() === '') {
+    body.pop()
+  }
+  const result = body.join('\n').trim()
   if (result === lines[startIndex].trim()) {
     return null
   }
@@ -152,6 +158,9 @@ function renderMarkdown(kind: string, data: Record<string, any>): string {
         const parts = [`_Ход завершён · ${event.success ? 'успешно' : 'с ошибкой'} · ${(event.durationMs / 1000).toFixed(1)} с`]
         if (event.totalCostUsd != null) {
           parts.push(`$${event.totalCostUsd.toFixed(3)}`)
+        }
+        if (event.usage) {
+          parts.push(formatUsage(event.usage))
         }
         if (event.numTurns != null) {
           parts.push(`шагов: ${event.numTurns}`)

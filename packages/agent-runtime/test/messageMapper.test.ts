@@ -89,4 +89,27 @@ describe("mapSdkMessage", () => {
 		const event = mapSdkMessage(fakeMessage);
 		expect(event).toEqual({ type: "other", raw: fakeMessage });
 	});
+
+	it("maps result usage to TokenUsage", () => {
+		const fakeMessage = {
+			type: "result",
+			subtype: "success",
+			duration_ms: 1000,
+			session_id: "s1",
+			total_cost_usd: 0.1,
+			num_turns: 2,
+			usage: { input_tokens: 453, output_tokens: 8, cache_read_input_tokens: 333, cache_creation_input_tokens: 5 }
+		} as any;
+		const event = mapSdkMessage(fakeMessage);
+		expect(event).toMatchObject({
+			type: "result",
+			usage: { inputTokens: 453, outputTokens: 8, cacheReadTokens: 333, cacheWriteTokens: 5 }
+		});
+	});
+
+	it("leaves usage undefined on a result without usage", () => {
+		const fakeMessage = { type: "result", subtype: "success", duration_ms: 1000, session_id: "s1" } as any;
+		const event = mapSdkMessage(fakeMessage);
+		expect(event.type === "result" && event.usage).toBeUndefined();
+	});
 });

@@ -1,0 +1,19 @@
+{
+  "name": "@bpmsoft-agent/evals",
+  "version": "0.0.1",
+  "private": true,
+  "main": "dist/cli.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "eval": "node dist/cli.js"
+  },
+  "dependencies": {
+    "@bpmsoft-agent/agent-runtime": "0.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4"
+  }
+}

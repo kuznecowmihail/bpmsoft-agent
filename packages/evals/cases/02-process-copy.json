@@ -1,0 +1,13 @@
+{
+  "title": "Процесс копирования обращения",
+  "provider": "claude",
+  "task": "Сделай процесс {{prefix}}EvalCopyProcess (\"Копирование обращения (эвал)\"): на входе Id записи {{entity}}; процесс создаёт новую запись {{entity}} с той же темой, типом и источником, к теме добавляет приставку \"Копия: \", и возвращает текстом номер новой записи.",
+  "answers": [{ "when": "в как\\S* пакет", "text": "{{package}}" }, { "when": "Подтверждаете план", "text": "Делай" }],
+  "maxTurns": 8,
+  "checks": [
+    { "type": "file_exists", "path": "Schemas/{{prefix}}EvalCopyProcess/metadata.json" },
+    { "type": "lint_clean" },
+    { "type": "crm_compile_ok" },
+    { "type": "tool_called", "name": "pkg_lint" }
+  ]
+}
