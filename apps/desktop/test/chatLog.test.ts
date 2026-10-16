@@ -276,6 +276,15 @@ describe('chatLog', () => {
       expect(md).toContain('Компиляция и перезапуск CRM → отклонено пользователем')
       expect(md).toContain('Компиляция и перезапуск CRM → ⚠️ Сборка не прошла')
     })
+
+    it('renders a stopped turn as stopped by the user, not as an error', () => {
+      startChatLogIfNeeded({ projectPath: '/test/proj' })
+      logChatRecord('agent_event', { event: { type: 'result', success: false, stopped: true, durationMs: 4000 } })
+
+      const md = readFileSync(getCurrentChatLogPath()!.replace('.jsonl', '.md'), 'utf-8')
+      expect(md).toContain('Ход остановлен пользователем')
+      expect(md).not.toContain('с ошибкой')
+    })
   })
 
   describe('crm browser and images', () => {

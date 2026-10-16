@@ -155,7 +155,8 @@ function renderMarkdown(kind: string, data: Record<string, any>): string {
         return `- 🔧 ${event.name}: ${short(JSON.stringify(event.input), 300)}\n`
       }
       if (event.type === 'result') {
-        const parts = [`_Ход завершён · ${event.success ? 'успешно' : 'с ошибкой'} · ${(event.durationMs / 1000).toFixed(1)} с`]
+        const outcome = event.stopped ? 'Ход остановлен пользователем' : `Ход завершён · ${event.success ? 'успешно' : 'с ошибкой'}`
+        const parts = [`_${outcome} · ${(event.durationMs / 1000).toFixed(1)} с`]
         if (event.totalCostUsd != null) {
           parts.push(`$${event.totalCostUsd.toFixed(3)}`)
         }
