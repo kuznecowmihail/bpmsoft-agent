@@ -74,6 +74,38 @@ describe("localTools", () => {
 			expect(result.isError).toBe(true);
 			expect(result.text).not.toContain("password");
 		});
+
+		it("cuts by characters with a hint to continue from the next line", async () => {
+			const lines = Array.from({ length: 1000 }, () => "x".repeat(100));
+			fs.writeFileSync(path.join(pkg, "TestPkg", "long.txt"), lines.join("\n") + "\n");
+			const result = await run("read_file", { path: "TestPkg/long.txt" });
+			expect(result.isError).toBe(false);
+			expect(result.text.length).toBeLessThanOrEqual(30000);
+			const match = result.text.match(/показаны строки 1–(\d+) из 1000 — читай с offset (\d+)/);
+			expect(match).not.toBeNull();
+			const last = Number(match![1]);
+			expect(Number(match![2])).toBe(last + 1);
+			expect(result.text).toContain(`${String(last).padStart(6)}\t`);
+			expect(result.text).not.toContain(`${String(last + 1).padStart(6)}\t`);
+			expect(result.text).not.toContain("[обрезано");
+		});
+
+		it("continues from the suggested offset", async () => {
+			const lines = Array.from({ length: 1000 }, () => "x".repeat(100));
+			fs.writeFileSync(path.join(pkg, "TestPkg", "long.txt"), lines.join("\n") + "\n");
+			const first = await run("read_file", { path: "TestPkg/long.txt" });
+			const next = Number(first.text.match(/читай с offset (\d+)/)![1]);
+			const result = await run("read_file", { path: "TestPkg/long.txt", offset: next });
+			expect(result.isError).toBe(false);
+			expect(result.text.startsWith(`${String(next).padStart(6)}\t`)).toBe(true);
+		});
+
+		it("keeps the line limit hint", async () => {
+			const lines = Array.from({ length: 30 }, (_, i) => `line ${i + 1}`);
+			fs.writeFileSync(path.join(pkg, "TestPkg", "short.txt"), lines.join("\n") + "\n");
+			const result = await run("read_file", { path: "TestPkg/short.txt", limit: 10 });
+			expect(result.text).toContain("показаны строки 1–10 из 30 — читай с offset 11");
+		});
 	});
 
 	describe("list_dir", () => {

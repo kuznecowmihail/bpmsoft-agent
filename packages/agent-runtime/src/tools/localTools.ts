@@ -317,12 +317,21 @@ export function createLocalTools(options: LocalToolsOptions): AppTool[] {
 			}
 			const start = offset - 1;
 			const end = Math.min(lines.length, start + limit);
+			// Character budget of the result, with room reserved for the tail note.
+			let size = out.reduce((sum, line) => sum + line.length + 1, 0);
+			let last = start;
 			for (let i = start; i < end; i++) {
 				const line = lines[i].length > MAX_LINE_LENGTH ? `${lines[i].slice(0, MAX_LINE_LENGTH)}… [строка обрезана]` : lines[i];
-				out.push(`${String(i + 1).padStart(6)}\t${line}`);
+				const numbered = `${String(i + 1).padStart(6)}\t${line}`;
+				if (i > start && size + numbered.length + 1 > MAX_OUTPUT - 200) {
+					break;
+				}
+				out.push(numbered);
+				size += numbered.length + 1;
+				last = i + 1;
 			}
-			if (end < lines.length) {
-				out.push(`… ещё ${lines.length - end} строк — читай с offset ${end + 1}`);
+			if (last < lines.length) {
+				out.push(`… показаны строки ${offset}–${last} из ${lines.length} — читай с offset ${last + 1}`);
 			}
 			return ok(truncate(out.join("\n")));
 		}
