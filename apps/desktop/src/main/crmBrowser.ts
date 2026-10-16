@@ -7,11 +7,16 @@ import type { CrmBrowserState } from '../shared/types'
 /**
  * Built-in CRM browser of the agent: a WebContentsView in the right-side panel of the main window,
  * with its own in-memory session. The agent reads pages (text, screenshot, console, network) and clicks
- * for navigation only; clicks are confirmed by the user when confirmations are on.
+ * for navigation only; every click is confirmed by the user.
  */
 
 export interface CrmBrowserRecord { tool: string; detail?: string; success: boolean; durationMs: number; error?: string }
-export interface CrmBrowserOptions { connection: CrmConnection; confirm?: (action: string) => Promise<boolean>; onAction?: (record: CrmBrowserRecord) => void }
+export interface CrmBrowserOptions {
+  connection: CrmConnection
+  /** Asks the user before every click; without it clicks are refused. */
+  confirm?: (action: string) => Promise<boolean>
+  onAction?: (record: CrmBrowserRecord) => void
+}
 
 const PARTITION = 'crm-agent-browser'
 const MAX_SCREENSHOT_WIDTH = 1280
@@ -507,7 +512,7 @@ function networkTool(): AppTool {
 function clickTool(): AppTool {
   return {
     name: 'crm_browser_click',
-    description: 'Клик по элементу страницы CRM — только для навигации и проверки; если пользователь включил подтверждение действий, каждый клик он разрешает сам.',
+    description: 'Клик по элементу страницы CRM — только для навигации и проверки; каждый клик пользователь разрешает сам.',
     params: {
       selector: { type: 'string', optional: true, description: 'CSS-селектор элемента' },
       text: { type: 'string', optional: true, description: 'Видимый текст кнопки, вкладки, пункта меню' }
@@ -520,11 +525,12 @@ function clickTool(): AppTool {
           throw new Error('Укажите selector или text')
         }
         const target = selector ?? `«${text}»`
-        if (options.confirm) {
-          const approved = await options.confirm(`Клик в CRM: ${target}`)
-          if (!approved) {
-            throw new Error('Пользователь отклонил клик')
-          }
+        if (!options.confirm) {
+          throw new Error('Клик требует подтверждения пользователя, а спросить его нельзя')
+        }
+        const approved = await options.confirm(`Клик в CRM: ${target}`)
+        if (!approved) {
+          throw new Error('Пользователь отклонил клик')
         }
 
         // the cap starts after the user's confirmation, so waiting for the answer does not count

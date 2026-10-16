@@ -123,6 +123,20 @@ function defineTool(
 	};
 }
 
+/** Variables that agent shell commands may see: system ones only. */
+const SHELL_ENV_NAMES = /^(PATH|HOME|USER|LOGNAME|SHELL|LANG|LC_[A-Z_]+|TZ|TERM|TMPDIR|TMP|TEMP|SYSTEMROOT|SYSTEMDRIVE|WINDIR|COMSPEC|PATHEXT|USERPROFILE|HOMEDRIVE|HOMEPATH|APPDATA|LOCALAPPDATA|PROGRAMDATA|PROGRAMFILES|PROGRAMFILES\(X86\)|PROGRAMW6432|COMMONPROGRAMFILES|NUMBER_OF_PROCESSORS|PROCESSOR_ARCHITECTURE|OS|MSYSTEM)$/i;
+
+/** Environment of agent shell commands: only system variables, no keys or tokens of the user's own environment. */
+export function shellEnv(env: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv {
+	const result: NodeJS.ProcessEnv = {};
+	for (const key of Object.keys(env)) {
+		if (SHELL_ENV_NAMES.test(key)) {
+			result[key] = env[key];
+		}
+	}
+	return result;
+}
+
 /** Finds the ripgrep binary of @cursor/sdk for the platform, or "rg" from PATH. */
 export function resolveRipgrep(platform: NodeJS.Platform = process.platform, arch: string = process.arch): string {
 	try {
@@ -205,11 +219,11 @@ export function runShellCommand(
 		// Off Windows the shell gets its own process group (detached), so a timeout can kill the whole tree.
 		let child: ChildProcess;
 		if (platform === "win32") {
-			child = spawn("bash", ["-c", command], { cwd, env: process.env, windowsHide: true });
+			child = spawn("bash", ["-c", command], { cwd, env: shellEnv(), windowsHide: true });
 		} else if (platform === "darwin" && seatbeltProfile) {
-			child = spawn("/usr/bin/sandbox-exec", ["-p", seatbeltProfile, "/bin/bash", "-c", command], { cwd, env: process.env, detached: true });
+			child = spawn("/usr/bin/sandbox-exec", ["-p", seatbeltProfile, "/bin/bash", "-c", command], { cwd, env: shellEnv(), detached: true });
 		} else {
-			child = spawn("/bin/bash", ["-c", command], { cwd, env: process.env, detached: true });
+			child = spawn("/bin/bash", ["-c", command], { cwd, env: shellEnv(), detached: true });
 		}
 
 		const killTree = () => {
@@ -544,7 +558,7 @@ export function createLocalTools(options: LocalToolsOptions): AppTool[] {
 			const result = await runShellCommand(command, {
 				cwd,
 				platform,
-				seatbeltProfile: osSandbox ? buildSeatbeltProfile(options.writeRoots, homeDir) : undefined,
+				seatbeltProfile: osSandbox ? buildSeatbeltProfile({ writeRoots: options.writeRoots, readRoots: policy.readRoots, homeDir }) : undefined,
 				timeoutMs
 			});
 			let text = result.output.trim() === "" ? "(нет вывода)" : truncate(result.output);

@@ -277,6 +277,19 @@ const BASH_PATH_TOKEN = /(?:^|[\s'"`=:(,;|&<>])((?:~\/|\/|\.\.|[A-Za-z]:[\\/])[^
 /** Environment variables that expand to directories outside the project (PWD excluded: handled separately). */
 const BASH_ENV_PATH = /\$\{?(HOME|OLDPWD|TMPDIR|USER)\b/;
 
+/** Commands that print environment variables, where API keys live: env/printenv/export/declare/set without a command, /proc/<pid>/environ, process.env or %ENV as a whole, and names of key variables (ANTHROPIC_API_KEY, GITHUB_TOKEN…). */
+const BASH_ENV_DUMP: RegExp[] = [
+	/(^|[\s;&|(`])printenv\b/,
+	/(^|[\s;&|(`])(env|export|declare|typeset|compgen)(\s+-[a-zA-Z0-9]+)*(?=\s*($|[;&|)`]))/,
+	/(^|[\s;&|(`])set(?=\s*($|[;&|)`]))/,
+	/\/proc\/[^\s/]+\/environ\b/,
+	/process\.env(?!\.[A-Za-z_])/,
+	/%ENV\b|\$ENV\{/,
+	/\b[A-Z][A-Z0-9_]*(API_KEY|_TOKEN|_SECRET|PASSWORD)\b/
+];
+
+const ENV_DUMP_DENY_REASON = "Команда выводит переменные окружения — там ключи доступа, читать их нельзя. Нужное значение спроси у пользователя";
+
 /** Commands that may have side effects beyond the file checks (network, package managers, processes, other interpreters) — always ask the user. */
 const BASH_RISKY_PATTERN =
 	/(^|[\s;&|(`$])(curl|wget|npm|npx|yarn|pnpm|pip|pip3|python|python3|ruby|php|sudo|su|kill|pkill|killall|open|osascript|ssh|scp|sftp|nc|psql|mysql|sqlite3|docker|kubectl|brew|launchctl|crontab|eval|exec|source|bash|sh|zsh)(\s|$)/;
@@ -383,6 +396,9 @@ function baseAt(bases: CdBase[], index: number, cwd: string): string {
 export function checkBashCommand(command: string, cwd: string, policy: SandboxPolicy): SandboxDecision {
 	if (/connectionstrings\.config/i.test(command)) {
 		return deny(SECRET_DENY_REASON);
+	}
+	if (BASH_ENV_DUMP.some((pattern) => pattern.test(command))) {
+		return deny(ENV_DUMP_DENY_REASON);
 	}
 	if (BASH_ENV_PATH.test(command)) {
 		return deny("Команда использует переменные окружения с путями ($HOME и т.п.) — укажи путь внутри проекта явно");

@@ -123,7 +123,7 @@ function createSingleTurnPromptStream(promptText: string): {
 /**
  * Thin wrapper around the real Claude Agent SDK's `query()`. NOT unit-tested
  * directly (it spawns a real CLI subprocess and requires a real
- * `ANTHROPIC_API_KEY` — see project PLAN.md Milestone 8 notes); the message
+ * `ANTHROPIC_API_KEY`); the message
  * mapping it delegates to (`mapSdkMessage`) is unit-tested with hand-built
  * fake messages instead. A manual smoke-test script exercising this function
  * end-to-end is a separate follow-up once a real API key is available.
@@ -217,8 +217,8 @@ export async function* runBpmsoftAgentQuery(
 		settingSources: [],
 		skills: [],
 		additionalDirectories,
-		// Bash in the OS sandbox: code run through node -e or perl -e cannot write outside Pkg, read credentials or use the network.
-		sandbox: options.sandbox && osShellSandbox ? buildShellSandbox(options.sandbox.writeRoots, os.homedir()) : undefined,
+		// Bash in the OS sandbox: no writes outside Pkg, no reads in the home folder outside the project and knowledge, no network, no API keys in the environment.
+		sandbox: options.sandbox && osShellSandbox && sandboxPolicy ? buildShellSandbox({ writeRoots: options.sandbox.writeRoots, readRoots: sandboxPolicy.readRoots, homeDir: os.homedir() }) : undefined,
 		mcpServers: Object.keys(servers).length > 0 ? servers : undefined,
 		hooks: sandboxPolicy
 			? {

@@ -1,6 +1,6 @@
 import * as path from "path";
 import { describe, it, expect } from "vitest";
-import { hasOsShellSandbox, buildShellSandbox } from "../src/safety/shellSandbox";
+import { hasOsShellSandbox, buildShellSandbox, homeReadDirs } from "../src/safety/shellSandbox";
 
 describe("shellSandbox", () => {
 	describe("hasOsShellSandbox", () => {
@@ -17,8 +17,15 @@ describe("shellSandbox", () => {
 		});
 	});
 
+	describe("homeReadDirs", () => {
+		it.skipIf(process.platform === "win32")("keeps tool folders in home and drops the rest", () => {
+			const pathEnv = ["/Users/u/.nvm/versions/node/v22/bin", "/usr/bin", "/Users/u/.config/x/bin", "/Users/u"].join(path.delimiter);
+			expect(homeReadDirs("/Users/u", pathEnv)).toEqual(["/Users/u/.nvm/versions/node/v22", "/Users/u/.gitconfig"]);
+		});
+	});
+
 	describe("buildShellSandbox", () => {
-		const settings = buildShellSandbox(["/p/Pkg"], "/Users/u");
+		const settings = buildShellSandbox({ writeRoots: ["/p/Pkg"], readRoots: ["/p/app"], homeDir: "/Users/u", pathEnv: "/usr/bin" });
 
 		it("enables the sandbox and fails instead of running unsandboxed", () => {
 			expect(settings.enabled).toBe(true);
@@ -38,6 +45,18 @@ describe("shellSandbox", () => {
 		it("denies reading credential folders in the home directory", () => {
 			expect(settings.filesystem?.denyRead).toContain(path.join("/Users/u", ".ssh"));
 			expect(settings.filesystem?.denyRead).toContain(path.join("/Users/u", "Library", "Keychains"));
+		});
+
+		it("denies reading the home directory itself", () => {
+			expect(settings.filesystem?.denyRead).toContain("/Users/u");
+		});
+
+		it("allows reading the given read roots", () => {
+			expect(settings.filesystem?.allowRead).toContain("/p/app");
+		});
+
+		it("unsets the API key variables for sandboxed commands", () => {
+			expect(settings.credentials?.envVars).toContainEqual({ name: "ANTHROPIC_API_KEY", mode: "deny" });
 		});
 	});
 });

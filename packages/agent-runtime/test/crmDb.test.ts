@@ -121,6 +121,13 @@ describe("checkReadOnlySql allowed", () => {
 		`SELECT "UpdatedOn", "Comment" FROM "Activity"`,
 		`(SELECT 1)`,
 		`SELECT $$;insert$$`,
+		`SELECT "Id"::text, "Name" FROM "SysAdminUnit"`,
+		`SELECT NULL::text AS a`,
+		`SELECT CAST("Id" AS text) FROM "Contact"`,
+		`SELECT CAST(NULL AS text)`,
+		`SELECT "Id" FROM "SysSettings" WHERE "Code" = 'PasswordMinLength'`,
+		`SELECT now()::text`,
+		`SELECT "Id" FROM "Contact" WHERE "Name" LIKE '%token%'`,
 	])("allows %s", (sql) => {
 		const result = checkReadOnlySql(sql);
 		expect(result.allowed).toBe(true);
@@ -156,6 +163,13 @@ describe("checkReadOnlySql blocked", () => {
 		`EXPLAIN ANALYZE DELETE FROM "A"`,
 		`SELECT lo_import('/etc/passwd')`,
 		`SELECT 'a\'; DELETE FROM "A"'`,
+		`SELECT "UserPassword" AS x FROM "SysAdminUnit"`,
+		`SELECT "Name" FROM "SysAdminUnit" WHERE "PasswordHash" IS NOT NULL`,
+		`SELECT row_to_json(u) FROM "SysAdminUnit" u`,
+		`SELECT to_jsonb(u) FROM "SysAdminUnit" u`,
+		`SELECT u::text FROM "SysAdminUnit" u`,
+		`SELECT (u)::text FROM "SysAdminUnit" u`,
+		`SELECT CAST(u AS text) FROM "SysAdminUnit" u`,
 	])("blocks %s", (sql) => {
 		const result = checkReadOnlySql(sql);
 		expect(result.allowed).toBe(false);
@@ -188,6 +202,23 @@ describe("formatQueryResult", () => {
 			200,
 		);
 		expect(text).toBe("Строк: 1\nId | UserPassword | PasswordHash | Name\n1 | *** | *** | n");
+	});
+
+	it("hides whole-row values by their field type and keeps plain columns", () => {
+		const text = formatQueryResult(
+			{
+				fields: [
+					{ name: "u", dataTypeID: 16500 },
+					{ name: "j", dataTypeID: 3802 },
+					{ name: "Id", dataTypeID: 2950 },
+				],
+				rows: [{ u: { Id: 1, Name: "n" }, j: { a: 1 }, Id: "00000000-0000-0000-0000-000000000001" }],
+			},
+			200,
+		);
+		expect(text).toBe(
+			"Строк: 1\nu | j | Id\n<составное значение скрыто — перечисли колонки явно> | <составное значение скрыто — перечисли колонки явно> | 00000000-0000-0000-0000-000000000001",
+		);
 	});
 
 	it("renders NULL and special values", () => {

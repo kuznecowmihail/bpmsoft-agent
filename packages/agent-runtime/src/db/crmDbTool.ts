@@ -4,7 +4,7 @@ import { PgConnectionConfig, DbConnectionOverride, parseConnectionStringsConfig,
 import { checkReadOnlySql } from "./sqlGuard";
 
 export interface DbQueryRecord { sql: string; rowCount: number; truncated: boolean; durationMs: number; error?: string; denied?: boolean }
-export interface DbQueryResult { rows: Record<string, unknown>[]; fields: { name: string }[] }
+export interface DbQueryResult { rows: Record<string, unknown>[]; fields: { name: string; dataTypeID?: number }[] }
 export interface DbClient { connect(): Promise<void>; query(sql: string): Promise<DbQueryResult>; end(): Promise<void> }
 export interface DbClientConfig { host: string; port: number; database: string; user: string; password: string; ssl: boolean | { rejectUnauthorized: false }; connectionTimeoutMillis: number; statement_timeout: number; query_timeout: number; application_name: string }
 export interface CrmDbToolOptions {
@@ -32,9 +32,18 @@ export function isSensitiveColumn(name: string): boolean {
 	return /pass(word)?|pwd|secret|token|hash|salt|api_?key|private_?key|access_?key|certificate/i.test(name);
 }
 
-function formatValue(column: string, value: unknown): string {
+const PACKED_TYPE_OIDS = new Set([114, 199, 3802, 3807, 2249, 2287]);
+/** json, jsonb, record and their arrays, table row types and other user types (OID from 16384): may hold a whole row. */
+export function isPackedType(oid?: number): boolean {
+	return oid !== undefined && (PACKED_TYPE_OIDS.has(oid) || oid >= 16384);
+}
+
+function formatValue(column: string, value: unknown, oid?: number): string {
 	if (value === null || value === undefined) {
 		return "NULL";
+	}
+	if (isPackedType(oid)) {
+		return "<составное значение скрыто — перечисли колонки явно>";
 	}
 	if (isSensitiveColumn(column)) {
 		return "***";
@@ -60,14 +69,14 @@ export function formatQueryResult(result: DbQueryResult, maxRows: number): strin
 		? `Строк: больше ${maxRows}, показаны первые ${maxRows} — уточни условие или добавь LIMIT`
 		: `Строк: ${result.rows.length}`;
 
-	const names = result.fields.map((field) => field.name);
-	if (names.length === 0) {
+	const fields = result.fields;
+	if (fields.length === 0) {
 		return header;
 	}
 
-	const lines = [header, names.join(" | ")];
+	const lines = [header, fields.map((field) => field.name).join(" | ")];
 	for (const row of shown) {
-		lines.push(names.map((name) => formatValue(name, row[name])).join(" | "));
+		lines.push(fields.map((field) => formatValue(field.name, row[field.name], field.dataTypeID)).join(" | "));
 	}
 
 	const text = lines.join("\n");
@@ -140,7 +149,7 @@ export function createCrmDbTool(options: CrmDbToolOptions): CrmDbTool {
 
 	return {
 		name: CRM_DB_QUERY_TOOL,
-		description: `Выполняет один запрос SELECT или WITH к базе данных CRM (PostgreSQL) только на чтение: транзакция только для чтения, до ${maxRows} строк, тайм-аут ${timeoutMs / 1000} с, чувствительные колонки маскируются. Имена таблиц и колонок — в двойных кавычках. Используй, когда данных нет в файлах Pkg: Id записей, рабочих мест, значения системных настроек.`,
+		description: `Выполняет один запрос SELECT или WITH к базе данных CRM (PostgreSQL) только на чтение: транзакция только для чтения, до ${maxRows} строк, тайм-аут ${timeoutMs / 1000} с, колонки с паролями, хешами, токенами и ключами недоступны. Имена таблиц и колонок — в двойных кавычках. Используй, когда данных нет в файлах Pkg: Id записей, рабочих мест, значения системных настроек.`,
 
 		async execute(sql: string): Promise<{ text: string; isError: boolean }> {
 			const check = checkReadOnlySql(sql);

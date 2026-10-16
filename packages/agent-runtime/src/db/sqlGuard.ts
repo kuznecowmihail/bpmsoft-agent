@@ -6,6 +6,19 @@ const FORBIDDEN_KEYWORDS = /\b(INSERT|UPDATE|DELETE|MERGE|UPSERT|DROP|ALTER|CREA
 const FORBIDDEN_FUNCTIONS = /\b(dblink\w*|pg_read_file|pg_read_binary_file|pg_ls_\w+|pg_stat_file|pg_file_\w+|pg_logdir_ls|lo_\w+|pg_sleep\w*|pg_terminate_backend|pg_cancel_backend|pg_reload_conf|pg_rotate_logfile|pg_switch_wal|pg_promote|set_config|current_setting|setval|nextval|pg_advisory\w*|pg_try_advisory\w*|\w*_to_xml\w*|xml_to_\w*|query_to_\w+|pg_notify|txid_current|pg_create_\w+|pg_drop_\w+)\s*\(/i;
 const FORBIDDEN_TABLES = /\b(pg_authid|pg_shadow|pg_user_mappings?|pg_hba_file_rules|pg_file_settings|pg_settings|pg_stat_activity)\b/i;
 const DOLLAR_TAG = /\$([A-Za-z_][A-Za-z0-9_]*)?\$/y;
+/** Columns with passwords, hashes, tokens and keys: not readable even under another name. Tested on every identifier of the query. */
+const SENSITIVE_IDENTIFIER = /(password|passwd|pwd|secret|token|hash|salt$|api_?key|private_?key|access_?key)/i;
+/** Functions that pack a whole row into one value and would carry sensitive columns past the masking. */
+const WHOLE_ROW_FUNCTIONS = /\b(row_to_json|to_json|to_jsonb|json_agg|jsonb_agg|json_object_agg|jsonb_object_agg|array_to_json|hstore|record_out)\s*\(/i;
+/** A bare name cast to text or json (u::text): for a table alias it is the whole row. Quoted names are already "x" in codeNoIds. */
+const BARE_NAME_CAST = /(^|[^"\w.])([A-Za-z_]\w*)\s*::\s*(text|varchar|character\s+varying|bpchar|name|json|jsonb)\b/gi;
+/** The same cast written as (u)::text or CAST(u AS text). */
+const OTHER_NAME_CASTS = [
+	/\(\s*([A-Za-z_]\w*)\s*\)\s*::\s*(text|varchar|character\s+varying|bpchar|name|json|jsonb)\b/gi,
+	/\bCAST\s*\(\s*([A-Za-z_]\w*)\s+AS\s+(text|varchar|character\s+varying|bpchar|name|json|jsonb)\b/gi
+];
+/** Keywords and functions that are not a table alias: casting them to text does not pack a row. */
+const CAST_CONSTANTS = new Set(["null", "true", "false", "current_date", "current_time", "current_timestamp", "localtime", "localtimestamp", "current_user", "session_user"]);
 
 function isIdentChar(ch: string | undefined): boolean {
 	return ch !== undefined && /[A-Za-z0-9_$\u0080-\uFFFF]/.test(ch);
@@ -136,6 +149,31 @@ export function checkReadOnlySql(sql: string): SqlCheckResult {
 	const table = FORBIDDEN_TABLES.exec(codeIdsAsText);
 	if (table) {
 		return { allowed: false, reason: `Таблица ${table[1]} запрещена` };
+	}
+
+	for (const token of codeIdsAsText.match(/[A-Za-z_\u0080-￿][\w$\u0080-￿]*/g) ?? []) {
+		if (SENSITIVE_IDENTIFIER.test(token)) {
+			return { allowed: false, reason: `Колонки с паролями, хешами, токенами и ключами читать нельзя: ${token}` };
+		}
+	}
+
+	const wholeRow = WHOLE_ROW_FUNCTIONS.exec(codeIdsAsText);
+	if (wholeRow) {
+		return { allowed: false, reason: `Функция ${wholeRow[1]} собирает строку целиком в одно значение — перечисли нужные колонки явно` };
+	}
+
+	for (const m of code.matchAll(BARE_NAME_CAST)) {
+		if (!CAST_CONSTANTS.has(m[2].toLowerCase())) {
+			return { allowed: false, reason: `Приведение ${m[2]}::${m[3]} может превратить строку таблицы целиком в текст — перечисли колонки явно` };
+		}
+	}
+
+	for (const regex of OTHER_NAME_CASTS) {
+		for (const m of code.matchAll(regex)) {
+			if (!CAST_CONSTANTS.has(m[1].toLowerCase())) {
+				return { allowed: false, reason: `Приведение ${m[1]} к ${m[2]} может превратить строку таблицы целиком в текст — перечисли колонки явно` };
+			}
+		}
 	}
 
 	return { allowed: true, normalized };

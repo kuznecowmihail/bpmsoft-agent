@@ -756,6 +756,42 @@ describe("sandboxGuard", () => {
 		});
 	});
 
+	describe("environment dumps", () => {
+		it.each([
+			"env",
+			"env | grep KEY",
+			"printenv",
+			"printenv ANTHROPIC_API_KEY",
+			"echo $ANTHROPIC_API_KEY",
+			"echo ${CURSOR_API_KEY}",
+			"export -p",
+			"export",
+			"declare -px",
+			"set",
+			"ls; set",
+			"cat /proc/self/environ",
+			`node -e "console.log(process.env)"`,
+			`node -e 'console.log(JSON.stringify(process.env))'`,
+			`perl -e 'print %ENV'`
+		])("denies %s", (command) => {
+			const decision = checkBashCommand(command, pkg, policy);
+			expect(decision.allowed).toBe(false);
+			expect(decision.reason).toContain("переменные окружения");
+		});
+
+		it.each([
+			"set -e; ls",
+			"env FOO=1 ls",
+			"export FOO=1",
+			`node -e "const APP=process.env.APP; console.log(APP)"`,
+			"grep -r UserPassword .",
+			"date +%s000"
+		])("allows %s", (command) => {
+			const decision = checkBashCommand(command, pkg, policy);
+			expect(decision.allowed).toBe(true);
+		});
+	});
+
 	describe("без песочницы ОС", () => {
 		const shell = { osSandbox: false, cwd: "/app/BPMSoft.Configuration/Pkg", trustedScriptDirs: ["/kn/scripts"] };
 

@@ -1,6 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
-import { changedSchemaDirs, changedSqlScriptDirs, listChangedFiles } from "./changedFiles";
+import { listChangedFiles, schemaDirsOf, sqlScriptDirsOf } from "./changedFiles";
 
 export interface LintIssue {
 	schema: string;
@@ -482,9 +482,10 @@ export function lintSchemas(
 
 /** Lints schemas and SQL scripts changed in Pkg since sinceMs. */
 export function lintChanged(pkgRoot: string, sinceMs: number, knowledgeDir: string = defaultKnowledgeDir()): LintReport {
-	return lintSchemas(changedSchemaDirs(pkgRoot, sinceMs), {
+	const files = listChangedFiles(pkgRoot, sinceMs);
+	return lintSchemas(schemaDirsOf(pkgRoot, files), {
 		knowledgeDir,
-		extraFiles: listChangedFiles(pkgRoot, sinceMs),
-		sqlScriptDirs: changedSqlScriptDirs(pkgRoot, sinceMs),
+		extraFiles: files,
+		sqlScriptDirs: sqlScriptDirsOf(pkgRoot, files),
 	});
 }

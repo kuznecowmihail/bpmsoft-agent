@@ -2,7 +2,7 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { createLocalTools, LOCAL_TOOL_NAMES, LocalToolsOptions } from "../src/tools/localTools";
+import { createLocalTools, LOCAL_TOOL_NAMES, LocalToolsOptions, runShellCommand, shellEnv } from "../src/tools/localTools";
 import type { AppTool, AppToolResult } from "../src/tools/appTool";
 import { buildSeatbeltProfile } from "../src/safety/shellSandbox";
 
@@ -227,10 +227,41 @@ describe("localTools", () => {
 
 	describe("buildSeatbeltProfile", () => {
 		it.skipIf(process.platform !== "darwin")("denies network, writes outside the roots and credential folders", () => {
-			const profile = buildSeatbeltProfile(["/x/Pkg"], "/Users/u", ["/tmp"]);
+			const profile = buildSeatbeltProfile({ writeRoots: ["/x/Pkg"], readRoots: [], homeDir: "/Users/u", tempDirs: ["/tmp"] });
 			expect(profile).toContain("(deny network*)");
 			expect(profile).toContain("(subpath \"/x/Pkg\")");
 			expect(profile).toContain("/Users/u/.ssh");
+		});
+
+		it.skipIf(process.platform !== "darwin")("really lets a command read only inside the read roots", async () => {
+			const home = fs.mkdtempSync(path.join(os.tmpdir(), "sbx-home-"));
+			try {
+				const proj = path.join(home, "proj");
+				const pkgDir = path.join(proj, "Pkg");
+				const insidePath = path.join(pkgDir, "a.txt");
+				const outsidePath = path.join(home, "Documents", "b.txt");
+				fs.mkdirSync(pkgDir, { recursive: true });
+				fs.mkdirSync(path.dirname(outsidePath), { recursive: true });
+				fs.writeFileSync(insidePath, "inside");
+				fs.writeFileSync(outsidePath, "outside");
+				const profile = buildSeatbeltProfile({ writeRoots: [pkgDir], readRoots: [proj], homeDir: home, pathEnv: "/usr/bin:/bin" });
+
+				const inside = await runShellCommand("cat " + insidePath, { cwd: pkgDir, platform: "darwin", seatbeltProfile: profile, timeoutMs: 10000 });
+				expect(inside.output).toContain("inside");
+				expect(inside.exitCode).toBe(0);
+
+				const outside = await runShellCommand("cat " + outsidePath, { cwd: pkgDir, platform: "darwin", seatbeltProfile: profile, timeoutMs: 10000 });
+				expect(outside.exitCode).not.toBe(0);
+				expect(outside.output).not.toContain("outside");
+			} finally {
+				fs.rmSync(home, { recursive: true, force: true });
+			}
+		});
+	});
+
+	describe("shellEnv", () => {
+		it("keeps only system variables", () => {
+			expect(shellEnv({ PATH: "/bin", ANTHROPIC_API_KEY: "k", GITHUB_TOKEN: "t", LANG: "ru" })).toEqual({ PATH: "/bin", LANG: "ru" });
 		});
 	});
 });

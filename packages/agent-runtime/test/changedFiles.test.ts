@@ -2,7 +2,7 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { listChangedFiles, changedSchemaNames, changedSchemaDirs } from "../src/lint/changedFiles";
+import { listChangedFiles, changedSchemaNames, changedSchemaDirs, hasChangedFiles } from "../src/lint/changedFiles";
 
 describe("changedFiles", () => {
 	let tmp: string;
@@ -72,5 +72,29 @@ describe("changedFiles", () => {
 		expect(listChangedFiles(pkg, since)).toEqual([]);
 		expect(changedSchemaNames(pkg, since)).toEqual(new Set());
 		expect(changedSchemaDirs(pkg, since)).toEqual([]);
+	});
+
+	it("hasChangedFiles reports true only when a file changed since the given time", () => {
+		const since = Date.now() - 1000;
+		const old = since / 1000 - 3600;
+
+		expect(hasChangedFiles(pkg, since)).toBe(false);
+
+		fs.utimesSync(write("P1/Schemas/TestC/metadata.json"), old, old);
+		expect(hasChangedFiles(pkg, since)).toBe(false);
+
+		write("P1/Schemas/TestC/changed.json");
+		expect(hasChangedFiles(pkg, since)).toBe(true);
+	});
+
+	it("listChangedFiles stops at the limit and returns exactly one file", () => {
+		const since = Date.now() - 1000;
+
+		write("P1/Schemas/TestD/metadata.json");
+		write("P1/Schemas/TestE/metadata.json");
+		write("P1/Resources/TestF.Entity/resource.ru-RU.xml");
+
+		expect(listChangedFiles(pkg, since, 1)).toHaveLength(1);
+		expect(listChangedFiles(pkg, since)).toHaveLength(3);
 	});
 });

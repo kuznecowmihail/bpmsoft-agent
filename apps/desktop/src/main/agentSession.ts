@@ -1,5 +1,5 @@
 import type { BrowserWindow } from 'electron'
-import { runBpmsoftAgentQuery, runCursorAgentQuery, createCrmDbTool, testCrmDbConnection, createCrmTools, testCrmConnection, createPkgLintTool, lintChanged, changedSchemaNames, listChangedFiles } from '@bpmsoft-agent/agent-runtime'
+import { runBpmsoftAgentQuery, runCursorAgentQuery, createCrmDbTool, testCrmDbConnection, createCrmTools, testCrmConnection, createPkgLintTool, lintChanged, changedSchemaNames, hasChangedFiles } from '@bpmsoft-agent/agent-runtime'
 import type { AgentEvent, ToolPermissionRequest, CrmDbToolOptions, CrmConnection } from '@bpmsoft-agent/agent-runtime'
 import { join } from 'path'
 import { saveSecret, loadSecret, clearSecret } from './secureStore'
@@ -303,7 +303,7 @@ export async function sendAgentMessage(
         appRoot: readRoot,
         ownSchemas: () => changedSchemaNames(projectPath, chatSince()),
         lint: () => lintChanged(projectPath, chatSince()),
-        changedSince: (ms) => listChangedFiles(projectPath, ms).length > 0,
+        changedSince: (ms) => hasChangedFiles(projectPath, ms),
         chatStartedAt: chatSince,
         confirm: crmConfirmActions ? (action) => requestToolPermission({ toolName: 'crm_action', input: { action } }) : undefined,
         onAction: (record) => {
@@ -317,7 +317,7 @@ export async function sendAgentMessage(
   const browserTools = crmBrowserEnabled && crmConn
     ? createCrmBrowserTools({
         connection: crmConn,
-        confirm: crmConfirmActions ? (action) => requestToolPermission({ toolName: 'crm_browser_click', input: { action } }) : undefined,
+        confirm: (action) => requestToolPermission({ toolName: 'crm_browser_click', input: { action } }),
         onAction: (record) => logChatRecord('crm_browser', { ...record })
       })
     : undefined

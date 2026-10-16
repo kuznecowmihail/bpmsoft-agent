@@ -691,7 +691,7 @@ export function SettingsMenu({
                 <div className="popover-row">
                   <div>
                     <div className="popover-row-title">Спрашивать перед каждым действием</div>
-                    <div className="popover-row-hint">Обновление, компиляция и клики в браузере — показывать и ждать вашего разрешения</div>
+                    <div className="popover-row-hint">Обновление и компиляция CRM — показывать и ждать вашего разрешения. Клики в браузере подтверждаются всегда</div>
                   </div>
                   <Toggle
                     checked={Boolean(settings?.crmConfirmActions)}
