@@ -59,8 +59,8 @@ function subfolders(dir: string): string[] {
 	}
 }
 
-/** Adds the folders found at a path: a package (all Schemas and SqlScripts subfolders), a schema folder or an SQL script folder. */
-function addPath(target: string, schemaDirs: Set<string>, sqlDirs: Set<string>): void {
+/** Adds the folders found at a path: a package (all Schemas and SqlScripts subfolders), a schema folder or an SQL script folder. Returns false when the path is none of them. */
+function addPath(target: string, schemaDirs: Set<string>, sqlDirs: Set<string>): boolean {
 	const abs = path.resolve(target);
 	if (isDir(path.join(abs, "Schemas")) || isDir(path.join(abs, "SqlScripts"))) {
 		for (const dir of subfolders(path.join(abs, "Schemas"))) {
@@ -69,10 +69,14 @@ function addPath(target: string, schemaDirs: Set<string>, sqlDirs: Set<string>):
 		for (const dir of subfolders(path.join(abs, "SqlScripts"))) {
 			sqlDirs.add(dir);
 		}
-	} else if (isFile(path.join(abs, "descriptor.json"))) {
+		return true;
+	}
+	if (isFile(path.join(abs, "descriptor.json"))) {
 		const isSql = path.basename(path.dirname(abs)) === "SqlScripts";
 		(isSql ? sqlDirs : schemaDirs).add(abs);
+		return true;
 	}
+	return false;
 }
 
 /** Returns absolute paths of files under pkgRoot that git status lists as changed or new; git runs without a shell. */
@@ -127,8 +131,16 @@ export function runPkgLintCli(argv: string[], defaultKnowledgeDir: string): PkgL
 	}
 	const schemaDirs = new Set<string>();
 	const sqlDirs = new Set<string>();
-	for (const target of targets) {
-		addPath(target, schemaDirs, sqlDirs);
+	const unrecognized = targets.filter((target) => !addPath(target, schemaDirs, sqlDirs));
+	if (unrecognized.length > 0) {
+		return usage(
+			unrecognized
+				.map(
+					(target) =>
+						`pkg-lint.js: путь не распознан (нужна папка пакета, схемы, набора данных или SQL-скрипта): ${target}`,
+				)
+				.join("\n"),
+		);
 	}
 	let extraFiles: string[] = [];
 	if (gitRoot !== undefined) {
@@ -143,6 +155,9 @@ export function runPkgLintCli(argv: string[], defaultKnowledgeDir: string): PkgL
 			}
 		} catch (e) {
 			return { code: 2, text: `pkg-lint.js: не удалось прочитать git status: ${errorMessage(e)}` };
+		}
+		if (targets.length === 0 && schemaDirs.size === 0 && sqlDirs.size === 0) {
+			return { code: 0, text: "pkg-lint.js: изменённых схем нет." };
 		}
 	}
 	const report = lintSchemas([...schemaDirs].sort(), {

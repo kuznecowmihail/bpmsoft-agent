@@ -79,6 +79,27 @@ describe("runPkgLintCli", () => {
 		expect(result.text).toContain("проверено схем: 2");
 	});
 
+	it("unrecognized path gives code 2 and names the path", () => {
+		const result = runPkgLintCli([path.join(tmp, "nope")], knowledgeDir);
+		expect(result.code).toBe(2);
+		expect(result.text).toContain("nope");
+		expect(result.text).toContain("путь не распознан");
+	});
+
+	it("--git with no changes reports nothing to check", () => {
+		writeClient("TestA", validMetadata("TestA"));
+		const git = (...args: string[]): string =>
+			execFileSync("git", ["-C", root, "-c", "user.email=test@example.com", "-c", "user.name=test", ...args], {
+				encoding: "utf8",
+			});
+		git("init");
+		git("add", "-A");
+		git("commit", "-m", "init");
+		const result = runPkgLintCli(["--git", root], knowledgeDir);
+		expect(result.code).toBe(0);
+		expect(result.text).toBe("pkg-lint.js: изменённых схем нет.");
+	});
+
 	it("no paths gives code 2 with usage", () => {
 		const result = runPkgLintCli([], knowledgeDir);
 		expect(result.code).toBe(2);
