@@ -3,9 +3,11 @@ import { runBpmsoftAgentQuery, runCursorAgentQuery, createCrmDbTool, testCrmDbCo
 import type { AgentEvent, ToolPermissionRequest, CrmDbToolOptions, CrmConnection } from '@bpmsoft-agent/agent-runtime'
 import { join, resolve } from 'path'
 import { saveSecret, loadSecret, clearSecret } from './secureStore'
-import { startChatLogIfNeeded, endChatLog, logChatRecord } from './chatLog'
+import { startChatLogIfNeeded, endChatLog, logChatRecord, reopenChatLog, getCurrentChatId } from './chatLog'
 import { getAppSettings, getProjectConnection } from './appSettings'
 import { createCrmBrowserTools, markCrmBrowserStale } from './crmBrowser'
+import { upsertChat, getChat } from './chatIndex'
+import { chatTitle } from './chatReplay'
 import type { AgentProvider } from '../shared/types'
 
 /**
@@ -233,6 +235,10 @@ let lastTurnStopped = false
 /** How long a stopped turn may still deliver events before the app stops waiting for it. */
 const STOP_GRACE_MS = 10000
 const STOPPED_TURN_NOTE = '(Предыдущий ход остановлен пользователем кнопкой «Стоп». Не продолжай прерванную работу сам: выполни сообщение ниже; если оно не о прерванной задаче — не возвращайся к ней.)'
+/** The previous turn was cut off by an app restart: the next message carries a note about it. */
+let lastTurnInterrupted = false
+const INTERRUPTED_TURN_NOTE = '(Предыдущий ход прервался: приложение перезапустилось во время работы агента. Прежде чем продолжать, проверь, что из прерванной работы уже сделано, затем выполни сообщение ниже.)'
+export const CONTEXT_LOST_MESSAGE = 'Контекст чата не восстановлен: провайдер начал новую сессию. Начните новый чат.'
 
 export function getCurrentSessionId(): string | undefined {
   return currentSessionId
@@ -245,7 +251,36 @@ export function resetAgentSession(): void {
   currentSessionProvider = undefined
   currentChatStartedAt = undefined
   lastTurnStopped = false
+  lastTurnInterrupted = false
   endChatLog()
+}
+
+/** A chat read back from its log: the session to resume and the flags of its last turn. */
+export interface RestoredSession {
+  sessionId: string
+  projectPath: string
+  provider: AgentProvider
+  chatStartedAt: number
+  lastTurnStopped: boolean
+  lastTurnInterrupted: boolean
+  jsonlPath: string
+}
+
+/** Makes a chat from history the current one: the next message resumes its session and appends to its log. */
+export function restoreAgentSession(s: RestoredSession): void {
+  resetAgentSession()
+  currentSessionId = s.sessionId
+  currentSessionProject = s.projectPath
+  currentSessionProvider = s.provider
+  currentChatStartedAt = s.chatStartedAt
+  lastTurnStopped = s.lastTurnStopped
+  lastTurnInterrupted = s.lastTurnInterrupted
+  reopenChatLog(s.jsonlPath, s.projectPath)
+}
+
+/** True when the provider answered a resume with a different session: the old context is gone. */
+export function isContextLost(resumedFrom: string | undefined, event: AgentEvent): boolean {
+  return resumedFrom !== undefined && event.type === 'system_init' && Boolean(event.sessionId) && event.sessionId !== resumedFrom
 }
 
 /**
@@ -253,9 +288,14 @@ export function resetAgentSession(): void {
  */
 export function rememberSessionId(event: AgentEvent, projectPath: string, provider: AgentProvider = 'claude'): void {
   if ((event.type === 'system_init' || event.type === 'result') && event.sessionId) {
+    const changed = event.sessionId !== currentSessionId
     currentSessionId = event.sessionId
     currentSessionProject = projectPath
     currentSessionProvider = provider
+    const chatId = changed ? getCurrentChatId() : undefined
+    if (chatId) {
+      upsertChat({ id: chatId, sessionId: event.sessionId })
+    }
   }
 }
 
@@ -332,7 +372,7 @@ export async function sendAgentMessage(
   if (currentRun) {
     throw new Error('Агент уже работает — дождитесь окончания или остановите его')
   }
-  const { provider, cursorModel, cursorModelParams, claudeModel, claudeEffort, dbAccessEnabled, dbConfirmQueries, crmActionsEnabled, crmConfirmActions, crmBrowserEnabled } = getAppSettings()
+  const { provider, cursorModel, cursorModelParams, cursorModelName, claudeModel, claudeEffort, claudeModelName, dbAccessEnabled, dbConfirmQueries, crmActionsEnabled, crmConfirmActions, crmBrowserEnabled } = getAppSettings()
   if (provider === 'cursor' && !currentCursorApiKey) {
     throw new Error('Ключ Cursor не задан — укажите его в настройках')
   }
@@ -404,11 +444,32 @@ export async function sendAgentMessage(
     const appTools = [...(browserTools ?? []), createPkgLintTool({ pkgRoot: projectPath, since: chatSince })]
 
     startChatLogIfNeeded({ projectPath, readRoot })
-    // After a stopped turn the agent gets a note, so it does not resume the interrupted work by itself.
+    // After a stopped or interrupted turn the agent gets a note, so it does not resume the interrupted work by itself.
     const afterStop = lastTurnStopped
-    const agentPrompt = afterStop ? `${STOPPED_TURN_NOTE}\n\n${prompt}` : prompt
+    const afterInterrupt = lastTurnInterrupted
+    const note = lastTurnInterrupted ? INTERRUPTED_TURN_NOTE : lastTurnStopped ? STOPPED_TURN_NOTE : undefined
+    const agentPrompt = note ? `${note}\n\n${prompt}` : prompt
     lastTurnStopped = false
-    logChatRecord('user_message', { text: prompt, afterStop, resume: currentSessionId ?? null, provider, model: provider === 'cursor' ? { id: cursorModel, params: cursorModelParams } : { id: claudeModel || null, effort: claudeEffort || null }, dbAccess: Boolean(dbTool), crmActions: Boolean(crmTools), crmBrowser: Boolean(browserTools) })
+    lastTurnInterrupted = false
+    const modelRef = provider === 'cursor' ? { id: cursorModel, params: cursorModelParams } : { id: claudeModel || null, effort: claudeEffort || null }
+    logChatRecord('user_message', { text: prompt, afterStop, afterInterrupt, resume: currentSessionId ?? null, provider, model: modelRef, dbAccess: Boolean(dbTool), crmActions: Boolean(crmTools), crmBrowser: Boolean(browserTools) })
+
+    const resumedFrom = currentSessionId
+    const chatId = getCurrentChatId()
+    if (chatId) {
+      const existing = getChat(chatId)
+      const now = new Date().toISOString()
+      upsertChat({
+        id: chatId,
+        projectPath,
+        provider,
+        model: modelRef,
+        modelName: provider === 'cursor' ? cursorModelName : claudeModelName,
+        updatedAt: now,
+        lastTurnInterrupted: true,
+        ...(existing ? {} : { title: chatTitle(prompt), createdAt: now, contextLost: false })
+      })
+    }
 
     const startedAt = Date.now()
     const events =
@@ -452,8 +513,19 @@ export async function sendAgentMessage(
       if (event.type === 'result') resultSent = true
       window.webContents.send('agent:event', event)
     }
+    let contextLost = false
     const consume = (async (): Promise<void> => {
       for await (const event of events) {
+        if (isContextLost(resumedFrom, event)) {
+          // The provider started a new session instead of resuming: the event is not shown or remembered.
+          contextLost = true
+          logChatRecord('context_lost', { resumedFrom, sessionId: (event as { sessionId?: string }).sessionId })
+          if (chatId) {
+            upsertChat({ id: chatId, contextLost: true })
+          }
+          controller.abort()
+          break
+        }
         rememberSessionId(event, projectPath, provider)
         logChatRecord('agent_event', { event })
         send(event)
@@ -481,13 +553,22 @@ export async function sendAgentMessage(
     } finally {
       if (graceTimer) clearTimeout(graceTimer)
       if (controller.signal.aborted) {
-        lastTurnStopped = true
-        if (!resultSent) {
-          send({ type: 'result', success: false, stopped: true, durationMs: Date.now() - startedAt, sessionId: currentSessionId })
+        if (!contextLost) {
+          lastTurnStopped = true
+          if (!resultSent) {
+            send({ type: 'result', success: false, stopped: true, durationMs: Date.now() - startedAt, sessionId: currentSessionId })
+          }
         }
         detached = true
       }
       logChatRecord('turn_end', { elapsedMs: Date.now() - startedAt, sessionId: currentSessionId ?? null, stopped: controller.signal.aborted })
+      if (chatId && !contextLost) {
+        upsertChat({ id: chatId, updatedAt: new Date().toISOString(), lastTurnInterrupted: false, lastTurnStopped: controller.signal.aborted })
+      }
+    }
+    if (contextLost) {
+      resetAgentSession()
+      throw new Error(CONTEXT_LOST_MESSAGE)
     }
   } finally {
     if (currentRun === controller) {

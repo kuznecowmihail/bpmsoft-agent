@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { mkdtempSync, readdirSync, readFileSync } from 'fs'
-import { join } from 'path'
+import { dirname, join } from 'path'
 import { tmpdir } from 'os'
 import {
   initChatLog,
@@ -8,6 +8,8 @@ import {
   startChatLogIfNeeded,
   endChatLog,
   getCurrentChatLogPath,
+  getCurrentChatId,
+  reopenChatLog,
   logChatRecord,
   truncateDeep,
   extractKnowledgeNotes
@@ -38,6 +40,35 @@ describe('chatLog', () => {
       expect(getCurrentChatLogPath()).toBeDefined()
       initChatLog(tempDir)
       expect(getCurrentChatLogPath()).toBeUndefined()
+    })
+  })
+
+  describe('reopenChatLog', () => {
+    it('reopenChatLog appends to the same file', () => {
+      startChatLogIfNeeded({ projectPath: '/proj' })
+      const jsonlPath = getCurrentChatLogPath()!
+      endChatLog()
+      reopenChatLog(jsonlPath, '/proj')
+      expect(getCurrentChatLogPath()).toBe(jsonlPath)
+      logChatRecord('user_message', { text: 'продолжим' })
+      const jsonlFiles = readdirSync(dirname(jsonlPath)).filter((name) => name.endsWith('.jsonl'))
+      expect(jsonlFiles).toHaveLength(1)
+      expect(readFileSync(jsonlPath, 'utf-8')).toContain('продолжим')
+    })
+
+    it('getCurrentChatId returns the id of the reopened chat', () => {
+      startChatLogIfNeeded({ projectPath: '/proj' })
+      const jsonlPath = getCurrentChatLogPath()!
+      endChatLog()
+      reopenChatLog(jsonlPath, '/proj')
+      const id = getCurrentChatId()
+      expect(id).toBeDefined()
+      expect(id!.split('/')).toHaveLength(2)
+      expect(id!.endsWith('.jsonl')).toBe(false)
+    })
+
+    it('getCurrentChatId is undefined without an open chat', () => {
+      expect(getCurrentChatId()).toBeUndefined()
     })
   })
 

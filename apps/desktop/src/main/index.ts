@@ -33,6 +33,7 @@ import {
   dropLegacyConnectionSecrets
 } from './agentSession'
 import { initChatLog, getChatLogDir } from './chatLog'
+import { initChatIndex } from './chatIndex'
 import {
   attachCrmBrowserHost,
   closeCrmBrowser,
@@ -158,6 +159,7 @@ app.whenReady().then(() => {
 
   // Chat logs: one JSONL trace + Markdown transcript per chat, plus knowledge-notes.md inbox.
   initChatLog(resolveChatLogDir())
+  initChatIndex(resolveChatLogDir())
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)

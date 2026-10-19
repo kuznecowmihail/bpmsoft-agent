@@ -1,6 +1,7 @@
 import { appendFileSync, existsSync, mkdirSync } from 'fs'
 import { basename, join } from 'path'
 import { formatUsage } from '../shared/usage'
+import { chatIdFromLogPath } from './chatIndex'
 
 let logDir: string | undefined
 let current: { jsonlPath: string; mdPath: string; projectPath: string } | undefined
@@ -259,6 +260,16 @@ export function endChatLog(): void {
 
 export function getCurrentChatLogPath(): string | undefined {
   return current?.jsonlPath
+}
+
+/** Makes an existing chat's .jsonl/.md pair the current one; no new record is written. */
+export function reopenChatLog(jsonlPath: string, projectPath: string): void {
+  current = { jsonlPath, mdPath: jsonlPath.replace(/\.jsonl$/, '.md'), projectPath }
+}
+
+/** Index id of the current chat ('<день>/<имя>'), or undefined when no chat is open. */
+export function getCurrentChatId(): string | undefined {
+  return current && logDir ? chatIdFromLogPath(logDir, current.jsonlPath) : undefined
 }
 
 export function logChatRecord(kind: string, data: Record<string, unknown>): void {
