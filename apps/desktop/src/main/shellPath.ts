@@ -9,13 +9,23 @@ export function extractMarkedPath(output: string): string | null {
   return value ? value : null
 }
 
+/** macOS (Finder) and Linux (desktop launchers) start apps with a minimal PATH; Windows apps inherit the full user PATH. */
+export function usesLoginShellPath(platform: NodeJS.Platform = process.platform): boolean {
+  return platform === 'darwin' || platform === 'linux'
+}
+
+/** The user's shell, or the usual default of the platform (zsh on macOS, bash on Linux). */
+export function defaultLoginShell(platform: NodeJS.Platform = process.platform, env: NodeJS.ProcessEnv = process.env): string {
+  return env['SHELL'] || (platform === 'darwin' ? '/bin/zsh' : '/bin/bash')
+}
+
 /**
- * An app started from Finder gets a minimal PATH without Homebrew or nvm, so the agent
- * cannot run node or git. Takes PATH from the user's login shell (macOS only).
+ * An app started from Finder or a Linux desktop launcher gets a minimal PATH without Homebrew, nvm or ~/.local/bin,
+ * so the agent cannot run node or git. Takes PATH from the user's login shell (macOS and Linux).
  */
 export function loadLoginShellPath(): void {
-  if (process.platform !== 'darwin') return
-  const shell = process.env['SHELL'] || '/bin/zsh'
+  if (!usesLoginShellPath()) return
+  const shell = defaultLoginShell()
   try {
     const output = execFileSync(shell, ['-ilc', `printf '%s%s%s' ${MARKER} "$PATH" ${MARKER}`], {
       encoding: 'utf8',

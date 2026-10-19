@@ -8,7 +8,7 @@ import { buildBpmsoftSystemPrompt } from "./systemPrompt";
 import { AgentEvent, mapSdkMessage } from "./messageMapper";
 import { checkToolAccess, isReadOnlyToolCall, isAutoApprovedToolCall } from "../safety/sandboxGuard";
 import type { ShellApprovalOptions } from "../safety/sandboxGuard";
-import { buildShellSandbox, hasOsShellSandbox } from "../safety/shellSandbox";
+import { buildShellSandbox, osShellSandboxAvailable } from "../safety/shellSandbox";
 import type { CrmDbTool } from "../db/crmDbTool";
 import type { CrmTool } from "../crm/crmTools";
 import type { AppTool } from "../tools/appTool";
@@ -146,7 +146,7 @@ export async function* runBpmsoftAgentQuery(
 	const sandboxPolicy = options.sandbox
 		? { readRoots: [...options.sandbox.readRoots, knowledgeDir, toolResultsDir], writeRoots: options.sandbox.writeRoots, sourceRoots: [knowledgeDir, toolResultsDir] }
 		: undefined;
-	const osShellSandbox = hasOsShellSandbox();
+	const osShellSandbox = osShellSandboxAvailable();
 	const shellApproval: ShellApprovalOptions = { osSandbox: osShellSandbox, cwd: options.cwd, trustedScriptDirs: [path.join(knowledgeDir, "scripts")] };
 	// Folders the agent wrote to in this turn; the SDK's staging folders there are removed after the turn.
 	const touchedDirs = new Set<string>([options.cwd]);

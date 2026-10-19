@@ -19,6 +19,13 @@ mac:
   hardenedRuntime: false
 win:
   target: nsis
+linux:
+  target:
+    - AppImage
+    - deb
+  category: Development
+  maintainer: bpmsoft-agent <noreply@bpmsoft-agent.local>
+  synopsis: AI agent for BPMSoft development
 nsis:
   oneClick: false
   perMachine: false

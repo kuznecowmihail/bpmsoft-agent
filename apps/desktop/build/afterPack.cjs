@@ -13,6 +13,19 @@ const PAIRS = [
   ['@cursor', 'sdk-'],
 ];
 
+/** chmod 755 for every regular file under `dir` that is not a text or data file (binaries have no extension). */
+function makeExecutable(dir) {
+  if (!fs.existsSync(dir)) return
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name)
+    if (entry.isDirectory()) {
+      makeExecutable(full)
+    } else if (entry.isFile() && !/\.(json|md|txt|js|mjs|cjs|ts|map|node|so|dylib|wasm|licen[cs]e)$/i.test(entry.name) && !/^(LICENSE|README)/i.test(entry.name)) {
+      fs.chmodSync(full, 0o755)
+    }
+  }
+}
+
 exports.default = async function afterPack(context) {
   const platform = context.electronPlatformName;
   const arch = ARCH_NAMES[context.arch];
@@ -51,6 +64,18 @@ exports.default = async function afterPack(context) {
   for (const required of requiredPaths) {
     if (!fs.existsSync(required)) {
       throw new Error(`afterPack: missing ${required}. ${hint}`);
+    }
+  }
+
+  // npm pack unpacked on Windows (or a copy through a Windows disk) drops the executable bit; the Claude CLI and the
+  // Cursor binaries are started as external processes, so a mac/Linux build made on any host needs them executable.
+  if (platform !== 'win32') {
+    for (const dir of [
+      path.join(nodeModules, '@anthropic-ai', `claude-agent-sdk-${target}`),
+      path.join(nodeModules, '@cursor', `sdk-${target}`, 'bin'),
+      path.join(nodeModules, '@cursor', `sdk-${target}`, 'vendor'),
+    ]) {
+      makeExecutable(dir)
     }
   }
 

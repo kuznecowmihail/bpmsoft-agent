@@ -204,7 +204,8 @@ describe("localTools", () => {
 		});
 
 		it("runs a trusted knowledge script without asking", async () => {
-			const result = await run("run_shell", { command: `node ${path.join(kn, "scripts", "hello.js")}` });
+			// forward slashes: a backslash path loses its separators in bash (the prompt shows paths to the model the same way)
+			const result = await run("run_shell", { command: `node ${path.join(kn, "scripts", "hello.js").split(path.sep).join("/")}` });
 			expect(result.isError).toBe(false);
 			expect(result.text).toContain("hi");
 		});

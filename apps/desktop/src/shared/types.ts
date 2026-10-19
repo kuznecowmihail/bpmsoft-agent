@@ -58,6 +58,8 @@ export interface AgentSettings {
 	claudeModelName: string
 	hasClaudeKey: boolean
 	hasCursorKey: boolean
+	/** The OS can encrypt keys and passwords for the disk; false (Linux without a secret service) = they live until the app closes. */
+	secretsPersistent: boolean
 	/**
 	 * Read-only CRM database access; empty host/port/user = values from ConnectionStrings.config.
 	 * Host, port, user, password and the CRM address, user, password belong to the opened project.

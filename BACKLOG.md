@@ -108,14 +108,16 @@
 
 **Риски.** операция на стенде продолжается после стопа; поведение interrupt/cancel проверено только по типам SDK.
 
-### Сборка установщиков для macOS и Windows
+### Сборка установщиков для macOS, Windows и Linux
 
 **Статус:** сборка работает (13.10.2026), подписи нет. Проверено: dmg arm64 собирается и запускается, встроенный `claude` отвечает. Не проверено: установка dmg x64 и exe на чистой машине.
 
 - Сборка из корня репозитория: `npm run dist` — под текущую ОС и архитектуру, `npm run dist:mac` — dmg arm64 и x64, `npm run dist:win` — NSIS x64 (собирается и на macOS). Результат — `apps/desktop/release/`.
 - electron-builder, конфиг `apps/desktop/electron-builder.yml`. asar выключен: CLI Claude, бинарники Cursor и каталог знаний читаются внешними процессами как обычные файлы.
 - Платформенные пакеты SDK (`@anthropic-ai/claude-agent-sdk-<платформа>`, `@cursor/sdk-<платформа>`) npm ставит только для текущей машины; для остальных целей их скачивает `scripts/fetch-platform-packages.mjs`. Хук `apps/desktop/build/afterPack.cjs` убирает из сборки пакеты чужих платформ и останавливает сборку, если пакета целевой платформы или каталога знаний нет.
-- macOS: при запуске из Finder PATH берётся из login-shell пользователя (`shellPath.ts`), иначе агент не видит `node` и `git` из Homebrew/nvm.
+- macOS и Linux: при запуске из Finder или десктопного лаунчера PATH берётся из login-shell пользователя (`shellPath.ts`), иначе агент не видит `node` и `git` из Homebrew/nvm.
+- Linux (добавлено 19.10.2026, собрано не проверялось): `npm run dist:linux` — AppImage и deb x64; `afterPack.cjs` ставит +x на `claude` и бинарники Cursor (при сборке на Windows бит теряется). Не проверено: запуск AppImage/deb на чистом Ubuntu/Fedora (на Ubuntu 24.04 AppImage может потребовать `--no-sandbox` из-за AppArmor), песочница bubblewrap, libsecret.
+- Хранилище ключей (`secureStore.ts`): ошибка расшифровки или повреждённый файл больше не роняют запуск; без хранилища ОС (Linux без gnome-keyring/KWallet) ключи живут до закрытия приложения, в настройках об этом сказано.
 - Требования на машине пользователя: Node.js (скрипты проверок из знаний, `node -e`) и Git; на Windows — Git for Windows.
 - Осталось:
   - Подпись: Apple Developer ID и нотаризация (`identity`, `hardenedRuntime: true`, entitlements для Electron и `claude`); сертификат подписи кода для Windows. Сейчас macOS-сборка подписана ad-hoc: скачанный dmg Gatekeeper не откроет двойным щелчком — «Открыть» из контекстного меню или `xattr -cr`; SmartScreen на Windows предупреждает.

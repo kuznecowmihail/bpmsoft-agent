@@ -4,7 +4,7 @@ import * as os from "os";
 import * as path from "path";
 import type { AppTool, AppToolParam, AppToolResult } from "./appTool";
 import { checkToolAccess, isAutoApprovedToolCall, SandboxDecision, SandboxPolicy, ShellApprovalOptions } from "../safety/sandboxGuard";
-import { buildSeatbeltProfile } from "../safety/shellSandbox";
+import { buildSeatbeltProfile, findOnPath } from "../safety/shellSandbox";
 
 export interface LocalToolsOptions {
 	/** Working directory of commands and of relative paths: the project's Pkg folder. */
@@ -154,6 +154,41 @@ export function resolveRipgrep(platform: NodeJS.Platform = process.platform, arc
 	return "rg";
 }
 
+/** True for the WSL launcher C:\Windows\System32\bash.exe: it starts a Linux distribution, where Windows paths and tools do not exist. */
+function isWslLauncher(file: string): boolean {
+	return /[\\/]windows[\\/](system32|sysnative|syswow64)[\\/]bash\.exe$/i.test(file);
+}
+
+/**
+ * Git Bash for the shell tool on Windows. A bare "bash" is not enough: the default Git for Windows install puts only Git\cmd on the PATH,
+ * and where a "bash" is found it may be the WSL launcher. Order: CLAUDE_CODE_GIT_BASH_PATH (the Claude CLI's own setting), the standard
+ * Git for Windows folders, the Git folder next to git.exe on the PATH, then any other bash.exe on the PATH.
+ */
+export function resolveWindowsBash(env: NodeJS.ProcessEnv = process.env, exists: (file: string) => boolean = fs.existsSync): string {
+	const configured = env.CLAUDE_CODE_GIT_BASH_PATH;
+	if (configured && exists(configured) && !isWslLauncher(configured)) {
+		return configured;
+	}
+	const roots = [env.ProgramFiles, env.ProgramW6432, env["ProgramFiles(x86)"], env.LOCALAPPDATA && path.win32.join(env.LOCALAPPDATA, "Programs")].filter((root): root is string => Boolean(root));
+	const candidates = roots.flatMap((root) => [path.win32.join(root, "Git", "bin", "bash.exe"), path.win32.join(root, "Git", "usr", "bin", "bash.exe")]);
+	const git = findOnPath("git", env.PATH ?? env.Path ?? "", "win32", exists);
+	if (git) {
+		const gitRoot = path.win32.dirname(path.win32.dirname(git));
+		candidates.push(path.win32.join(gitRoot, "bin", "bash.exe"), path.win32.join(gitRoot, "usr", "bin", "bash.exe"));
+	}
+	const found = candidates.find((candidate) => exists(candidate));
+	if (found) {
+		return found;
+	}
+	for (const dir of (env.PATH ?? env.Path ?? "").split(";").filter((entry) => entry !== "")) {
+		const candidate = path.win32.join(dir, "bash.exe");
+		if (exists(candidate) && !isWslLauncher(candidate)) {
+			return candidate;
+		}
+	}
+	return "bash";
+}
+
 /** Runs ripgrep without a shell. Exit code 1 (no matches) is not an error; code 2 keeps partial results with the first error line. */
 function runRipgrep(args: string[], platform: NodeJS.Platform): Promise<RipgrepResult> {
 	return new Promise((resolve, reject) => {
@@ -228,7 +263,7 @@ export function runShellCommand(
 		// Off Windows the shell gets its own process group (detached), so a timeout can kill the whole tree.
 		let child: ChildProcess;
 		if (platform === "win32") {
-			child = spawn("bash", ["-c", command], { cwd, env: shellEnv(), windowsHide: true });
+			child = spawn(resolveWindowsBash(), ["-c", command], { cwd, env: shellEnv(), windowsHide: true });
 		} else if (platform === "darwin" && seatbeltProfile) {
 			child = spawn("/usr/bin/sandbox-exec", ["-p", seatbeltProfile, "/bin/bash", "-c", command], { cwd, env: shellEnv(), detached: true });
 		} else {

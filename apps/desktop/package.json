@@ -14,7 +14,8 @@
     "test": "vitest run",
     "dist": "npm run build && electron-builder --publish never",
     "dist:mac": "npm run build && node ../../scripts/fetch-platform-packages.mjs darwin arm64 darwin x64 && electron-builder --mac --arm64 --x64 --publish never",
-    "dist:win": "npm run build && node ../../scripts/fetch-platform-packages.mjs win32 x64 && electron-builder --win --x64 --publish never"
+    "dist:win": "npm run build && node ../../scripts/fetch-platform-packages.mjs win32 x64 && electron-builder --win --x64 --publish never",
+    "dist:linux": "npm run build && node ../../scripts/fetch-platform-packages.mjs linux x64 && electron-builder --linux --x64 --publish never"
   },
   "dependencies": {
     "@bpmsoft-agent/agent-runtime": "0.0.1",

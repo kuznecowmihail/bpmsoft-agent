@@ -11,6 +11,7 @@
     "test": "npm run test --workspaces --if-present",
     "dist": "npm run build -w @bpmsoft-agent/metadata-core -w @bpmsoft-agent/agent-runtime && npm run dist -w @bpmsoft-agent/desktop",
     "dist:mac": "npm run build -w @bpmsoft-agent/metadata-core -w @bpmsoft-agent/agent-runtime && npm run dist:mac -w @bpmsoft-agent/desktop",
-    "dist:win": "npm run build -w @bpmsoft-agent/metadata-core -w @bpmsoft-agent/agent-runtime && npm run dist:win -w @bpmsoft-agent/desktop"
+    "dist:win": "npm run build -w @bpmsoft-agent/metadata-core -w @bpmsoft-agent/agent-runtime && npm run dist:win -w @bpmsoft-agent/desktop",
+    "dist:linux": "npm run build -w @bpmsoft-agent/metadata-core -w @bpmsoft-agent/agent-runtime && npm run dist:linux -w @bpmsoft-agent/desktop"
   }
 }

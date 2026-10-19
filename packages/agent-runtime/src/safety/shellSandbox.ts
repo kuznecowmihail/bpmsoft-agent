@@ -1,3 +1,4 @@
+import { execFileSync } from "child_process";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
@@ -22,6 +23,78 @@ export interface ShellSandboxRoots {
 /** The Claude CLI runs Bash inside an OS sandbox on macOS (Seatbelt) and Linux (bubblewrap); Windows has none. */
 export function hasOsShellSandbox(platform: NodeJS.Platform = process.platform): boolean {
 	return platform === "darwin" || platform === "linux";
+}
+
+/** Programs the Linux sandbox of the Claude CLI needs: bubblewrap for the filesystem, socat for the network proxy. */
+export const LINUX_SANDBOX_TOOLS = ["bwrap", "socat"];
+
+function isRegularFile(file: string): boolean {
+	try {
+		return fs.statSync(file).isFile();
+	} catch {
+		return false;
+	}
+}
+
+/** First file called `name` in the PATH folders (with .exe/.cmd/.bat on Windows), or undefined. */
+export function findOnPath(name: string, pathEnv: string = process.env.PATH ?? "", platform: NodeJS.Platform = process.platform, isFile: (file: string) => boolean = isRegularFile): string | undefined {
+	const p = platform === "win32" ? path.win32 : path.posix;
+	const extensions = platform === "win32" ? [".exe", ".cmd", ".bat", ""] : [""];
+	for (const dir of pathEnv.split(p.delimiter).filter((entry) => entry !== "")) {
+		for (const extension of extensions) {
+			const candidate = p.join(dir, name + extension);
+			if (isFile(candidate)) {
+				return candidate;
+			}
+		}
+	}
+	return undefined;
+}
+
+/** Linux sandbox tools missing from the PATH; empty on other platforms. */
+export function missingSandboxTools(platform: NodeJS.Platform = process.platform, pathEnv: string = process.env.PATH ?? "", isFile: (file: string) => boolean = isRegularFile): string[] {
+	if (platform !== "linux") {
+		return [];
+	}
+	return LINUX_SANDBOX_TOOLS.filter((tool) => findOnPath(tool, pathEnv, platform, isFile) === undefined);
+}
+
+let bubblewrapWorks: boolean | undefined;
+
+/**
+ * Starts a trivial command in bubblewrap with the isolation the CLI sandbox uses. Fails where unprivileged user
+ * namespaces are blocked (Ubuntu 24.04 AppArmor policy, hardened kernels, some containers) although bwrap is installed.
+ */
+function probeBubblewrap(): boolean {
+	if (bubblewrapWorks === undefined) {
+		try {
+			execFileSync("bwrap", ["--ro-bind", "/", "/", "--dev", "/dev", "--unshare-user", "--unshare-pid", "--unshare-net", "true"], { stdio: "ignore", timeout: 5000 });
+			bubblewrapWorks = true;
+		} catch {
+			bubblewrapWorks = false;
+		}
+	}
+	return bubblewrapWorks;
+}
+
+/**
+ * True when Bash of the Claude CLI will really run in an OS sandbox here. Unlike hasOsShellSandbox it checks the Linux dependencies:
+ * the CLI refuses to start when the sandbox is requested but bubblewrap or socat is missing or cannot create namespaces,
+ * so without them the app must run without the sandbox (and ask the user about writing commands) instead.
+ */
+export function osShellSandboxAvailable(
+	platform: NodeJS.Platform = process.platform,
+	pathEnv: string = process.env.PATH ?? "",
+	probe: () => boolean = probeBubblewrap,
+	isFile: (file: string) => boolean = isRegularFile
+): boolean {
+	if (!hasOsShellSandbox(platform)) {
+		return false;
+	}
+	if (platform === "linux") {
+		return missingSandboxTools(platform, pathEnv, isFile).length === 0 && probe();
+	}
+	return true;
 }
 
 /**

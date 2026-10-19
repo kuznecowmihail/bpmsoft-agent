@@ -56,6 +56,14 @@ export function toNativePath(token: string, platform: NodeJS.Platform = process.
 	return token;
 }
 
+/** Top-level folders of the POSIX tree that Git Bash shows on Windows; "/etc" does not exist on the Windows drive, but the shell reads it. */
+const MSYS_ROOT_DIRS = new Set(["etc", "usr", "var", "tmp", "home", "bin", "sbin", "lib", "opt", "dev", "proc", "sys", "mnt", "root", "srv"]);
+
+/** True on Windows for a first path segment that Git Bash maps into its own POSIX tree, so a path under it is a filesystem path. */
+export function isMsysRoot(segment: string, platform: NodeJS.Platform = process.platform): boolean {
+	return platform === "win32" && MSYS_ROOT_DIRS.has(segment.toLowerCase());
+}
+
 /** True when `child` equals `root` or lies inside it; case-insensitive and backslash-aware on win32. */
 export function isPathInside(child: string, root: string, platform: NodeJS.Platform = process.platform): boolean {
 	const p = platform === "win32" ? path.win32 : path.posix;
@@ -458,7 +466,7 @@ export function checkBashCommand(command: string, cwd: string, policy: SandboxPo
 		const native = toNativePath(token);
 		if (native.startsWith("/")) {
 			const firstSegment = native.split("/")[1];
-			if (!firstSegment || !fs.existsSync("/" + firstSegment)) {
+			if (!firstSegment || !(fs.existsSync("/" + firstSegment) || isMsysRoot(firstSegment))) {
 				continue; // not a filesystem path (regex, URL path and the like)
 			}
 		}

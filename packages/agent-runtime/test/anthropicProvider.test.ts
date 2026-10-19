@@ -5,9 +5,11 @@ import { sdkToolResultsDirectory } from "../src/provider/anthropicProvider";
 
 describe("sdkToolResultsDirectory", () => {
 	it("computes the SDK tool results directory path correctly", () => {
-		const cwd = "/Users/a/crm/BPMSoft.Configuration/Pkg";
+		// the SDK names the folder after the working directory with every non-alphanumeric character turned into "-"
+		const cwd = process.platform === "win32" ? String.raw`C:\Users\a\crm\BPMSoft.Configuration\Pkg` : "/Users/a/crm/BPMSoft.Configuration/Pkg";
 		const result = sdkToolResultsDirectory(cwd);
-		const expected = path.join(os.homedir(), ".claude", "projects", "-Users-a-crm-BPMSoft-Configuration-Pkg");
+		const folder = process.platform === "win32" ? "C--Users-a-crm-BPMSoft-Configuration-Pkg" : "-Users-a-crm-BPMSoft-Configuration-Pkg";
+		const expected = path.join(os.homedir(), ".claude", "projects", folder);
 		expect(result).toBe(expected);
 	});
 

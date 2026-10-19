@@ -25,6 +25,19 @@ npm run build
 npm test
 ```
 
+Установщики собираются на своей ОС (бинарники SDK и права на запуск зависят от хоста): `npm run dist:mac` (dmg), `npm run dist:win` (NSIS), `npm run dist:linux` (AppImage и deb, x64). Результат — `apps/desktop/release/`.
+
+## Платформы
+
+| | macOS | Windows | Linux |
+|---|---|---|---|
+| Хранилище ключей | Keychain | DPAPI | libsecret / KWallet; без них ключи живут до закрытия приложения |
+| Команды агента (Bash) | песочница Seatbelt | Git Bash (Git for Windows), без песочницы | песочница bubblewrap, если установлены `bwrap` и `socat` и работают user namespaces; иначе без песочницы, подтверждение записывающих команд |
+| PATH из login-shell | да | не нужен | да |
+| Логи | `~/Library/Logs/bpmsoft-agent` | `%APPDATA%\BPMSoft Agent\logs` | `~/.config/BPMSoft Agent/logs` |
+
+Требования на машине пользователя: Node.js и Git; на Windows — Git for Windows; на Linux для песочницы — `bubblewrap` и `socat` (на Ubuntu 24.04 нужно разрешить user namespaces для bwrap в AppArmor).
+
 Эвалы запускаются на тестовом стенде — настройка в [`packages/evals/README.md`](packages/evals/README.md):
 
 ```bash

@@ -61,6 +61,8 @@ export function SettingsMenu({
   appRoot,
   onClose
 }: SettingsMenuProps): React.JSX.Element {
+  // Keychain on macOS, DPAPI on Windows, libsecret/KWallet on Linux; where the OS has none, secrets live only in memory.
+  const secretPlace = settings?.secretsPersistent === false ? 'до закрытия приложения' : 'в хранилище ОС'
   const [cursorKeyInput, setCursorKeyInput] = useState('')
   const [editingCursorKey, setEditingCursorKey] = useState(false)
   const [claudeKeyInput, setClaudeKeyInput] = useState('')
@@ -430,6 +432,9 @@ export function SettingsMenu({
           ))}
         </div>
         <div className="popover-note">Смена провайдера начинает новый чат.</div>
+        {settings?.secretsPersistent === false && (
+          <div className="popover-note">В системе нет хранилища паролей (gnome-keyring или KWallet): ключи и пароли хранятся только до закрытия приложения.</div>
+        )}
       </div>
       <div className="popover-divider" />
       {provider === 'claude' ? (
@@ -438,7 +443,7 @@ export function SettingsMenu({
           {settings?.hasClaudeKey && !editingClaudeKey ? (
             <>
               <div className="popover-row">
-                <span className="key-status">Ключ в Keychain</span>
+                <span className="key-status">Ключ {secretPlace}</span>
                 <div className="popover-inline">
                   <button type="button" className="btn btn-secondary btn-sm" disabled={isRunning} onClick={() => setEditingClaudeKey(true)}>
                     Сменить
@@ -524,7 +529,7 @@ export function SettingsMenu({
           {hasCursorKey && !editingCursorKey ? (
             <>
               <div className="popover-row">
-                <span className="key-status">Ключ в Keychain</span>
+                <span className="key-status">Ключ {secretPlace}</span>
                 <div className="popover-inline">
                   <button type="button" className="btn btn-secondary btn-sm" disabled={isRunning} onClick={() => setEditingCursorKey(true)}>
                     Сменить
@@ -671,7 +676,7 @@ export function SettingsMenu({
             <div className="popover-field">
               {settings?.hasDbPassword && !editingDbPassword ? (
                 <div className="popover-row">
-                  <span className="key-status">Пароль в Keychain</span>
+                  <span className="key-status">Пароль {secretPlace}</span>
                   <div className="popover-inline">
                     <button type="button" className="btn btn-secondary btn-sm" disabled={isRunning} onClick={() => setEditingDbPassword(true)}>
                       Сменить
@@ -796,7 +801,7 @@ export function SettingsMenu({
             <div className="popover-field">
               {settings?.hasCrmPassword && !editingCrmPassword ? (
                 <div className="popover-row">
-                  <span className="key-status">Пароль в Keychain</span>
+                  <span className="key-status">Пароль {secretPlace}</span>
                   <div className="popover-inline">
                     <button type="button" className="btn btn-secondary btn-sm" disabled={isRunning} onClick={() => setEditingCrmPassword(true)}>
                       Сменить

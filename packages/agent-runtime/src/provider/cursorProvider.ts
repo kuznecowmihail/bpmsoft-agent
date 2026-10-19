@@ -3,7 +3,7 @@ import type { AgentOptions, SDKAgent, SDKCustomTool, SDKMessage, ToolName } from
 import * as path from "path";
 import type { AgentEvent, TokenUsage } from "./messageMapper";
 import type { ToolPermissionRequest } from "./anthropicProvider";
-import { buildBpmsoftSystemPrompt } from "./systemPrompt";
+import { buildBpmsoftSystemPrompt, promptPath } from "./systemPrompt";
 import type { CrmDbTool } from "../db/crmDbTool";
 import type { CrmTool } from "../crm/crmTools";
 import type { AppTool } from "../tools/appTool";
@@ -82,7 +82,7 @@ export function buildCursorSafetyRules(readRoot: string, writeRoot: string, know
 		"- write_file — создать или перезаписать файл; edit_file — точная замена фрагмента (вместо инструмента правки); run_shell — команда bash в папке Pkg (date, node со скриптами из каталога знаний, perl -pi и т.п.).",
 		"- Правь файлы только write_file и edit_file; читай read_file и grep_files. Команды для правки текста (python, python3, ruby, php, sed -i, perl -i, node -e) не используй: они дольше, ломают кодировку и часть из них каждый раз требует подтверждения пользователя. run_shell — для date, uuidgen (идентификаторы — только uuidgen, не python), node --check, скриптов проверок из каталога знаний и чтения логов стенда.",
 		"- Порядок работы из инструкций обязателен, даже если задача кажется простой: 1) пакет — если пользователь не назвал пакет, а в Pkg их несколько, сначала спроси, в каком пакете работать, и не выбирай за него, даже если найдёшь подходящие схемы; 2) вопросы по требованиям с вариантами ответов; 3) план с AC/CC/DoD и остановка до подтверждения пользователя: сообщение с планом всегда заканчивай блоком <choices> с вопросом «Подтверждаете план?» и вариантами «Делай» и «Нужны правки» — без этого блока у пользователя нет кнопок и план выглядит незаконченным. Только после подтверждения — изменения файлов.",
-		`- Читать можно только папку приложения ${readRoot} и каталог знаний ${knowledgeDir}, изменять — только ${writeRoot}. Приложение проверяет каждый путь и отклоняет остальные; команды выполняются без сети.`,
+		`- Читать можно только папку приложения ${promptPath(readRoot)} и каталог знаний ${promptPath(knowledgeDir)}, изменять — только ${promptPath(writeRoot)}. Приложение проверяет каждый путь и отклоняет остальные; команды выполняются без сети.`,
 		"- Не читай файлы с секретами: ConnectionStrings.config, *.pfx, *.p12, *.pem, *.key — даже внутри папки приложения. Тип СУБД бери из DBEngineType существующих SQL-скриптов в Pkg; если их нет — спроси у пользователя.",
 		"- Удаление файлов и папок, перемещение с перезаписью и команды git, меняющие состояние (checkout, reset, restore, stash, add, commit и т.п.), — только после явного согласия пользователя в чате: перечисли, что удалишь или изменишь, и дождись ответа. Такие команды run_shell приложение ещё раз показывает пользователю на подтверждение.",
 		"- Удаление и массовое изменение данных (SQL-скрипт с DELETE или UPDATE) — только после вопроса пользователю блоком <choices>, даже если это очевидные дубли или мусор, найденный по ходу работы: сначала опиши находку и спроси, скрипт пиши после ответа.",

@@ -44,6 +44,7 @@ import {
 import { initAppSettings, getAppSettings, updateAppSettings, addRecentProject, removeRecentProject, getProjectConnection, updateProjectConnection } from './appSettings'
 import type { ProjectConnection, StoredSettings } from './appSettings'
 import { loadLoginShellPath } from './shellPath'
+import { canPersistSecrets } from './secureStore'
 import { isExternalWebUrl } from './urlPolicy'
 import { listCursorModels, listClaudeModels, claudeSkillsStatus, installClaudeSkills, defaultExportSources } from '@bpmsoft-agent/agent-runtime'
 import type { ClaudeMdChoice } from '@bpmsoft-agent/agent-runtime'
@@ -241,6 +242,7 @@ app.whenReady().then(() => {
     return {
       ...app,
       ...getProjectConnection(getActiveProject()),
+      secretsPersistent: canPersistSecrets(),
       hasClaudeKey: hasApiKey(),
       hasCursorKey: hasCursorApiKey(),
       hasDbPassword: hasDbPassword(),

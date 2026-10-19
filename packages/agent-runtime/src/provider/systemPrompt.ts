@@ -28,6 +28,11 @@ const CRM_BROWSER_SECTION = [
 	"- Браузер недоступен или вход не выполнен — не повторяй: попроси пользователя проверить страницу самому."
 ].join("\n");
 
+/** Path as shown to the model: forward slashes on Windows, because a backslash path inside a bash command loses its separators. */
+export function promptPath(p: string, platform: NodeJS.Platform = process.platform): string {
+	return platform === "win32" ? p.replace(/\\/g, "/") : p;
+}
+
 /**
  * System prompt for the BPMSoft agent session: the agent implements user
  * tasks by editing package files under Pkg directly (no Designer/OData/DB),
@@ -44,6 +49,7 @@ const CRM_BROWSER_SECTION = [
  * correct after packaging, so it's not hardcoded here).
  */
 export function buildBpmsoftSystemPrompt(knowledgeDir: string, options: { dbQuery?: boolean; crmActions?: boolean; crmBrowser?: boolean } = {}): string {
+	const knowledge = promptPath(knowledgeDir);
 	return `Ты — AI-агент-разработчик BPMSoft (низкокодовая CRM/BPM-платформа). Ты реализуешь задачи пользователя напрямую через файлы пакетов в BPMSoft.Configuration/Pkg — без Designer, OData, базы данных и API работающей системы. После твоих правок пользователь сам нажимает в CRM «Обновить из файловой системы», при необходимости компилирует и проверяет результат.
 
 РАБОЧАЯ ОБЛАСТЬ И ИСТОЧНИКИ (пути относительно корня приложения [app]; текущий каталог — [app]/BPMSoft.Configuration/Pkg):
@@ -98,7 +104,7 @@ export function buildBpmsoftSystemPrompt(knowledgeDir: string, options: { dbQuer
 - S4 — для lookup-колонки: UId целевой Entity-схемы.
 - BL1 — класс типа элемента процесса; CI1/CI2 — UId source/target элемента связи.
 
-ПОДРОБНЫЕ ЗНАНИЯ ПО ТЕМАМ лежат в ${knowledgeDir} и загружаются по требованию: прочитай нужный файл инструментом Read, когда работаешь именно с этой темой. Знания собраны на другом BPMSoft-проекте — сверяй их с файлами текущего. Имена пакетов, схем и колонок в примерах знаний обезличены (ProjectMain, ProjectCore, Project…, Sample…, Test…): в текущем проекте их нет — ищи аналог по типу (J6/BL7 элемента процесса, SchemaType, родитель схемы) или по UId из рецепта, а не по имени.
+ПОДРОБНЫЕ ЗНАНИЯ ПО ТЕМАМ лежат в ${knowledge} и загружаются по требованию: прочитай нужный файл инструментом Read, когда работаешь именно с этой темой. Знания собраны на другом BPMSoft-проекте — сверяй их с файлами текущего. Имена пакетов, схем и колонок в примерах знаний обезличены (ProjectMain, ProjectCore, Project…, Sample…, Test…): в текущем проекте их нет — ищи аналог по типу (J6/BL7 элемента процесса, SchemaType, родитель схемы) или по UId из рецепта, а не по имени.
 
 Файлы «фактов» (что означают поля metadata — когда нужно понять существующую схему):
 - entity.md — объекты: колонки D2 и их свойства E*, схема верхнего уровня, процесс событий объекта EG1/CK2 и заглушки базовых событий, флаги событий D20.FA<N>, индексы D6, ресурсы.
