@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { AgentProvider, AgentSettings } from '../../../shared/types'
 import { projectName } from '../chatFormat'
-import { IconFolder, IconGlobe, IconLogo, IconLogout, IconSettings, IconSidebar, IconTerminal } from './icons'
+import { IconFolder, IconGlobe, IconLogo, IconLogout, IconPlus, IconSettings, IconSidebar, IconTerminal } from './icons'
 import { SettingsMenu } from './SettingsMenu'
 
 interface HeaderProps {
@@ -27,6 +27,8 @@ interface HeaderProps {
   /** Chat sidebar (chat history) is shown. */
   sidebarOpen: boolean
   onToggleSidebar: () => void
+  /** Starts a new chat (shown in the header while the sidebar is hidden). */
+  onNewChat: () => void
 }
 
 type BadgeStatus = { state: 'checking' | 'ok' | 'error'; text: string }
@@ -112,7 +114,8 @@ export function Header({
   onMenuOpenChange,
   onChangeProject,
   sidebarOpen,
-  onToggleSidebar
+  onToggleSidebar,
+  onNewChat
 }: HeaderProps): React.JSX.Element {
   const [menuOpen, setMenuOpen] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -167,6 +170,18 @@ export function Header({
         >
           <IconSidebar size={16} />
         </button>
+        {!sidebarOpen && (
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm btn-icon sidebar-toggle"
+            onClick={onNewChat}
+            disabled={isRunning}
+            title="Новый чат"
+            aria-label="Новый чат"
+          >
+            <IconPlus size={16} />
+          </button>
+        )}
         <div className="logo">
           <IconLogo size={15} />
         </div>

@@ -419,6 +419,7 @@ function App(): React.JSX.Element {
         onChangeProject={handleChangeProject}
         sidebarOpen={sidebarOpen}
         onToggleSidebar={handleToggleSidebar}
+        onNewChat={handleNewChat}
       />
       <div className="workspace">
         {sidebarOpen && (
