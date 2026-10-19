@@ -122,4 +122,81 @@ describe("runPkgLintCli", () => {
 		expect(result.text).toContain("ОШИБКА");
 		expect(result.text).toContain("проверено схем: 1");
 	});
+
+	it("broken data.json in a data set gives code 1", () => {
+		write("Data/TestSet/descriptor.json", JSON.stringify({ Descriptor: { Name: "TestSet" } }, null, 2));
+		write("Data/TestSet/data.json", '{"a": 1,}');
+		const result = runPkgLintCli([path.join(pkg, "Data", "TestSet")], knowledgeDir);
+		expect(result.code).toBe(1);
+		expect(result.text).toContain("ОШИБКА");
+		expect(result.text).toContain("data.json");
+	});
+
+	it("empty filter.json in a data set is valid", () => {
+		write("Data/TestSet/descriptor.json", JSON.stringify({ Descriptor: { Name: "TestSet" } }, null, 2));
+		write("Data/TestSet/data.json", "[]");
+		write("Data/TestSet/filter.json", "");
+		const result = runPkgLintCli([path.join(pkg, "Data", "TestSet")], knowledgeDir);
+		expect(result.code).toBe(0);
+		expect(result.text).not.toContain("ОШИБКА");
+	});
+
+	it("package path includes Data sets", () => {
+		writeClient("TestA", validMetadata("TestA"));
+		write("Data/TestSet/descriptor.json", JSON.stringify({ Descriptor: { Name: "TestSet" } }, null, 2));
+		write("Data/TestSet/data.json", "[]");
+		const result = runPkgLintCli([pkg], knowledgeDir);
+		expect(result.code).toBe(0);
+		expect(result.text).toContain("проверено схем: 2");
+	});
+
+	it("--git picks changed data set", () => {
+		write("Data/TestSet/descriptor.json", JSON.stringify({ Descriptor: { Name: "TestSet" } }, null, 2));
+		write("Data/TestSet/data.json", "[]");
+		const git = (...args: string[]): string =>
+			execFileSync("git", ["-C", root, "-c", "user.email=test@example.com", "-c", "user.name=test", ...args], {
+				encoding: "utf8",
+			});
+		git("init");
+		git("add", "-A");
+		git("commit", "-m", "init");
+		write("Data/TestSet/data.json", '{"a": 1,}');
+		const result = runPkgLintCli(["--git", root], knowledgeDir);
+		expect(result.code).toBe(1);
+		expect(result.text).toContain("ОШИБКА");
+		expect(result.text).toContain("проверено схем: 1");
+	});
+
+	it("--git works when Pkg is a subfolder of the git repo", () => {
+		const repo = tmp;
+		const std = path.join(repo, "Stand", "Pkg");
+		const put = (rel: string, content: string): void => {
+			const file = path.join(std, rel);
+			fs.mkdirSync(path.dirname(file), { recursive: true });
+			fs.writeFileSync(file, content);
+		};
+		put(
+			"P1/Schemas/TestA/descriptor.json",
+			JSON.stringify({ Descriptor: { Name: "TestA", ManagerName: "ClientUnitSchemaManager" } }, null, 2),
+		);
+		put("P1/Schemas/TestA/metadata.json", validMetadata("TestA"));
+		const git = (...args: string[]): string =>
+			execFileSync("git", ["-C", repo, "-c", "user.email=test@example.com", "-c", "user.name=test", ...args], {
+				encoding: "utf8",
+			});
+		git("init");
+		git("add", "-A");
+		git("commit", "-m", "init");
+		put("P1/Schemas/TestA/metadata.json", '{"a": 1,}');
+		const result = runPkgLintCli(["--git", std], knowledgeDir);
+		expect(result.code).toBe(1);
+		expect(result.text).toContain("ОШИБКА");
+	});
+
+	it("empty package reports nothing to check", () => {
+		fs.mkdirSync(path.join(pkg, "Schemas"), { recursive: true });
+		const result = runPkgLintCli([pkg], knowledgeDir);
+		expect(result.code).toBe(0);
+		expect(result.text).toBe("pkg-lint.js: в указанных папках нет схем, наборов данных и SQL-скриптов.");
+	});
 });

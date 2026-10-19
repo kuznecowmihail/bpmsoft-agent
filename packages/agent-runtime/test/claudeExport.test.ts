@@ -198,6 +198,55 @@ describe("claudeExport", () => {
 		expect(read(".claude", "settings.local.json")).toBe('{"permissions":{}}');
 	});
 
+	it("no manifest: existing edited skill file needs confirmation", () => {
+		installClaudeSkills(appRoot, sources(), opts);
+		fs.rmSync(path.join(appRoot, ".claude", "skills", ".bpmsoft-agent.json"));
+		put(path.join(appRoot, ".claude", "skills", "bpm-develop", "SKILL.md"), "my edit\n");
+
+		const outcome = installClaudeSkills(appRoot, sources(), opts);
+		expect(outcome).toEqual({
+			kind: "needs-overwrite-confirm",
+			modified: [".claude/skills/bpm-develop/SKILL.md"],
+		});
+		expect(read(".claude", "skills", "bpm-develop", "SKILL.md")).toBe("my edit\n");
+	});
+
+	it("no manifest: identical existing files install without confirmation", () => {
+		installClaudeSkills(appRoot, sources(), opts);
+		fs.rmSync(path.join(appRoot, ".claude", "skills", ".bpmsoft-agent.json"));
+
+		const outcome = installClaudeSkills(appRoot, sources(), opts);
+		expect(outcome.kind).toBe("installed");
+	});
+
+	it("file already equal to new source is not reported as modified", () => {
+		installClaudeSkills(appRoot, sources(), opts);
+		put(path.join(exportDir, "skills", "bpm-develop", "SKILL.md"), "new text\n");
+		put(path.join(appRoot, ".claude", "skills", "bpm-develop", "SKILL.md"), "new text\n");
+
+		const outcome = installClaudeSkills(appRoot, sources(), opts);
+		expect(outcome.kind).toBe("installed");
+		expect(read(".claude", "skills", "bpm-develop", "SKILL.md")).toBe("new text\n");
+	});
+
+	it("manifest keys outside .claude are ignored and never deleted", () => {
+		installClaudeSkills(appRoot, sources(), opts);
+		const manifestPath = path.join(appRoot, ".claude", "skills", ".bpmsoft-agent.json");
+		const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+		manifest.files["../outside.txt"] = "deadbeef";
+		manifest.files[".claude/../../x"] = "deadbeef";
+		fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
+		const outside = path.join(tmp, "outside.txt");
+		const escaped = path.join(tmp, "x");
+		fs.writeFileSync(outside, "keep me\n");
+		fs.writeFileSync(escaped, "keep me too\n");
+
+		const outcome = installClaudeSkills(appRoot, sources(), opts);
+		expect(outcome.kind).toBe("installed");
+		expect(fs.readFileSync(outside, "utf8")).toBe("keep me\n");
+		expect(fs.readFileSync(escaped, "utf8")).toBe("keep me too\n");
+	});
+
 	it("hash changes when the core changes", () => {
 		const a = sources().hash;
 		put(path.join(exportDir, "CLAUDE.md"), `${MARKER}\n# Другое ядро\n`);

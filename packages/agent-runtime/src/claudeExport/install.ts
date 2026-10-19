@@ -52,7 +52,20 @@ function hasMarker(file: string): boolean {
 	return firstLine === MARKER;
 }
 
-/** Reads the manifest, or returns undefined when it is absent or corrupt. */
+/** Returns true when a manifest key may be touched: CLAUDE.md, or a plain path under .claude/ without ".." or "\\". */
+function isSafeManifestKey(rel: string): boolean {
+	if (rel === "CLAUDE.md") {
+		return true;
+	}
+	return (
+		rel.startsWith(".claude/") &&
+		!rel.includes("\\") &&
+		!path.posix.isAbsolute(rel) &&
+		!rel.split("/").includes("..")
+	);
+}
+
+/** Reads the manifest, or returns undefined when it is absent or corrupt. Unsafe file keys are dropped. */
 function readManifest(appRoot: string): Manifest | undefined {
 	try {
 		const data = JSON.parse(fs.readFileSync(toDisk(appRoot, MANIFEST_REL), "utf8").replace(/^\uFEFF/, ""));
@@ -63,21 +76,38 @@ function readManifest(appRoot: string): Manifest | undefined {
 			(data.claudeMd === "root" || data.claudeMd === "separate") &&
 			typeof data.files === "object" &&
 			data.files !== null;
-		return valid ? (data as Manifest) : undefined;
+		if (!valid) {
+			return undefined;
+		}
+		const files = Object.fromEntries(
+			Object.entries(data.files as Record<string, string>).filter(([rel]) => isSafeManifestKey(rel)),
+		);
+		return { ...(data as Manifest), files };
 	} catch {
 		return undefined;
 	}
 }
 
-/** Returns the manifest files that exist on disk with a different sha256, sorted. */
-function modifiedFiles(appRoot: string, old: Manifest): string[] {
-	return Object.keys(old.files)
+/**
+ * Returns the export files that exist on disk and differ from both the new source and (when a manifest exists)
+ * the manifest hash, sorted. Without a manifest, every export file that differs from its source counts.
+ */
+function modifiedFiles(appRoot: string, old: Manifest | undefined, newHashes: Map<string, string>): string[] {
+	const candidates = old ? Object.keys(old.files) : [...newHashes.keys()];
+	return candidates
 		.filter((rel) => {
 			const dest = toDisk(appRoot, rel);
 			if (rel === "CLAUDE.md" && !hasMarker(dest)) {
 				return false;
 			}
-			return fs.existsSync(dest) && fileSha256(dest) !== old.files[rel];
+			if (!fs.existsSync(dest)) {
+				return false;
+			}
+			const disk = fileSha256(dest);
+			if (disk === newHashes.get(rel)) {
+				return false;
+			}
+			return old ? disk !== old.files[rel] : true;
 		})
 		.sort();
 }
@@ -152,15 +182,16 @@ export function installClaudeSkills(
 		return { kind: "needs-claude-md-choice" };
 	}
 
-	const modified = old ? modifiedFiles(appRoot, old) : [];
-	if (modified.length > 0 && !options.overwriteModified) {
-		return { kind: "needs-overwrite-confirm", modified };
-	}
-
 	const coreRel = mode === "root" ? "CLAUDE.md" : SEPARATE_CORE_REL;
 	const all: ExportFile[] = [...sources.files, { rel: coreRel, source: sources.core }].sort((a, b) =>
 		a.rel < b.rel ? -1 : a.rel > b.rel ? 1 : 0,
 	);
+	const newHashes = new Map(all.map((file) => [file.rel, fileSha256(file.source)] as const));
+
+	const modified = modifiedFiles(appRoot, old, newHashes);
+	if (modified.length > 0 && !options.overwriteModified) {
+		return { kind: "needs-overwrite-confirm", modified };
+	}
 
 	const files: Record<string, string> = {};
 	for (const file of all) {

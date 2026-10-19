@@ -21,8 +21,8 @@ description: Use when the stand does not start, an update or compilation fails, 
 1. Возьми текст ошибки и стек из сообщения пользователя или со скриншота. Скриншот смотри, только если текст не дал ответа.
 2. По стеку найди клиентскую схему: имя в пути или в функции. Ищи сначала в `BPMSoft.Configuration/Pkg`, затем в `conf/content` и `Resources`.
 3. Собери полную иерархию схемы скриптом из знаний:
-   `APP=<корень стенда> node .claude/skills/bpm-knowledge/scripts/hierarchy.js <ИмяСхемы>`.
-   Корень стенда — папка, где открыт Claude Code (в ней `BPMSoft.Configuration` и `conf`). Порядок и вывод скрипта — в `.claude/skills/bpm-knowledge/client-schemas-edit.md`.
+   `APP=. node .claude/skills/bpm-knowledge/scripts/hierarchy.js <ИмяСхемы>`.
+   Запускай из корня стенда (папки, где открыт Claude Code; в ней `BPMSoft.Configuration` и `conf`): `APP=.` работает и в Git Bash на Windows. Порядок и вывод скрипта — в `.claude/skills/bpm-knowledge/client-schemas-edit.md`.
 4. Шум консоли и типичные ложные сообщения — в `.claude/skills/bpm-knowledge/browser-check.md`.
 
 ## Вход C. Ошибка в работе процесса или серверной логики

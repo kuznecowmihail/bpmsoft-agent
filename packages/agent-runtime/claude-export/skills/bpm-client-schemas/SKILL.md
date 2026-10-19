@@ -18,9 +18,9 @@ description: Use when the task touches a client schema such as a section, card, 
 
 До правки собери полную иерархию родителя скриптом:
 
-`APP=<корень стенда> node .claude/skills/bpm-knowledge/scripts/hierarchy.js <ИмяСхемы>`
+`APP=. node .claude/skills/bpm-knowledge/scripts/hierarchy.js <ИмяСхемы>`
 
-Корень стенда — папка, где открыт Claude Code (в ней `BPMSoft.Configuration` и `conf`). Для ещё не созданной схемы запускай скрипт на её будущем родителе. Скрипт только читает файлы; вывод сохранять во временный файл не нужно.
+Запускай из корня стенда (папки, где открыт Claude Code; в ней `BPMSoft.Configuration` и `conf`): `APP=.` работает и в Git Bash на Windows. Для ещё не созданной схемы запускай скрипт на её будущем родителе. Скрипт только читает файлы; вывод сохранять во временный файл не нужно.
 
 Затем найди все карточки объекта:
 - замещения с тем же именем;
