@@ -91,6 +91,22 @@ export function sdkToolResultsDirectory(cwd: string): string {
 	return path.join(os.homedir(), ".claude", "projects", path.resolve(cwd).replace(/[^a-zA-Z0-9]/g, "-"));
 }
 
+/** Tools whose background mode would outlive the turn: the query closes on the first result and kills them. */
+const FOREGROUND_TOOLS = new Set(["Agent", "Task", "Bash"]);
+
+/** Input with run_in_background: false for Agent/Task/Bash when it is not already false; undefined when nothing changes. */
+export function foregroundToolInput(toolName: string, input: Record<string, unknown>): Record<string, unknown> | undefined {
+	if (!FOREGROUND_TOOLS.has(toolName) || input.run_in_background === false) {
+		return undefined;
+	}
+	// Agent/Task default to background, so any value except false is forced to foreground.
+	// Bash is foreground by default: only an explicit true needs changing.
+	if (toolName === "Bash" && input.run_in_background !== true) {
+		return undefined;
+	}
+	return { ...input, run_in_background: false };
+}
+
 /**
  * Builds a single-turn streaming prompt: yields exactly one user message,
  * then stays open (awaiting `close()`) instead of returning immediately.
@@ -257,17 +273,19 @@ export async function* runBpmsoftAgentQuery(
 											}
 										};
 									}
+									const updatedInput = foregroundToolInput(input.tool_name, toolInput);
 									// Auto-approve tool calls that don't require permission prompts
 									if (options.requestToolPermission && isAutoApprovedToolCall(input.tool_name, toolInput, shellApproval)) {
 										return {
 											hookSpecificOutput: {
 												hookEventName: "PreToolUse",
 												permissionDecision: "allow",
-												permissionDecisionReason: "Разрешено политикой приложения: чтение проекта или запись в Pkg без удаления"
+												permissionDecisionReason: "Разрешено политикой приложения: чтение проекта или запись в Pkg без удаления",
+												...(updatedInput ? { updatedInput } : {})
 											}
 										};
 									}
-									return {};
+									return updatedInput ? { hookSpecificOutput: { hookEventName: "PreToolUse", updatedInput } } : {};
 								}
 							]
 						}
