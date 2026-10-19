@@ -199,6 +199,11 @@ export function newEntryId(): string {
 }
 
 /** Maps an agent event to a chat entry. Service events become `agent-other` (hidden unless debug is on). */
+/** Service Cursor SDK messages (raw.type "cursor_sdk"): shown only in the log panel, not in the chat. */
+export function isDiagnosticEvent(event: AgentEvent): boolean {
+  return event.type === 'other' && field(event.raw, 'type') === 'cursor_sdk'
+}
+
 export function mapAgentEventToEntry(event: AgentEvent): ChatEntry {
   const id = newEntryId()
   const ts = Date.now()

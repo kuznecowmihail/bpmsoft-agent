@@ -3,6 +3,7 @@ import type { ProjectValidationResult, AgentProvider, AgentSettings, RecentProje
 import {
   agentEventToLog,
   describeToolCall,
+  isDiagnosticEvent,
   isEntryVisible,
   mapAgentEventToEntry,
   newEntryId,
@@ -71,7 +72,9 @@ function App(): React.JSX.Element {
   const subscribeToAgent = (): void => {
     if (!unsubscribeRef.current) {
       unsubscribeRef.current = window.api.onAgentEvent((event) => {
-        setEntries((prev) => [...prev, mapAgentEventToEntry(event)])
+        if (!isDiagnosticEvent(event)) {
+          setEntries((prev) => [...prev, mapAgentEventToEntry(event)])
+        }
         setLogEvents((prev) => [...prev, agentEventToLog(event)])
       })
     }

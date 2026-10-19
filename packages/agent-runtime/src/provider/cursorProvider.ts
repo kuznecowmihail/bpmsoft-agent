@@ -453,6 +453,58 @@ export function addCursorUsage(total: TokenUsage | undefined, message: unknown):
 	};
 }
 
+const DIAGNOSTIC_TEXT_LIMIT = 500;
+
+function clipDiagnosticText(text: string): string {
+	return text.length > DIAGNOSTIC_TEXT_LIMIT ? text.slice(0, DIAGNOSTIC_TEXT_LIMIT) + "…" : text;
+}
+
+/** Service SDK messages written to the chat log only (raw.type "cursor_sdk"): usage, task, request, status, runtime user messages and system messages. */
+export function cursorDiagnostic(message: SDKMessage): AgentEvent | undefined {
+	const r = record(message);
+	const type = String(r.type);
+	if (!["usage", "task", "request", "status", "user", "system"].includes(type)) {
+		return undefined;
+	}
+	const details: Record<string, unknown> = {};
+	if (type === "usage") {
+		details.usage = r.usage;
+	} else if (type === "task") {
+		details.status = r.status;
+		details.text = clipDiagnosticText(typeof r.text === "string" ? r.text : "");
+	} else if (type === "request") {
+		details.request_id = r.request_id;
+	} else if (type === "status") {
+		details.status = r.status;
+		details.message = r.message;
+	} else if (type === "user") {
+		const content = Array.isArray(record(r.message).content) ? (record(r.message).content as unknown[]) : [];
+		const text = content
+			.filter((block) => record(block).type === "text")
+			.map((block) => (typeof record(block).text === "string" ? (record(block).text as string) : ""))
+			.join("");
+		details.text = clipDiagnosticText(text);
+	} else {
+		details.subtype = r.subtype;
+	}
+	return { type: "other", raw: { type: "cursor_sdk", sdkType: type, run_id: r.run_id, ...details } };
+}
+
+/** Detects a new turn started by the Cursor runtime inside one run after the turn ended (a "usage" message). */
+export function createCursorTurnGuard(): { restarted(message: SDKMessage): boolean } {
+	let turnEnded = false;
+	return {
+		restarted(message: SDKMessage): boolean {
+			const type: string = message.type;
+			if (type === "usage") {
+				turnEnded = true;
+				return false;
+			}
+			return turnEnded && ["assistant", "tool_call", "thinking", "user", "task"].includes(type);
+		}
+	};
+}
+
 /**
  * Converts one Cursor stream message to AgentEvents. Tool results are shaped like
  * Claude SDK user messages with `tool_result` blocks, so the UI and logs treat them
@@ -574,9 +626,24 @@ async function* runCursorAgentQueryUnsafe(options: RunCursorAgentQueryOptions): 
 				}
 				try {
 					const seenCalls = new Set<string>();
+					const guard = createCursorTurnGuard();
+					let restartedTurn = false;
 					let pendingText = "";
 					for await (const sdkMessage of run.stream()) {
+						if (guard.restarted(sdkMessage)) {
+							restartedTurn = true;
+							cancelRun();
+							break;
+						}
 						usage = addCursorUsage(usage, sdkMessage);
+						const diagnostic = cursorDiagnostic(sdkMessage);
+						if (diagnostic) {
+							if (pendingText) {
+								yield { type: "text", text: pendingText };
+								pendingText = "";
+							}
+							yield diagnostic;
+						}
 						for (const event of mapCursorMessage(sdkMessage, seenCalls)) {
 							produced = true;
 							if (event.type === "text") {
@@ -593,10 +660,18 @@ async function* runCursorAgentQueryUnsafe(options: RunCursorAgentQueryOptions): 
 					if (pendingText) {
 						yield { type: "text", text: pendingText };
 					}
-					const result = await run.wait();
-					finished = result.status === "finished";
-					errorText = finished ? "" : result.error?.message ?? "";
-					durationMs = result.durationMs;
+					if (restartedTurn) {
+						await run.wait().catch(() => undefined);
+						finished = true;
+						errorText = "";
+						durationMs = undefined;
+						yield { type: "text", text: "Cursor начал задачу заново в том же запуске — похоже, после сжатия контекста. Остановил запуск: результат — в ответе выше." };
+					} else {
+						const result = await run.wait();
+						finished = result.status === "finished";
+						errorText = finished ? "" : result.error?.message ?? "";
+						durationMs = result.durationMs;
+					}
 				} finally {
 					options.signal?.removeEventListener("abort", cancelRun);
 				}

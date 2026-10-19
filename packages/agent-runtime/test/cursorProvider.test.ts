@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isTransientCursorError, normalizeCursorToolCall, mapCursorMessage, buildCursorFirstMessage, buildCursorFollowUpMessage, buildCursorSafetyRules, cursorErrorMessage, cursorRecommendationRank, expandCursorModels, addCursorUsage } from "../src/provider/cursorProvider";
+import { isTransientCursorError, normalizeCursorToolCall, mapCursorMessage, buildCursorFirstMessage, buildCursorFollowUpMessage, buildCursorSafetyRules, cursorErrorMessage, cursorRecommendationRank, expandCursorModels, addCursorUsage, cursorDiagnostic, createCursorTurnGuard } from "../src/provider/cursorProvider";
 import type { SDKMessage } from "@cursor/sdk";
 
 describe("cursorProvider", () => {
@@ -745,6 +745,72 @@ describe("cursorProvider", () => {
 		it("maps a usage message to no events", () => {
 			const message = { type: "usage", agent_id: "a", run_id: "r", usage: { inputTokens: 1, outputTokens: 1, cacheReadTokens: 0, cacheWriteTokens: 0 } } as unknown as SDKMessage;
 			expect(mapCursorMessage(message, new Set())).toEqual([]);
+		});
+	});
+
+	describe("createCursorTurnGuard", () => {
+		const msg = (type: string) => ({ type, agent_id: "a", run_id: "r" }) as unknown as SDKMessage;
+
+		it("does not flag assistant messages before usage", () => {
+			const guard = createCursorTurnGuard();
+			expect(guard.restarted(msg("assistant"))).toBe(false);
+		});
+
+		it("does not flag the usage message itself", () => {
+			const guard = createCursorTurnGuard();
+			expect(guard.restarted(msg("usage"))).toBe(false);
+		});
+
+		it("flags assistant messages after usage", () => {
+			const guard = createCursorTurnGuard();
+			guard.restarted(msg("usage"));
+			expect(guard.restarted(msg("assistant"))).toBe(true);
+		});
+
+		it("flags tool_call messages after usage", () => {
+			const guard = createCursorTurnGuard();
+			guard.restarted(msg("usage"));
+			expect(guard.restarted(msg("tool_call"))).toBe(true);
+		});
+
+		it("does not flag status messages after usage", () => {
+			const guard = createCursorTurnGuard();
+			guard.restarted(msg("usage"));
+			expect(guard.restarted(msg("status"))).toBe(false);
+		});
+
+		it("does not carry state into a fresh guard", () => {
+			const first = createCursorTurnGuard();
+			first.restarted(msg("usage"));
+			const fresh = createCursorTurnGuard();
+			expect(fresh.restarted(msg("assistant"))).toBe(false);
+		});
+	});
+
+	describe("cursorDiagnostic", () => {
+		it("maps a usage message to a cursor_sdk diagnostic", () => {
+			const usage = { inputTokens: 1, outputTokens: 2, cacheReadTokens: 0, cacheWriteTokens: 0 };
+			const message = { type: "usage", agent_id: "a", run_id: "r", usage } as unknown as SDKMessage;
+			expect(cursorDiagnostic(message)).toEqual({ type: "other", raw: { type: "cursor_sdk", sdkType: "usage", run_id: "r", usage } });
+		});
+
+		it("clips long user text to 500 characters plus an ellipsis", () => {
+			const message = { type: "user", run_id: "r", message: { content: [{ type: "text", text: "x".repeat(1000) }] } } as unknown as SDKMessage;
+			const event = cursorDiagnostic(message);
+			expect(event?.type).toBe("other");
+			const text = (event as { raw: { text: string } }).raw.text;
+			expect(text).toHaveLength(501);
+			expect(text.endsWith("…")).toBe(true);
+		});
+
+		it("returns undefined for assistant messages", () => {
+			const message = { type: "assistant", message: { content: [{ type: "text", text: "hi" }] } } as unknown as SDKMessage;
+			expect(cursorDiagnostic(message)).toBeUndefined();
+		});
+
+		it("returns undefined for tool_call messages", () => {
+			const message = { type: "tool_call", call_id: "c", name: "read", status: "running" } as unknown as SDKMessage;
+			expect(cursorDiagnostic(message)).toBeUndefined();
 		});
 	});
 });
