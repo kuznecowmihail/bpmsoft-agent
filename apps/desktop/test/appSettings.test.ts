@@ -2,7 +2,13 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import * as fs from 'fs'
 import * as path from 'path'
 import * as os from 'os'
-import { initAppSettings, getAppSettings, updateAppSettings, addRecentProject, removeRecentProject, DEFAULT_SETTINGS } from '../src/main/appSettings'
+import { initAppSettings, getAppSettings, updateAppSettings, addRecentProject, removeRecentProject, getProjectConnection, updateProjectConnection, DEFAULT_SETTINGS, EMPTY_PROJECT_CONNECTION } from '../src/main/appSettings'
+
+/** Writes connection fields of project '/p' to the settings file and reloads it. */
+function writeProjectFields(filePath: string, fields: Record<string, unknown>): void {
+  fs.writeFileSync(filePath, JSON.stringify({ projectConnections: { '/p': fields } }))
+  initAppSettings(filePath)
+}
 
 describe('appSettings', () => {
   let tempDir: string
@@ -29,11 +35,11 @@ describe('appSettings', () => {
 
     // Verify file was written
     const written = JSON.parse(fs.readFileSync(filePath, 'utf-8'))
-    expect(written).toEqual({ provider: 'cursor', cursorModel: 'composer-2.6', cursorModelParams: [{ id: 'thinking', value: 'on' }], cursorModelName: 'Composer with Thinking', claudeModel: '', claudeEffort: '', claudeModelName: '', dbAccessEnabled: false, dbConfirmQueries: false, dbHost: '', dbPort: '', dbUser: '', crmActionsEnabled: false, crmConfirmActions: false, crmBrowserEnabled: false, crmUrl: '', crmUser: '', recentProjects: [] })
+    expect(written).toEqual({ provider: 'cursor', cursorModel: 'composer-2.6', cursorModelParams: [{ id: 'thinking', value: 'on' }], cursorModelName: 'Composer with Thinking', claudeModel: '', claudeEffort: '', claudeModelName: '', dbAccessEnabled: false, dbConfirmQueries: false, crmActionsEnabled: false, crmConfirmActions: false, crmBrowserEnabled: false, recentProjects: [], projectConnections: {} })
 
     // Verify reading the file again loads the same settings
     initAppSettings(filePath)
-    expect(getAppSettings()).toEqual({ provider: 'cursor', cursorModel: 'composer-2.6', cursorModelParams: [{ id: 'thinking', value: 'on' }], cursorModelName: 'Composer with Thinking', claudeModel: '', claudeEffort: '', claudeModelName: '', dbAccessEnabled: false, dbConfirmQueries: false, dbHost: '', dbPort: '', dbUser: '', crmActionsEnabled: false, crmConfirmActions: false, crmBrowserEnabled: false, crmUrl: '', crmUser: '', recentProjects: [] })
+    expect(getAppSettings()).toEqual({ provider: 'cursor', cursorModel: 'composer-2.6', cursorModelParams: [{ id: 'thinking', value: 'on' }], cursorModelName: 'Composer with Thinking', claudeModel: '', claudeEffort: '', claudeModelName: '', dbAccessEnabled: false, dbConfirmQueries: false, crmActionsEnabled: false, crmConfirmActions: false, crmBrowserEnabled: false, recentProjects: [], projectConnections: {} })
   })
 
   it('broken JSON loads defaults', () => {
@@ -127,13 +133,11 @@ describe('appSettings', () => {
     expect(settings.claudeEffort).toBe('')
   })
 
-  it('db settings default to disabled with empty connection overrides', () => {
+  it('db settings default to disabled and the project has no connection', () => {
     const settings = getAppSettings()
     expect(settings.dbAccessEnabled).toBe(false)
     expect(settings.dbConfirmQueries).toBe(false)
-    expect(settings.dbHost).toBe('')
-    expect(settings.dbPort).toBe('')
-    expect(settings.dbUser).toBe('')
+    expect(getProjectConnection('/p')).toEqual(EMPTY_PROJECT_CONNECTION)
   })
 
   it('db flags are true only for boolean true', () => {
@@ -151,39 +155,30 @@ describe('appSettings', () => {
 
   it('db host and user are trimmed, non-strings become empty', () => {
     const filePath = path.join(tempDir, 'settings.json')
-    fs.writeFileSync(filePath, JSON.stringify({ dbHost: '  db.local  ', dbUser: ' reader ' }))
-    initAppSettings(filePath)
-    expect(getAppSettings().dbHost).toBe('db.local')
-    expect(getAppSettings().dbUser).toBe('reader')
+    writeProjectFields(filePath, { dbHost: '  db.local  ', dbUser: ' reader ' })
+    expect(getProjectConnection('/p').dbHost).toBe('db.local')
+    expect(getProjectConnection('/p').dbUser).toBe('reader')
 
-    fs.writeFileSync(filePath, JSON.stringify({ dbHost: 42, dbUser: null }))
-    initAppSettings(filePath)
-    expect(getAppSettings().dbHost).toBe('')
-    expect(getAppSettings().dbUser).toBe('')
+    writeProjectFields(filePath, { dbHost: 42, dbUser: null })
+    expect(getProjectConnection('/p').dbHost).toBe('')
+    expect(getProjectConnection('/p').dbUser).toBe('')
   })
 
   it('db port keeps only 1 to 5 digits, invalid port becomes empty', () => {
     const filePath = path.join(tempDir, 'settings.json')
-    fs.writeFileSync(filePath, JSON.stringify({ dbPort: ' 5432 ' }))
-    initAppSettings(filePath)
-    expect(getAppSettings().dbPort).toBe('5432')
+    writeProjectFields(filePath, { dbPort: ' 5432 ' })
+    expect(getProjectConnection('/p').dbPort).toBe('5432')
 
     for (const invalid of ['abc', '12a', '123456', '', 5432]) {
-      fs.writeFileSync(filePath, JSON.stringify({ dbPort: invalid }))
-      initAppSettings(filePath)
-      expect(getAppSettings().dbPort).toBe('')
+      writeProjectFields(filePath, { dbPort: invalid })
+      expect(getProjectConnection('/p').dbPort).toBe('')
     }
   })
 
-  it('crm settings default to disabled with empty connection', () => {
-    const settings = getAppSettings()
-    expect(settings.crmActionsEnabled).toBe(false)
-    expect(settings.crmConfirmActions).toBe(false)
-    expect(settings.crmUrl).toBe('')
-    expect(settings.crmUser).toBe('')
-  })
+  it('crm flags default to disabled and are true only for boolean true', () => {
+    expect(getAppSettings().crmActionsEnabled).toBe(false)
+    expect(getAppSettings().crmConfirmActions).toBe(false)
 
-  it('crm flags are true only for boolean true', () => {
     const filePath = path.join(tempDir, 'settings.json')
     fs.writeFileSync(filePath, JSON.stringify({ crmActionsEnabled: 'true', crmConfirmActions: 1 }))
     initAppSettings(filePath)
@@ -198,21 +193,18 @@ describe('appSettings', () => {
 
   it('crm url is trimmed and loses trailing slashes', () => {
     const filePath = path.join(tempDir, 'settings.json')
-    fs.writeFileSync(filePath, JSON.stringify({ crmUrl: '  http://localhost:8007//  ' }))
-    initAppSettings(filePath)
-    expect(getAppSettings().crmUrl).toBe('http://localhost:8007')
+    writeProjectFields(filePath, { crmUrl: '  http://localhost:8007//  ' })
+    expect(getProjectConnection('/p').crmUrl).toBe('http://localhost:8007')
 
-    fs.writeFileSync(filePath, JSON.stringify({ crmUrl: 'HTTPS://crm.example.test/app' }))
-    initAppSettings(filePath)
-    expect(getAppSettings().crmUrl).toBe('HTTPS://crm.example.test/app')
+    writeProjectFields(filePath, { crmUrl: 'HTTPS://crm.example.test/app' })
+    expect(getProjectConnection('/p').crmUrl).toBe('HTTPS://crm.example.test/app')
   })
 
   it('crm url without http(s) scheme, with spaces or non-strings becomes empty', () => {
     const filePath = path.join(tempDir, 'settings.json')
     for (const invalid of ['localhost:8007', 'ftp://host', 'http://', 'http://ho st', 'http:/host', 42, null]) {
-      fs.writeFileSync(filePath, JSON.stringify({ crmUrl: invalid }))
-      initAppSettings(filePath)
-      expect(getAppSettings().crmUrl).toBe('')
+      writeProjectFields(filePath, { crmUrl: invalid })
+      expect(getProjectConnection('/p').crmUrl).toBe('')
     }
   })
 
@@ -231,13 +223,41 @@ describe('appSettings', () => {
 
   it('crm user is trimmed, non-strings become empty', () => {
     const filePath = path.join(tempDir, 'settings.json')
-    fs.writeFileSync(filePath, JSON.stringify({ crmUser: ' admin ' }))
-    initAppSettings(filePath)
-    expect(getAppSettings().crmUser).toBe('admin')
+    writeProjectFields(filePath, { crmUser: ' admin ' })
+    expect(getProjectConnection('/p').crmUser).toBe('admin')
 
-    fs.writeFileSync(filePath, JSON.stringify({ crmUser: 7 }))
+    writeProjectFields(filePath, { crmUser: 7 })
+    expect(getProjectConnection('/p').crmUser).toBe('')
+  })
+
+  it('connection settings of two projects are kept separately and survive a reload', () => {
+    const filePath = path.join(tempDir, 'settings.json')
     initAppSettings(filePath)
-    expect(getAppSettings().crmUser).toBe('')
+    updateProjectConnection('/a', { dbHost: 'db-a', crmUrl: 'http://a.test' })
+    updateProjectConnection('/b', { dbHost: 'db-b', crmUser: 'bob' })
+
+    expect(getProjectConnection('/a')).toEqual({ ...EMPTY_PROJECT_CONNECTION, dbHost: 'db-a', crmUrl: 'http://a.test' })
+    expect(getProjectConnection('/b')).toEqual({ ...EMPTY_PROJECT_CONNECTION, dbHost: 'db-b', crmUser: 'bob' })
+
+    initAppSettings(filePath)
+    expect(getProjectConnection('/a').dbHost).toBe('db-a')
+    expect(getProjectConnection('/b').crmUser).toBe('bob')
+  })
+
+  it('unknown or missing project key gives an empty connection', () => {
+    const filePath = path.join(tempDir, 'settings.json')
+    initAppSettings(filePath)
+    updateProjectConnection('/a', { dbHost: 'db-a' })
+    expect(getProjectConnection('/unknown')).toEqual(EMPTY_PROJECT_CONNECTION)
+    expect(getProjectConnection(undefined)).toEqual(EMPTY_PROJECT_CONNECTION)
+  })
+
+  it('legacy top-level connection fields are ignored', () => {
+    const filePath = path.join(tempDir, 'settings.json')
+    fs.writeFileSync(filePath, JSON.stringify({ dbHost: 'x', crmUser: 'admin' }))
+    initAppSettings(filePath)
+    expect(getProjectConnection('/p').dbHost).toBe('')
+    expect(getProjectConnection('/p').crmUser).toBe('')
   })
 
   it('addRecentProject moves an existing path to the top without duplicates', () => {

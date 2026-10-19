@@ -27,7 +27,10 @@ import {
   hasCrmPassword,
   clearCrmPassword,
   testCrm,
-  crmConnection
+  crmConnection,
+  setActiveProject,
+  getActiveProject,
+  dropLegacyConnectionSecrets
 } from './agentSession'
 import { initChatLog, getChatLogDir } from './chatLog'
 import {
@@ -38,7 +41,8 @@ import {
   setCrmBrowserBounds,
   setCrmBrowserVisible
 } from './crmBrowser'
-import { initAppSettings, getAppSettings, updateAppSettings, addRecentProject, removeRecentProject } from './appSettings'
+import { initAppSettings, getAppSettings, updateAppSettings, addRecentProject, removeRecentProject, getProjectConnection, updateProjectConnection } from './appSettings'
+import type { ProjectConnection, StoredSettings } from './appSettings'
 import { loadLoginShellPath } from './shellPath'
 import { isExternalWebUrl } from './urlPolicy'
 import { listCursorModels, listClaudeModels, claudeSkillsStatus, installClaudeSkills, defaultExportSources } from '@bpmsoft-agent/agent-runtime'
@@ -61,6 +65,15 @@ function assertAppRoot(appRoot: unknown): string {
     throw new Error('Не указана папка проекта')
   }
   return appRoot
+}
+
+/** The opened project's key for connection settings; the connection settings are per opened project. */
+function requireOpenedProject(): string {
+  const project = getActiveProject()
+  if (!project) {
+    throw new Error('Сначала откройте проект')
+  }
+  return project
 }
 
 function resolveChatLogDir(): string {
@@ -141,6 +154,7 @@ app.whenReady().then(() => {
   // Milestone 9, slice 4: hydrate a previously saved Anthropic API key (if
   // any) from the OS keychain before the renderer asks about it.
   loadStoredApiKey()
+  dropLegacyConnectionSecrets()
 
   // Chat logs: one JSONL trace + Markdown transcript per chat, plus knowledge-notes.md inbox.
   initChatLog(resolveChatLogDir())
@@ -165,7 +179,10 @@ app.whenReady().then(() => {
 
   ipcMain.handle('project:validate', async (_event, projectPath: string) => {
     const result = await validateBpmsoftProject(projectPath)
-    if (result.isValid) addRecentProject(projectPath)
+    if (result.isValid) {
+      addRecentProject(projectPath)
+      setActiveProject(result.appRoot ?? result.pkgRoot)
+    }
     return result
   })
 
@@ -219,13 +236,17 @@ app.whenReady().then(() => {
     resolvePermissionRequest(payload.id, payload.approved)
   })
 
-  ipcMain.handle('settings:get', () => ({
-    ...getAppSettings(),
-    hasClaudeKey: hasApiKey(),
-    hasCursorKey: hasCursorApiKey(),
-    hasDbPassword: hasDbPassword(),
-    hasCrmPassword: hasCrmPassword()
-  }))
+  ipcMain.handle('settings:get', () => {
+    const { projectConnections: _projectConnections, ...app } = getAppSettings()
+    return {
+      ...app,
+      ...getProjectConnection(getActiveProject()),
+      hasClaudeKey: hasApiKey(),
+      hasCursorKey: hasCursorApiKey(),
+      hasDbPassword: hasDbPassword(),
+      hasCrmPassword: hasCrmPassword()
+    }
+  })
 
   ipcMain.handle('settings:setProvider', (_event, provider: AgentProvider) => {
     if (provider !== 'claude' && provider !== 'cursor') {
@@ -244,13 +265,16 @@ app.whenReady().then(() => {
   })
 
   ipcMain.handle('settings:setDb', (_event, patch: DbSettingsPatch) => {
-    const next: DbSettingsPatch = {}
-    if (typeof patch?.dbAccessEnabled === 'boolean') next.dbAccessEnabled = patch.dbAccessEnabled
-    if (typeof patch?.dbConfirmQueries === 'boolean') next.dbConfirmQueries = patch.dbConfirmQueries
-    if (typeof patch?.dbHost === 'string') next.dbHost = patch.dbHost
-    if (typeof patch?.dbPort === 'string') next.dbPort = patch.dbPort
-    if (typeof patch?.dbUser === 'string') next.dbUser = patch.dbUser
-    updateAppSettings(next)
+    const toggles: Partial<Pick<StoredSettings, 'dbAccessEnabled' | 'dbConfirmQueries'>> = {}
+    if (typeof patch?.dbAccessEnabled === 'boolean') toggles.dbAccessEnabled = patch.dbAccessEnabled
+    if (typeof patch?.dbConfirmQueries === 'boolean') toggles.dbConfirmQueries = patch.dbConfirmQueries
+    updateAppSettings(toggles)
+
+    const connection: Partial<ProjectConnection> = {}
+    if (typeof patch?.dbHost === 'string') connection.dbHost = patch.dbHost
+    if (typeof patch?.dbPort === 'string') connection.dbPort = patch.dbPort
+    if (typeof patch?.dbUser === 'string') connection.dbUser = patch.dbUser
+    if (Object.keys(connection).length > 0) updateProjectConnection(requireOpenedProject(), connection)
   })
 
   ipcMain.handle('db:setPassword', (_event, password: string) => {
@@ -264,13 +288,16 @@ app.whenReady().then(() => {
   ipcMain.handle('db:test', (_event, readRoot: string) => testDbConnection(readRoot))
 
   ipcMain.handle('settings:setCrm', (_event, patch: CrmSettingsPatch) => {
-    const next: CrmSettingsPatch = {}
-    if (typeof patch?.crmActionsEnabled === 'boolean') next.crmActionsEnabled = patch.crmActionsEnabled
-    if (typeof patch?.crmConfirmActions === 'boolean') next.crmConfirmActions = patch.crmConfirmActions
-    if (typeof patch?.crmBrowserEnabled === 'boolean') next.crmBrowserEnabled = patch.crmBrowserEnabled
-    if (typeof patch?.crmUrl === 'string') next.crmUrl = patch.crmUrl
-    if (typeof patch?.crmUser === 'string') next.crmUser = patch.crmUser
-    updateAppSettings(next)
+    const toggles: Partial<Pick<StoredSettings, 'crmActionsEnabled' | 'crmConfirmActions' | 'crmBrowserEnabled'>> = {}
+    if (typeof patch?.crmActionsEnabled === 'boolean') toggles.crmActionsEnabled = patch.crmActionsEnabled
+    if (typeof patch?.crmConfirmActions === 'boolean') toggles.crmConfirmActions = patch.crmConfirmActions
+    if (typeof patch?.crmBrowserEnabled === 'boolean') toggles.crmBrowserEnabled = patch.crmBrowserEnabled
+    updateAppSettings(toggles)
+
+    const connection: Partial<ProjectConnection> = {}
+    if (typeof patch?.crmUrl === 'string') connection.crmUrl = patch.crmUrl
+    if (typeof patch?.crmUser === 'string') connection.crmUser = patch.crmUser
+    if (Object.keys(connection).length > 0) updateProjectConnection(requireOpenedProject(), connection)
   })
 
   ipcMain.handle('crm:setPassword', (_event, password: string) => {

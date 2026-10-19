@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+import * as path from 'path'
 
 const store = new Map<string, string>()
 
@@ -24,7 +25,12 @@ import {
   stopAgent,
   getCurrentSessionId,
   resetAgentSession,
-  rememberSessionId
+  rememberSessionId,
+  setActiveProject,
+  setCrmPassword,
+  hasCrmPassword,
+  clearCrmPassword,
+  dropLegacyConnectionSecrets
 } from '../src/main/agentSession'
 
 describe('normalizeApiKey', () => {
@@ -170,6 +176,42 @@ describe('agentSession tool-permission requests', () => {
     rejectAllPendingPermissions()
     resolvePermissionRequest(id, true)
     await expect(wait).resolves.toBe(false)
+  })
+})
+
+describe('agentSession per-project CRM password', () => {
+  beforeEach(() => {
+    store.clear()
+    setActiveProject(undefined)
+  })
+
+  it('keeps the CRM password of each opened project apart', () => {
+    setActiveProject(path.resolve('a'))
+    setCrmPassword('secret-a')
+    expect(hasCrmPassword()).toBe(true)
+
+    setActiveProject(path.resolve('b'))
+    expect(hasCrmPassword()).toBe(false)
+    setCrmPassword('secret-b')
+
+    setActiveProject(path.resolve('a'))
+    expect(hasCrmPassword()).toBe(true)
+    expect(store.get(`crmPassword:${path.resolve('a')}`)).toBe('secret-a')
+
+    clearCrmPassword()
+    expect(hasCrmPassword()).toBe(false)
+    expect(store.has(`crmPassword:${path.resolve('a')}`)).toBe(false)
+  })
+
+  it('without an opened project there is no password and it cannot be set', () => {
+    expect(hasCrmPassword()).toBe(false)
+    expect(() => setCrmPassword('secret')).toThrow('Сначала откройте проект')
+  })
+
+  it('dropLegacyConnectionSecrets removes the unattributed password saved before', () => {
+    store.set('crmPassword', 'old-secret')
+    dropLegacyConnectionSecrets()
+    expect(store.has('crmPassword')).toBe(false)
   })
 })
 

@@ -1,10 +1,10 @@
 import type { BrowserWindow } from 'electron'
 import { runBpmsoftAgentQuery, runCursorAgentQuery, createCrmDbTool, testCrmDbConnection, createCrmTools, testCrmConnection, createPkgLintTool, lintChanged, changedSchemaNames, hasChangedFiles } from '@bpmsoft-agent/agent-runtime'
 import type { AgentEvent, ToolPermissionRequest, CrmDbToolOptions, CrmConnection } from '@bpmsoft-agent/agent-runtime'
-import { join } from 'path'
+import { join, resolve } from 'path'
 import { saveSecret, loadSecret, clearSecret } from './secureStore'
 import { startChatLogIfNeeded, endChatLog, logChatRecord } from './chatLog'
-import { getAppSettings } from './appSettings'
+import { getAppSettings, getProjectConnection } from './appSettings'
 import { createCrmBrowserTools, markCrmBrowserStale } from './crmBrowser'
 import type { AgentProvider } from '../shared/types'
 
@@ -98,38 +98,75 @@ export function clearCursorApiKey(): void {
   clearSecret(CURSOR_API_KEY_SECRET)
 }
 
-const DB_PASSWORD_SECRET = 'dbPassword'
+/** The opened project (application root, or the Pkg folder without one, resolved): its connection settings and passwords apply. */
+let activeProject: string | undefined
 
-/** Password of a separate read-only DB user (optional), kept in the OS keychain. */
+export function setActiveProject(appRoot: string | undefined): void {
+  activeProject = appRoot ? resolve(appRoot) : undefined
+}
+
+export function getActiveProject(): string | undefined {
+  return activeProject
+}
+
+function requireActiveProject(): string {
+  if (!activeProject) {
+    throw new Error('Сначала откройте проект')
+  }
+  return activeProject
+}
+
+function dbPasswordSecret(projectKey: string): string {
+  return `dbPassword:${projectKey}`
+}
+
+function crmPasswordSecret(projectKey: string): string {
+  return `crmPassword:${projectKey}`
+}
+
+/** Passwords saved before they became per-project: they cannot be attributed to a project, so they are removed. */
+const LEGACY_SECRETS = ['dbPassword', 'crmPassword']
+
+export function dropLegacyConnectionSecrets(): void {
+  for (const name of LEGACY_SECRETS) {
+    try {
+      clearSecret(name)
+    } catch {
+      // the entry may be missing or the keychain unavailable; nothing to clean up
+    }
+  }
+}
+
+/** Password of a separate read-only DB user (optional) of the opened project, kept in the OS keychain. */
 export function setDbPassword(password: string): void {
   if (!password) {
     throw new Error('Пароль пустой')
   }
-  saveSecret(DB_PASSWORD_SECRET, password)
+  saveSecret(dbPasswordSecret(requireActiveProject()), password)
 }
 
 export function hasDbPassword(): boolean {
-  return Boolean(loadSecret(DB_PASSWORD_SECRET))
+  return activeProject ? Boolean(loadSecret(dbPasswordSecret(activeProject))) : false
 }
 
 export function clearDbPassword(): void {
-  clearSecret(DB_PASSWORD_SECRET)
+  clearSecret(dbPasswordSecret(requireActiveProject()))
 }
 
 /**
  * Connection options of the read-only CRM database tool: ConnectionStrings.config of the opened
- * application folder, overridden by host/port/user from settings and the password from the keychain.
- * The agent never sees these values — the tool reads them itself.
+ * application folder, overridden by this project's host/port/user from settings and this project's
+ * password from the keychain. The agent never sees these values — the tool reads them itself.
  */
 export function dbConnectionOptions(readRoot: string): CrmDbToolOptions {
-  const { dbHost, dbPort, dbUser } = getAppSettings()
+  const { dbHost, dbPort, dbUser } = getProjectConnection(activeProject)
   return {
     connectionStringsPath: join(readRoot, 'ConnectionStrings.config'),
     override: {
       host: dbHost || undefined,
       port: dbPort ? Number(dbPort) : undefined,
       user: dbUser || undefined,
-      password: loadSecret(DB_PASSWORD_SECRET)
+      password: activeProject ? loadSecret(dbPasswordSecret(activeProject)) : undefined
     }
   }
 }
@@ -141,28 +178,29 @@ export async function testDbConnection(readRoot: string): Promise<string> {
   return testCrmDbConnection(dbConnectionOptions(readRoot))
 }
 
-const CRM_PASSWORD_SECRET = 'crmPassword'
-
-/** Password of the CRM user the agent acts as (stand actions), kept in the OS keychain. */
+/** Password of the CRM user the agent acts as in the opened project (stand actions), kept in the OS keychain. */
 export function setCrmPassword(password: string): void {
   if (!password) {
     throw new Error('Пароль пустой')
   }
-  saveSecret(CRM_PASSWORD_SECRET, password)
+  saveSecret(crmPasswordSecret(requireActiveProject()), password)
 }
 
 export function hasCrmPassword(): boolean {
-  return Boolean(loadSecret(CRM_PASSWORD_SECRET))
+  return activeProject ? Boolean(loadSecret(crmPasswordSecret(activeProject))) : false
 }
 
 export function clearCrmPassword(): void {
-  clearSecret(CRM_PASSWORD_SECRET)
+  clearSecret(crmPasswordSecret(requireActiveProject()))
 }
 
-/** CRM connection from settings (address, user) and the keychain password; undefined until all three are set. */
+/** CRM connection of the opened project (address, user) and its keychain password; undefined until all three are set. */
 export function crmConnection(): CrmConnection | undefined {
-  const { crmUrl, crmUser } = getAppSettings()
-  const password = loadSecret(CRM_PASSWORD_SECRET)
+  if (!activeProject) {
+    return undefined
+  }
+  const { crmUrl, crmUser } = getProjectConnection(activeProject)
+  const password = loadSecret(crmPasswordSecret(activeProject))
   if (!crmUrl || !crmUser || !password) {
     return undefined
   }
