@@ -101,7 +101,7 @@ export function initChatIndex(dir: string): void {
   }
   let loaded: Record<string, ChatIndexEntry> | undefined
   try {
-    const parsed = JSON.parse(readFileSync(indexPath, 'utf8').replace(/^﻿/, ''))
+    const parsed = JSON.parse(readFileSync(indexPath, 'utf8').replace(/^\uFEFF/, ''))
     if (parsed !== null && typeof parsed === 'object' && parsed.chats !== null && typeof parsed.chats === 'object' && !Array.isArray(parsed.chats)) {
       loaded = parsed.chats as Record<string, ChatIndexEntry>
     }
