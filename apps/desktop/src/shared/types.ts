@@ -142,3 +142,11 @@ export interface ChatSummary {
 	updatedAt: string
 	contextLost: boolean
 }
+
+/** Чат, открытый из истории: лента для показа и причина, почему его нельзя продолжить. */
+export interface OpenedChat {
+	id: string
+	items: ChatReplayItem[]
+	readOnlyReason: string | null
+	note: string | null
+}

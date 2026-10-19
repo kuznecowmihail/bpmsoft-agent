@@ -30,10 +30,12 @@ import {
   crmConnection,
   setActiveProject,
   getActiveProject,
-  dropLegacyConnectionSecrets
+  dropLegacyConnectionSecrets,
+  isAgentRunning
 } from './agentSession'
 import { initChatLog, getChatLogDir } from './chatLog'
-import { initChatIndex } from './chatIndex'
+import { initChatIndex, listChats } from './chatIndex'
+import { openChatFromHistory } from './chatOpen'
 import {
   attachCrmBrowserHost,
   closeCrmBrowser,
@@ -362,6 +364,29 @@ app.whenReady().then(() => {
     }
     return listClaudeModels(apiKey)
   })
+
+  ipcMain.handle('chat:list', (_event, pkgRoot: string) => listChats(pkgRoot))
+
+  ipcMain.handle('chat:open', (_event, id: string, pkgRoot: string) =>
+    openChatFromHistory(id, pkgRoot, {
+      isRunning: isAgentRunning,
+      hasKey: (provider: AgentProvider) => (provider === 'cursor' ? hasCursorApiKey() : hasApiKey()),
+      listModelIds: async (provider: AgentProvider) => {
+        if (provider === 'cursor') {
+          const apiKey = getCursorApiKey()
+          if (!apiKey) {
+            throw new Error('Ключ Cursor не задан')
+          }
+          return (await listCursorModels(apiKey)).map((m) => m.id)
+        }
+        const apiKey = getClaudeApiKey()
+        if (!apiKey) {
+          throw new Error('API-ключ Anthropic не задан')
+        }
+        return (await listClaudeModels(apiKey)).map((m) => m.id)
+      }
+    })
+  )
 
   ipcMain.handle('claudeSkills:status', (_event, appRoot: string) => claudeSkillsStatus(assertAppRoot(appRoot), defaultExportSources()))
 

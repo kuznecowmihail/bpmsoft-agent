@@ -244,6 +244,11 @@ export function getCurrentSessionId(): string | undefined {
   return currentSessionId
 }
 
+/** True while a turn of the agent is running. */
+export function isAgentRunning(): boolean {
+  return currentRun !== undefined
+}
+
 export function resetAgentSession(): void {
   stopAgent()
   currentSessionId = undefined
