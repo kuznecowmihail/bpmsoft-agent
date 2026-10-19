@@ -58,6 +58,7 @@ function App(): React.JSX.Element {
 
   const [browserOpen, setBrowserOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(() => localStorage.getItem('chatSidebarOpen') !== '0')
 
   const feedRef = useRef<HTMLDivElement | null>(null)
   const stickToBottomRef = useRef(true)
@@ -314,6 +315,12 @@ function App(): React.JSX.Element {
 
   const handleCloseLogs = useCallback(() => setLogsOpen(false), [])
 
+  const handleToggleSidebar = (): void => {
+    const next = !sidebarOpen
+    setSidebarOpen(next)
+    localStorage.setItem('chatSidebarOpen', next ? '1' : '0')
+  }
+
   // the agent uses the CRM browser: open its panel
   useEffect(() => window.api.onCrmBrowserActivity(() => setBrowserOpen(true)), [])
 
@@ -410,17 +417,21 @@ function App(): React.JSX.Element {
         onToggleBrowser={() => setBrowserOpen((value) => !value)}
         onMenuOpenChange={setMenuOpen}
         onChangeProject={handleChangeProject}
+        sidebarOpen={sidebarOpen}
+        onToggleSidebar={handleToggleSidebar}
       />
       <div className="workspace">
-        <ChatSidebar
-          chats={chats}
-          activeChatId={activeChatId}
-          disabled={isRunning || isOpeningChat}
-          onSelect={(id) => {
-            void handleSelectChat(id)
-          }}
-          onNewChat={handleNewChat}
-        />
+        {sidebarOpen && (
+          <ChatSidebar
+            chats={chats}
+            activeChatId={activeChatId}
+            disabled={isRunning || isOpeningChat}
+            onSelect={(id) => {
+              void handleSelectChat(id)
+            }}
+            onNewChat={handleNewChat}
+          />
+        )}
         <main className="main">
           <div ref={feedRef} onScroll={handleFeedScroll} className={`feed${isEmpty ? ' is-empty' : ''}`}>
             {isEmpty ? (

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { AgentProvider, AgentSettings } from '../../../shared/types'
 import { projectName } from '../chatFormat'
-import { IconFolder, IconGlobe, IconLogo, IconLogout, IconSettings, IconTerminal } from './icons'
+import { IconFolder, IconGlobe, IconLogo, IconLogout, IconSettings, IconSidebar, IconTerminal } from './icons'
 import { SettingsMenu } from './SettingsMenu'
 
 interface HeaderProps {
@@ -24,6 +24,9 @@ interface HeaderProps {
   onMenuOpenChange?: (open: boolean) => void
   /** Returns to the project picker. */
   onChangeProject: () => void
+  /** Chat sidebar (chat history) is shown. */
+  sidebarOpen: boolean
+  onToggleSidebar: () => void
 }
 
 type BadgeStatus = { state: 'checking' | 'ok' | 'error'; text: string }
@@ -107,7 +110,9 @@ export function Header({
   browserOpen,
   onToggleBrowser,
   onMenuOpenChange,
-  onChangeProject
+  onChangeProject,
+  sidebarOpen,
+  onToggleSidebar
 }: HeaderProps): React.JSX.Element {
   const [menuOpen, setMenuOpen] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -152,6 +157,16 @@ export function Header({
   return (
     <header className="header">
       <div className="header-brand">
+        <button
+          type="button"
+          className={`btn btn-ghost btn-sm btn-icon sidebar-toggle${sidebarOpen ? ' is-active' : ''}`}
+          onClick={onToggleSidebar}
+          title={sidebarOpen ? 'Скрыть список чатов' : 'Показать список чатов'}
+          aria-label={sidebarOpen ? 'Скрыть список чатов' : 'Показать список чатов'}
+          aria-pressed={sidebarOpen}
+        >
+          <IconSidebar size={16} />
+        </button>
         <div className="logo">
           <IconLogo size={15} />
         </div>

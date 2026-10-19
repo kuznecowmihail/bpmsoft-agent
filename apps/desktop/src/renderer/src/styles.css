@@ -157,6 +157,8 @@ button, input, textarea { font: inherit; color: inherit; }
 .project-row { display: flex; align-items: center; gap: 2px; }
 .project-switch { width: 22px; height: 22px; padding: 0; color: var(--text-tertiary); -webkit-app-region: no-drag; }
 .header-actions { -webkit-app-region: no-drag; display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.sidebar-toggle { -webkit-app-region: no-drag; flex-shrink: 0; color: var(--text-secondary); }
+.sidebar-toggle.is-active { color: var(--text); }
 
 /* Settings popover */
 .popover-anchor { position: relative; }
