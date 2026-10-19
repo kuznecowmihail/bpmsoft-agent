@@ -567,6 +567,8 @@ export async function sendAgentMessage(
       }
     }
     if (contextLost) {
+      // The turn is over: clear it first so the reset does not log a stop request.
+      currentRun = undefined
       resetAgentSession()
       throw new Error(CONTEXT_LOST_MESSAGE)
     }
