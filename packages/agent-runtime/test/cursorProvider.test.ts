@@ -16,6 +16,14 @@ describe("cursorProvider", () => {
 			expect(isTransientCursorError("getaddrinfo ENOTFOUND api.cursor.sh")).toBe(true);
 		});
 
+		it("returns true for Connection stalled repeatedly", () => {
+			expect(isTransientCursorError("Connection stalled repeatedly")).toBe(true);
+		});
+
+		it("returns true for Connection failed repeatedly", () => {
+			expect(isTransientCursorError("Connection failed repeatedly")).toBe(true);
+		});
+
 		it("returns false for Model not found", () => {
 			expect(isTransientCursorError("Model not found")).toBe(false);
 		});

@@ -408,7 +408,7 @@ export function expandCursorModels(models: CursorModelListItem[]): CursorModelOp
 
 /** Network failures of the Cursor API that are worth another try when nothing reached the model yet. */
 export function isTransientCursorError(message: string): boolean {
-	return /fetch failed|failed to connect|network request failed|ECONNRESET|ETIMEDOUT|ENOTFOUND|EAI_AGAIN/i.test(message);
+	return /fetch failed|failed to connect|network request failed|connection stalled|connection failed|ECONNRESET|ETIMEDOUT|ENOTFOUND|EAI_AGAIN/i.test(message);
 }
 
 const CURSOR_SEND_ATTEMPTS = 3;
