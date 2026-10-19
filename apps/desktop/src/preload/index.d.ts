@@ -1,5 +1,5 @@
 import type { ProjectValidationResult, AgentProvider, AgentSettings, CursorModelOption, ClaudeModelOption, CursorModelParam, ClaudeEffort, DbSettingsPatch, CrmSettingsPatch, CrmBrowserState, RecentProject } from '../shared/types'
-import type { AgentEvent } from '@bpmsoft-agent/agent-runtime'
+import type { AgentEvent, ClaudeSkillsStatus, ClaudeMdChoice, InstallOutcome } from '@bpmsoft-agent/agent-runtime'
 
 export interface AgentPermissionRequest {
   id: string
@@ -37,6 +37,8 @@ export interface BpmsoftDesktopApi {
   setCrmPassword: (password: string) => Promise<void>
   clearCrmPassword: () => Promise<void>
   testCrmConnection: () => Promise<string>
+  claudeSkillsStatus: (appRoot: string) => Promise<ClaudeSkillsStatus>
+  installClaudeSkills: (appRoot: string, options: { claudeMd?: ClaudeMdChoice; overwriteModified?: boolean }) => Promise<InstallOutcome>
   onCrmBrowserActivity: (callback: () => void) => () => void
   onCrmBrowserState: (callback: (state: CrmBrowserState) => void) => () => void
   setCrmBrowserBounds: (bounds: { x: number; y: number; width: number; height: number }) => Promise<void>

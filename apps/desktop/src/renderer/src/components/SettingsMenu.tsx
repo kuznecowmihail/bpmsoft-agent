@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { AgentProvider, AgentSettings, CursorModelOption, ClaudeModelOption, DbSettingsPatch, CrmSettingsPatch } from '../../../shared/types'
+import type { ClaudeMdChoice, ClaudeSkillsStatus } from '@bpmsoft-agent/agent-runtime'
 import { IconExternal, IconTrash } from './icons'
 import { Toggle } from './Toggle'
 
@@ -33,6 +34,20 @@ function claudeKey(id: string, effort?: string): string {
 
 function errorText(error: unknown): string {
   return (error as Error).message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '')
+}
+
+function formatInstalledAt(value: string): string {
+  return new Date(value).toLocaleString('ru-RU')
+}
+
+function claudeSkillsStatusText(status: ClaudeSkillsStatus): string {
+  if (status.state === 'not-installed') {
+    return 'Не установлены'
+  }
+  if (status.state === 'installed') {
+    return `Установлены · ${formatInstalledAt(status.installedAt)} · версия ${status.appVersion}`
+  }
+  return `Есть обновление · установлены ${formatInstalledAt(status.installedAt)}`
 }
 
 export function SettingsMenu({
@@ -71,6 +86,28 @@ export function SettingsMenu({
   const [crmTestResult, setCrmTestResult] = useState<{ ok: boolean; text: string } | null>(null)
   const [isTestingCrm, setIsTestingCrm] = useState(false)
   const [crmError, setCrmError] = useState<string | null>(null)
+  const [claudeSkills, setClaudeSkills] = useState<ClaudeSkillsStatus | null>(null)
+  const [isBusySkills, setIsBusySkills] = useState(false)
+  const [skillsPending, setSkillsPending] = useState<'claude-md' | { modified: string[] } | null>(null)
+  const [skillsClaudeMd, setSkillsClaudeMd] = useState<ClaudeMdChoice | undefined>(undefined)
+  const [skillsNote, setSkillsNote] = useState<string | null>(null)
+  const [skillsError, setSkillsError] = useState<string | null>(null)
+
+  const loadClaudeSkillsStatus = async (root: string): Promise<void> => {
+    try {
+      setClaudeSkills(await window.api.claudeSkillsStatus(root))
+    } catch (error) {
+      setSkillsError(errorText(error))
+    }
+  }
+
+  useEffect(() => {
+    if (appRoot) {
+      void loadClaudeSkillsStatus(appRoot)
+    } else {
+      setClaudeSkills(null)
+    }
+  }, [appRoot])
 
   useEffect(() => {
     setDbHost(settings?.dbHost ?? '')
@@ -270,6 +307,42 @@ export function SettingsMenu({
     } finally {
       setIsTestingDb(false)
     }
+  }
+
+  const runClaudeSkillsInstall = async (options: { claudeMd?: ClaudeMdChoice; overwriteModified?: boolean }): Promise<void> => {
+    if (!appRoot) {
+      return
+    }
+    setIsBusySkills(true)
+    setSkillsError(null)
+    setSkillsNote(null)
+    setSkillsPending(null)
+    try {
+      const outcome = await window.api.installClaudeSkills(appRoot, options)
+      if (outcome.kind === 'needs-claude-md-choice') {
+        setSkillsPending('claude-md')
+      } else if (outcome.kind === 'needs-overwrite-confirm') {
+        setSkillsPending({ modified: outcome.modified })
+      } else {
+        setSkillsClaudeMd(undefined)
+        setSkillsNote(`Готово: ${outcome.target}. Чтобы передать коллегам, заархивируйте папку .claude и CLAUDE.md`)
+        await loadClaudeSkillsStatus(appRoot)
+      }
+    } catch (error) {
+      setSkillsError(errorText(error))
+    } finally {
+      setIsBusySkills(false)
+    }
+  }
+
+  const cancelClaudeSkillsInstall = (): void => {
+    setSkillsPending(null)
+    setSkillsClaudeMd(undefined)
+  }
+
+  const chooseClaudeMd = (choice: ClaudeMdChoice): void => {
+    setSkillsClaudeMd(choice)
+    void runClaudeSkillsInstall({ claudeMd: choice })
   }
 
   const saveCrmSettings = async (patch: CrmSettingsPatch): Promise<void> => {
@@ -782,6 +855,66 @@ export function SettingsMenu({
             </div>
           </>
         )}
+      </div>
+      <div className="popover-divider" />
+      <div className="popover-section">
+        <div className="popover-row">
+          <div>
+            <div className="popover-row-title">Claude Code</div>
+            <div className="popover-row-hint">Скиллы и знания агента для Claude Code в папке проекта (.claude)</div>
+          </div>
+        </div>
+        {claudeSkills && <div className="popover-note">{claudeSkillsStatusText(claudeSkills)}</div>}
+        {!appRoot && <div className="popover-note">Откройте проект, чтобы установить скиллы</div>}
+        {skillsPending === 'claude-md' && (
+          <div className="popover-field">
+            <div className="popover-note">В проекте уже есть свой CLAUDE.md</div>
+            <button type="button" className="btn btn-secondary btn-sm" disabled={isBusySkills || isRunning} onClick={() => chooseClaudeMd('separate')}>
+              Подключить отдельным файлом
+            </button>
+            <button type="button" className="btn btn-secondary btn-sm" disabled={isBusySkills || isRunning} onClick={() => chooseClaudeMd('replace')}>
+              Заменить мой CLAUDE.md
+            </button>
+            <button type="button" className="btn btn-secondary btn-sm" disabled={isBusySkills} onClick={cancelClaudeSkillsInstall}>
+              Отмена
+            </button>
+          </div>
+        )}
+        {skillsPending && skillsPending !== 'claude-md' && (
+          <div className="popover-field">
+            <div className="popover-note">Изменены вручную, будут перезаписаны:</div>
+            {skillsPending.modified.map((file) => (
+              <div key={file} className="popover-note">
+                {file}
+              </div>
+            ))}
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              disabled={isBusySkills || isRunning}
+              onClick={() => void runClaudeSkillsInstall({ claudeMd: skillsClaudeMd, overwriteModified: true })}
+            >
+              Перезаписать
+            </button>
+            <button type="button" className="btn btn-secondary btn-sm" disabled={isBusySkills} onClick={cancelClaudeSkillsInstall}>
+              Отмена
+            </button>
+          </div>
+        )}
+        {!skillsPending && (
+          <div className="popover-field">
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              disabled={!appRoot || isBusySkills || isRunning}
+              onClick={() => void runClaudeSkillsInstall({ claudeMd: skillsClaudeMd })}
+            >
+              {claudeSkills?.state === 'not-installed' ? 'Установить скиллы в проект' : 'Обновить скиллы'}
+            </button>
+          </div>
+        )}
+        {skillsNote && <div className="popover-note">{skillsNote}</div>}
+        {skillsError && <div className="popover-error">{skillsError}</div>}
       </div>
       <div className="popover-divider" />
       <div className="popover-section">

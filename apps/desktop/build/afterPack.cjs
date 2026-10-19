@@ -58,4 +58,12 @@ exports.default = async function afterPack(context) {
   if (!fs.existsSync(knowledgeDir)) {
     throw new Error(`afterPack: missing ${knowledgeDir}`);
   }
+  const claudeExportDir = path.join(nodeModules, '@bpmsoft-agent', 'agent-runtime', 'claude-export');
+  if (!fs.existsSync(claudeExportDir)) {
+    throw new Error(`afterPack: missing ${claudeExportDir}`);
+  }
+  const lintBundle = path.join(nodeModules, '@bpmsoft-agent', 'agent-runtime', 'dist', 'claude-export', 'pkg-lint.js');
+  if (!fs.existsSync(lintBundle)) {
+    throw new Error(`afterPack: missing ${lintBundle}`);
+  }
 };

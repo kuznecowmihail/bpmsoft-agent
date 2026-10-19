@@ -41,7 +41,8 @@ import {
 import { initAppSettings, getAppSettings, updateAppSettings, addRecentProject, removeRecentProject } from './appSettings'
 import { loadLoginShellPath } from './shellPath'
 import { isExternalWebUrl } from './urlPolicy'
-import { listCursorModels, listClaudeModels } from '@bpmsoft-agent/agent-runtime'
+import { listCursorModels, listClaudeModels, claudeSkillsStatus, installClaudeSkills, defaultExportSources } from '@bpmsoft-agent/agent-runtime'
+import type { ClaudeMdChoice } from '@bpmsoft-agent/agent-runtime'
 import type { AgentProvider, CursorModelParam, ClaudeEffort, DbSettingsPatch, CrmSettingsPatch, RecentProject } from '../shared/types'
 
 if (app.isPackaged) loadLoginShellPath()
@@ -53,6 +54,14 @@ if (app.isPackaged) process.argv.splice(1, 0, __filename)
 // Packaged builds take the icon from the bundle (icns/ico made by electron-builder from build/icon.png);
 // in dev the Dock and the window would show the default Electron icon.
 const DEV_ICON_PATH = join(__dirname, '../../build/icon.png')
+
+/** The renderer may only name the project folder; everything else for the skills export is fixed in main. */
+function assertAppRoot(appRoot: unknown): string {
+  if (typeof appRoot !== 'string' || appRoot.trim() === '') {
+    throw new Error('Не указана папка проекта')
+  }
+  return appRoot
+}
 
 function resolveChatLogDir(): string {
   const override = process.env['BPMSOFT_AGENT_LOG_DIR']
@@ -324,6 +333,16 @@ app.whenReady().then(() => {
     }
     return listClaudeModels(apiKey)
   })
+
+  ipcMain.handle('claudeSkills:status', (_event, appRoot: string) => claudeSkillsStatus(assertAppRoot(appRoot), defaultExportSources()))
+
+  ipcMain.handle('claudeSkills:install', (_event, appRoot: string, options?: { claudeMd?: ClaudeMdChoice; overwriteModified?: boolean }) =>
+    installClaudeSkills(assertAppRoot(appRoot), defaultExportSources(), {
+      claudeMd: options?.claudeMd === 'separate' || options?.claudeMd === 'replace' ? options.claudeMd : undefined,
+      overwriteModified: options?.overwriteModified === true,
+      appVersion: app.getVersion()
+    })
+  )
 
   ipcMain.handle('logs:open', async () => {
     const dir = getChatLogDir()

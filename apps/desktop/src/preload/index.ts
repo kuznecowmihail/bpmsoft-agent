@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { IpcRendererEvent } from 'electron'
 import type { ProjectValidationResult, AgentProvider, AgentSettings, CursorModelOption, ClaudeModelOption, CursorModelParam, ClaudeEffort, DbSettingsPatch, CrmSettingsPatch, CrmBrowserState, RecentProject } from '../shared/types'
-import type { AgentEvent } from '@bpmsoft-agent/agent-runtime'
+import type { AgentEvent, ClaudeSkillsStatus, ClaudeMdChoice, InstallOutcome } from '@bpmsoft-agent/agent-runtime'
 
 export interface AgentPermissionRequest {
   id: string
@@ -50,6 +50,9 @@ const api = {
   setCrmPassword: (password: string): Promise<void> => ipcRenderer.invoke('crm:setPassword', password),
   clearCrmPassword: (): Promise<void> => ipcRenderer.invoke('crm:clearPassword'),
   testCrmConnection: (): Promise<string> => ipcRenderer.invoke('crm:test'),
+  claudeSkillsStatus: (appRoot: string): Promise<ClaudeSkillsStatus> => ipcRenderer.invoke('claudeSkills:status', appRoot),
+  installClaudeSkills: (appRoot: string, options: { claudeMd?: ClaudeMdChoice; overwriteModified?: boolean }): Promise<InstallOutcome> =>
+    ipcRenderer.invoke('claudeSkills:install', appRoot, options),
   onCrmBrowserActivity: (callback: () => void): (() => void) => {
     const listener = (): void => callback()
     ipcRenderer.on('crmBrowser:activity', listener)
