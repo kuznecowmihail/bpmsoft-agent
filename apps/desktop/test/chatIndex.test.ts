@@ -102,12 +102,45 @@ describe('chatIndex', () => {
   })
 
   it('survives corrupt index.json', () => {
+    writeLog(logDir, '2026-10-19', '10-00-00', logText('/pkgA', '2026-10-19T10:00:00.000Z', 'a', 's1'))
     const dir = join(logDir, 'chats')
     mkdirSync(dir, { recursive: true })
     writeFileSync(join(dir, 'index.json'), '{not json')
 
     expect(() => initChatIndex(logDir)).not.toThrow()
-    expect(listChats('/pkgA')).toEqual([])
+    expect(listChats('/pkgA')).toHaveLength(1)
+  })
+
+  it('reads index.json with BOM', () => {
+    writeLog(logDir, '2026-10-19', '10-00-00', logText('/pkgA', '2026-10-19T10:00:00.000Z', 'старый', 's1'))
+    const dir = join(logDir, 'chats')
+    mkdirSync(dir, { recursive: true })
+    const index = {
+      version: 1,
+      chats: {
+        '2026-10-19/10-00-00': {
+          id: '2026-10-19/10-00-00',
+          title: 'из индекса',
+          provider: 'claude',
+          updatedAt: '2026-10-19T10:00:00.000Z',
+          contextLost: false,
+          projectPath: '/pkgA',
+          createdAt: '2026-10-19T10:00:00.000Z',
+          model: null,
+          modelName: '',
+          sessionId: 's1',
+          lastTurnInterrupted: false,
+          lastTurnStopped: false
+        }
+      }
+    }
+    writeFileSync(join(dir, 'index.json'), '﻿' + JSON.stringify(index))
+
+    initChatIndex(logDir)
+
+    const chats = listChats('/pkgA')
+    expect(chats).toHaveLength(1)
+    expect(chats[0].title).toBe('из индекса')
   })
 
   it('chatIdFromLogPath and chatLogPath are inverse', () => {

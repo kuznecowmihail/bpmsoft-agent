@@ -288,6 +288,11 @@ export function isContextLost(resumedFrom: string | undefined, event: AgentEvent
   return resumedFrom !== undefined && event.type === 'system_init' && Boolean(event.sessionId) && event.sessionId !== resumedFrom
 }
 
+/** True when the provider reports that the session to resume does not exist (the old context cannot be restored). */
+export function isSessionNotFoundError(message: string): boolean {
+  return /no conversation found|session.*not found|agent.*not found/i.test(message)
+}
+
 /**
  * Remembers the session id carried by a `system_init` / `result` event.
  */
@@ -521,6 +526,8 @@ export async function sendAgentMessage(
     let contextLost = false
     const consume = (async (): Promise<void> => {
       for await (const event of events) {
+        // late events of a detached or superseded turn are dropped; the iterator is still drained so the SDK can finish
+        if (detached || currentRun !== controller) continue
         if (isContextLost(resumedFrom, event)) {
           // The provider started a new session instead of resuming: the event is not shown or remembered.
           contextLost = true
@@ -552,8 +559,18 @@ export async function sendAgentMessage(
       }
     } catch (error) {
       if (!controller.signal.aborted) {
-        logChatRecord('error', { message: (error as Error).message, stack: (error as Error).stack })
-        throw error
+        const message = (error as Error).message
+        if (resumedFrom && isSessionNotFoundError(message)) {
+          // the provider has no such session any more: the chat continues only as a read-only log
+          contextLost = true
+          logChatRecord('context_lost', { resumedFrom, error: message })
+          if (chatId) {
+            upsertChat({ id: chatId, contextLost: true })
+          }
+        } else {
+          logChatRecord('error', { message, stack: (error as Error).stack })
+          throw error
+        }
       }
     } finally {
       if (graceTimer) clearTimeout(graceTimer)
@@ -566,7 +583,7 @@ export async function sendAgentMessage(
         }
         detached = true
       }
-      logChatRecord('turn_end', { elapsedMs: Date.now() - startedAt, sessionId: currentSessionId ?? null, stopped: controller.signal.aborted })
+      logChatRecord('turn_end', { elapsedMs: Date.now() - startedAt, sessionId: currentSessionId ?? null, stopped: controller.signal.aborted && !contextLost })
       if (chatId && !contextLost) {
         upsertChat({ id: chatId, updatedAt: new Date().toISOString(), lastTurnInterrupted: false, lastTurnStopped: controller.signal.aborted })
       }

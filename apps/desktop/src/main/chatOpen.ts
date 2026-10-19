@@ -58,7 +58,7 @@ export function planChatOpen(chat: ChatIndexEntry, ctx: ChatOpenContext): ChatOp
         provider: 'cursor',
         cursorModel: modelId ?? '',
         cursorModelParams: model.params ?? [],
-        cursorModelName: chat.modelName
+        cursorModelName: chat.modelName || (modelId ?? '')
       },
       note: null
     }
@@ -69,7 +69,7 @@ export function planChatOpen(chat: ChatIndexEntry, ctx: ChatOpenContext): ChatOp
       provider: 'claude',
       claudeModel: modelId ?? '',
       claudeEffort: (model.effort ?? '') as ClaudeEffort | '',
-      claudeModelName: chat.modelName
+      claudeModelName: chat.modelName || (modelId ?? '')
     },
     note: null
   }
@@ -96,17 +96,22 @@ export async function openChatFromHistory(id: string, pkgRoot: string, deps: Cha
   const availableModelIds = deps.hasKey(chat.provider)
     ? await deps.listModelIds(chat.provider).catch(() => undefined)
     : undefined
+  // a turn may have started while the model list was loading
+  if (deps.isRunning()) {
+    throw new Error('Агент работает — дождитесь окончания хода')
+  }
   const plan = planChatOpen(chat, { hasKey: deps.hasKey, availableModelIds })
   if (plan.readOnlyReason || !plan.settingsPatch || !chat.sessionId) {
     resetAgentSession()
   } else {
     // Settings are written directly (not via settings:setProvider): that would reset the session just restored.
     updateAppSettings(plan.settingsPatch)
+    const started = Date.parse(parsed.startedAt || chat.createdAt)
     restoreAgentSession({
       sessionId: chat.sessionId,
       projectPath: chat.projectPath,
       provider: chat.provider,
-      chatStartedAt: Date.parse(parsed.startedAt ?? chat.createdAt),
+      chatStartedAt: Number.isNaN(started) ? Date.now() : started,
       lastTurnStopped: parsed.lastTurnStopped,
       lastTurnInterrupted: parsed.lastTurnInterrupted,
       jsonlPath

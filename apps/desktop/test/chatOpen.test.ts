@@ -104,6 +104,11 @@ describe('planChatOpen', () => {
     })
   })
 
+  it('names the model by its id when the chat has no model name', () => {
+    const plan = planChatOpen(chat({ model: { id: 'x', effort: 'high' }, modelName: '' }), { hasKey: hasAll })
+    expect(plan.settingsPatch?.claudeModelName).toBe('x')
+  })
+
   it('switches the model when the chat model is still in the list', () => {
     const plan = planChatOpen(chat(), { hasKey: hasAll, availableModelIds: ['claude-x', 'claude-y'] })
     expect(plan.note).toBeNull()

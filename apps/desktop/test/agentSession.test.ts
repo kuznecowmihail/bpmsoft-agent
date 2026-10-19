@@ -34,8 +34,23 @@ import {
   clearCrmPassword,
   dropLegacyConnectionSecrets,
   restoreAgentSession,
-  isContextLost
+  isContextLost,
+  isSessionNotFoundError
 } from '../src/main/agentSession'
+
+describe('isSessionNotFoundError', () => {
+  it('recognizes a missing conversation', () => {
+    expect(isSessionNotFoundError('No conversation found with session ID: x')).toBe(true)
+  })
+
+  it('recognizes a missing agent', () => {
+    expect(isSessionNotFoundError('Agent not found')).toBe(true)
+  })
+
+  it('does not treat other errors as a missing session', () => {
+    expect(isSessionNotFoundError('network error')).toBe(false)
+  })
+})
 
 describe('normalizeApiKey', () => {
   it('removes leading and trailing whitespace', () => {

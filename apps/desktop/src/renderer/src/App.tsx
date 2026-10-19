@@ -44,6 +44,8 @@ function App(): React.JSX.Element {
   const [prompt, setPrompt] = useState('')
   const [isRunning, setIsRunning] = useState(false)
   const [isStopping, setIsStopping] = useState(false)
+  const [isOpeningChat, setIsOpeningChat] = useState(false)
+  const openRequestRef = useRef(0)
   const [showDebug, setShowDebug] = useState(false)
   const unsubscribeRef = useRef<(() => void) | null>(null)
 
@@ -163,7 +165,7 @@ function App(): React.JSX.Element {
   }
 
   const sendText = async (text: string): Promise<void> => {
-    if (!text || !validation?.pkgRoot || isRunning) {
+    if (!text || !validation?.pkgRoot || isRunning || isOpeningChat || readOnlyReason) {
       return
     }
     setEntries((prev) => [...prev, { id: newEntryId(), ts: Date.now(), role: 'user', content: text }])
@@ -202,11 +204,15 @@ function App(): React.JSX.Element {
   }
 
   const handleSelectChat = async (id: string): Promise<void> => {
-    if (isRunning || id === activeChatId || !validation?.pkgRoot) {
+    // a read-only chat may be opened again: its view is what the user sees, the session is not restored
+    if (isRunning || isOpeningChat || (id === activeChatId && !readOnlyReason) || !validation?.pkgRoot) {
       return
     }
+    const token = ++openRequestRef.current
+    setIsOpeningChat(true)
     try {
       const opened = await window.api.openChat(id, validation.pkgRoot)
+      if (token !== openRequestRef.current) return
       resetChatView()
       const noteEntries: ChatEntry[] = opened.note
         ? [{ id: newEntryId(), ts: Date.now(), role: 'agent-result', level: 'warn', content: opened.note }]
@@ -222,6 +228,10 @@ function App(): React.JSX.Element {
         { id: newEntryId(), ts: Date.now(), role: 'agent-result', level: 'error', content: `Ошибка: ${message}` }
       ])
       pushLog(newLogEvent('error', 'app', message))
+    } finally {
+      if (token === openRequestRef.current) {
+        setIsOpeningChat(false)
+      }
     }
   }
 
@@ -405,7 +415,7 @@ function App(): React.JSX.Element {
         <ChatSidebar
           chats={chats}
           activeChatId={activeChatId}
-          disabled={isRunning}
+          disabled={isRunning || isOpeningChat}
           onSelect={(id) => {
             void handleSelectChat(id)
           }}
@@ -421,9 +431,13 @@ function App(): React.JSX.Element {
                 isRunning={isRunning}
                 permissionRequests={permissionRequests}
                 onPermissionResponse={handlePermissionResponse}
-                onChoiceSubmit={(text) => {
-                  void sendText(text)
-                }}
+                onChoiceSubmit={
+                  readOnlyReason
+                    ? undefined
+                    : (text) => {
+                        void sendText(text)
+                      }
+                }
               />
             )}
           </div>
@@ -436,7 +450,7 @@ function App(): React.JSX.Element {
             onStop={handleStop}
             isStopping={isStopping}
             stopOnEscape={!logsOpen && !menuOpen}
-            disabledReason={readOnlyReason ?? undefined}
+            disabledReason={readOnlyReason ?? (isOpeningChat ? 'Открываю чат…' : undefined)}
           />
         </main>
         {browserPanelShown && (

@@ -89,25 +89,32 @@ function backfill(dir: string): void {
   }
 }
 
-/** Loads the chat index from `chats/index.json`; a missing file is rebuilt from the logs, a corrupt one starts empty. */
+/** Loads the chat index from `chats/index.json`; a missing or corrupt file is rebuilt from the logs. */
 export function initChatIndex(dir: string): void {
   logDir = dir
   indexPath = join(dir, 'chats', 'index.json')
   entries = {}
+  if (!existsSync(indexPath)) {
+    backfill(dir)
+    saveIndex()
+    return
+  }
+  let loaded: Record<string, ChatIndexEntry> | undefined
   try {
-    if (!existsSync(indexPath)) {
-      backfill(dir)
-      saveIndex()
-      return
-    }
-    const parsed = JSON.parse(readFileSync(indexPath, 'utf8'))
+    const parsed = JSON.parse(readFileSync(indexPath, 'utf8').replace(/^﻿/, ''))
     if (parsed !== null && typeof parsed === 'object' && parsed.chats !== null && typeof parsed.chats === 'object' && !Array.isArray(parsed.chats)) {
-      entries = parsed.chats as Record<string, ChatIndexEntry>
+      loaded = parsed.chats as Record<string, ChatIndexEntry>
     }
   } catch (err) {
     console.error('Error loading chat index:', err)
-    entries = {}
   }
+  if (loaded) {
+    entries = loaded
+    return
+  }
+  entries = {}
+  backfill(dir)
+  saveIndex()
 }
 
 /** Chat id is the log path relative to `chats/` without `.jsonl`, with '/' as the separator: '<день>/<имя>'. */
