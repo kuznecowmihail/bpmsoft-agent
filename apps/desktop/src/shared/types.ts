@@ -133,3 +133,12 @@ export interface ParsedChatLog {
 	updatedAt: string | null
 	items: ChatReplayItem[]
 }
+
+/** Строка списка чатов текущего стенда. */
+export interface ChatSummary {
+	id: string
+	title: string
+	provider: AgentProvider
+	updatedAt: string
+	contextLost: boolean
+}
