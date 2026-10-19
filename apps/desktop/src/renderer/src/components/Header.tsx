@@ -170,18 +170,6 @@ export function Header({
         >
           <IconSidebar size={16} />
         </button>
-        {!sidebarOpen && (
-          <button
-            type="button"
-            className="btn btn-ghost btn-sm btn-icon sidebar-toggle"
-            onClick={onNewChat}
-            disabled={isRunning}
-            title="Новый чат"
-            aria-label="Новый чат"
-          >
-            <IconPlus size={16} />
-          </button>
-        )}
         <div className="logo">
           <IconLogo size={15} />
         </div>
@@ -258,6 +246,18 @@ export function Header({
           <IconTerminal size={14} />
           <span className="btn-label">Логи</span>
         </button>
+        {!sidebarOpen && (
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={onNewChat}
+            disabled={isRunning}
+            title={isRunning ? 'Дождитесь окончания ответа агента' : 'Начать новый чат'}
+          >
+            <IconPlus size={14} />
+            <span className="btn-label">Новый чат</span>
+          </button>
+        )}
         <div className="popover-anchor" ref={menuRef}>
           {(() => {
             const keyReady = settings ? (settings.provider === 'cursor' ? settings.hasCursorKey : settings.hasClaudeKey) : true
