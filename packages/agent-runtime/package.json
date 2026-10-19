@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && esbuild src/lint/pkgLintCli.ts --bundle --platform=node --target=node18 --outfile=dist/claude-export/pkg-lint.js",
     "test": "vitest run"
   },
   "dependencies": {
@@ -19,6 +19,7 @@
   "devDependencies": {
     "@types/node": "^20.14.0",
     "@types/pg": "^8.23.1",
+    "esbuild": "^0.21.5",
     "typescript": "^5.6.3",
     "vitest": "^2.1.4"
   }

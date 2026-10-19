@@ -227,6 +227,64 @@ export function lintSqlScripts(dirs: string[]): LintIssue[] {
 	return issues;
 }
 
+/** Returns all files under a folder, recursively, as absolute paths. */
+function walkFiles(dir: string): string[] {
+	const files: string[] = [];
+	for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+		const full = path.join(dir, entry.name);
+		if (entry.isDirectory()) {
+			files.push(...walkFiles(full));
+		} else if (entry.isFile()) {
+			files.push(full);
+		}
+	}
+	return files;
+}
+
+/** Data sets: descriptor.json must exist, and every *.json file in the set must parse as JSON. */
+export function lintDataDirs(dirs: string[]): LintIssue[] {
+	const issues: LintIssue[] = [];
+	for (const dir of dirs) {
+		const name = path.basename(dir);
+		const push = (message: string): void => {
+			issues.push({ schema: name, level: "error", message });
+		};
+		if (!fs.existsSync(path.join(dir, "descriptor.json"))) {
+			push("нет descriptor.json");
+		}
+		let files: string[];
+		try {
+			files = walkFiles(dir).filter((file) => file.endsWith(".json"));
+		} catch (e) {
+			push(`папка не читается: ${errorMessage(e)}`);
+			continue;
+		}
+		for (const file of files) {
+			const rel = path.relative(dir, file).split(path.sep).join("/");
+			let text: string;
+			try {
+				text = fs.readFileSync(file, "utf8").replace(/^\uFEFF/, "");
+			} catch (e) {
+				push(`${rel}: JSON не разбирается: ${errorMessage(e)}`);
+				continue;
+			}
+			if (text.trim() === "") {
+				// BPMSoft writes filter.json empty for data sets without a filter.
+				if (rel !== "filter.json") {
+					push(`${rel}: JSON не разбирается: файл пустой`);
+				}
+				continue;
+			}
+			try {
+				JSON.parse(text);
+			} catch (e) {
+				push(`${rel}: JSON не разбирается: ${errorMessage(e)}`);
+			}
+		}
+	}
+	return issues;
+}
+
 /** Error name used internally by checkCsBrackets to stop at the first mismatch. */
 const CS_BRACKET_ERROR = "CsBracketError";
 
@@ -425,11 +483,11 @@ function checkCsFiles(schemaDirs: string[], issues: LintIssue[]): void {
 }
 
 /** Renders the report as plain text for the chat. */
-function renderText(checked: number, issues: LintIssue[]): string {
+function renderText(title: string, checked: number, issues: LintIssue[]): string {
 	if (checked === 0 && issues.length === 0) {
-		return "pkg_lint: в этом чате схемы не изменялись.";
+		return `${title}: в этом чате схемы не изменялись.`;
 	}
-	const lines: string[] = [`pkg_lint: проверено схем: ${checked}`];
+	const lines: string[] = [`${title}: проверено схем: ${checked}`];
 	const groups = new Map<string, LintIssue[]>();
 	for (const issue of issues) {
 		const group = groups.get(issue.schema) ?? [];
@@ -452,17 +510,20 @@ function renderText(checked: number, issues: LintIssue[]): string {
 /** Lints the given schema folders and extra changed files, returning issues and a text report. */
 export function lintSchemas(
 	schemaDirs: string[],
-	options: { knowledgeDir?: string; extraFiles?: string[]; sqlScriptDirs?: string[] } = {},
+	options: { knowledgeDir?: string; extraFiles?: string[]; sqlScriptDirs?: string[]; dataDirs?: string[]; title?: string } = {},
 ): LintReport {
 	const knowledgeDir = options.knowledgeDir ?? defaultKnowledgeDir();
 	const extraFiles = options.extraFiles ?? [];
 	const sqlScriptDirs = options.sqlScriptDirs ?? [];
+	const dataDirs = options.dataDirs ?? [];
+	const title = options.title ?? "pkg_lint";
 	const issues: LintIssue[] = [];
 	checkJson(schemaDirs, extraFiles, issues);
 	checkResources(schemaDirs, issues);
 	checkScripts(schemaDirs, knowledgeDir, issues);
 	checkCsFiles(schemaDirs, issues);
 	issues.push(...lintSqlScripts(sqlScriptDirs));
+	issues.push(...lintDataDirs(dataDirs));
 	// The script warning about missing resources repeats our resource error for the same schema: keep only the error.
 	const missingResourceSchemas = new Set(
 		issues.filter((i) => i.level === "error" && i.message.includes("нет resource.")).map((i) => i.schema),
@@ -471,12 +532,12 @@ export function lintSchemas(
 		(i) => !(i.level === "warning" && i.message.includes("отсутствует файл ресурсов") && missingResourceSchemas.has(i.schema)),
 	);
 	const errorCount = shown.filter((i) => i.level === "error").length;
-	const checked = schemaDirs.length + sqlScriptDirs.length;
+	const checked = schemaDirs.length + sqlScriptDirs.length + dataDirs.length;
 	return {
 		checked,
 		issues: shown,
 		ok: errorCount === 0,
-		text: renderText(checked, shown),
+		text: renderText(title, checked, shown),
 	};
 }
 
