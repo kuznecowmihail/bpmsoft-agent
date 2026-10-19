@@ -35,7 +35,8 @@ import {
   dropLegacyConnectionSecrets,
   restoreAgentSession,
   isContextLost,
-  isSessionNotFoundError
+  isSessionNotFoundError,
+  sendToWindow
 } from '../src/main/agentSession'
 
 describe('isSessionNotFoundError', () => {
@@ -231,6 +232,21 @@ describe('agentSession per-project CRM password', () => {
     store.set('crmPassword', 'old-secret')
     dropLegacyConnectionSecrets()
     expect(store.has('crmPassword')).toBe(false)
+  })
+})
+
+describe('agentSession sendToWindow', () => {
+  type Window = Parameters<typeof sendToWindow>[0]
+
+  it('does not send to a destroyed window and reports false, but sends to a live one', () => {
+    const send = vi.fn()
+    const destroyed = { isDestroyed: () => true, webContents: { isDestroyed: () => false, send } } as unknown as Window
+    expect(sendToWindow(destroyed, 'agent:event', { type: 'text' })).toBe(false)
+    expect(send).not.toHaveBeenCalled()
+
+    const live = { isDestroyed: () => false, webContents: { isDestroyed: () => false, send } } as unknown as Window
+    expect(sendToWindow(live, 'agent:event', { type: 'text' })).toBe(true)
+    expect(send).toHaveBeenCalledWith('agent:event', { type: 'text' })
   })
 })
 

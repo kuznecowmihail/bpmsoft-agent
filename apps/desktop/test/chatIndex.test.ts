@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { mkdtempSync, mkdirSync, writeFileSync, unlinkSync } from 'fs'
+import { mkdtempSync, mkdirSync, writeFileSync, unlinkSync, readFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import {
@@ -141,6 +141,53 @@ describe('chatIndex', () => {
     const chats = listChats('/pkgA')
     expect(chats).toHaveLength(1)
     expect(chats[0].title).toBe('из индекса')
+  })
+
+  it('drops invalid index entries and keeps the valid ones', () => {
+    writeLog(logDir, '2026-10-19', '10-00-00', logText('/pkgA', '2026-10-19T10:00:00.000Z', 'a', 's1'))
+    const dir = join(logDir, 'chats')
+    mkdirSync(dir, { recursive: true })
+    const index = {
+      version: 1,
+      chats: {
+        '2026-10-19/10-00-00': {
+          id: '2026-10-19/10-00-00',
+          title: 'валидный',
+          provider: 'claude',
+          updatedAt: '2026-10-19T10:00:00.000Z',
+          contextLost: false,
+          projectPath: '/pkgA',
+          createdAt: '2026-10-19T10:00:00.000Z',
+          model: null,
+          modelName: '',
+          sessionId: 's1',
+          lastTurnInterrupted: false,
+          lastTurnStopped: false
+        },
+        '2026-10-18/09-00-00': {
+          id: '2026-10-18/09-00-00',
+          title: 'без updatedAt',
+          provider: 'claude',
+          contextLost: false,
+          projectPath: '/pkgA',
+          createdAt: '2026-10-18T09:00:00.000Z',
+          model: null,
+          modelName: '',
+          sessionId: null,
+          lastTurnInterrupted: false,
+          lastTurnStopped: false
+        }
+      }
+    }
+    writeFileSync(join(dir, 'index.json'), JSON.stringify(index))
+
+    initChatIndex(logDir)
+
+    const chats = listChats('/pkgA')
+    expect(chats).toHaveLength(1)
+    expect(chats[0].title).toBe('валидный')
+    const saved = JSON.parse(readFileSync(join(dir, 'index.json'), 'utf8'))
+    expect(Object.keys(saved.chats)).toEqual(['2026-10-19/10-00-00'])
   })
 
   it('chatIdFromLogPath and chatLogPath are inverse', () => {

@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import { ExportFile, ExportSources, fileSha256 } from "./sources";
+import { isInsideRoots } from "../safety/sandboxGuard";
 
 /** First line of a CLAUDE.md that the app wrote itself. */
 const MARKER = "<!-- bpmsoft-agent: generated -->";
@@ -41,6 +42,13 @@ interface Manifest {
 /** Converts a "/"-separated rel path to a path under the stand root. */
 function toDisk(appRoot: string, rel: string): string {
 	return path.join(appRoot, ...rel.split("/"));
+}
+
+/** Throws when a path the export touches resolves outside the stand root (a symlinked .claude, CLAUDE.md or file). */
+function assertInsideStand(appRoot: string, dest: string): void {
+	if (!isInsideRoots(dest, [appRoot])) {
+		throw new Error(`Путь выходит за пределы папки проекта: ${dest}`);
+	}
 }
 
 /** Returns true when the first line of the file, without BOM and trailing CR, is the app marker. */
@@ -141,6 +149,7 @@ function removeStale(appRoot: string, old: Manifest | undefined, keep: Set<strin
 		if (rel === "CLAUDE.md" && !hasMarker(dest)) {
 			continue;
 		}
+		assertInsideStand(appRoot, dest);
 		fs.unlinkSync(dest);
 		removed++;
 		let dir = path.dirname(dest);
@@ -193,6 +202,20 @@ export function installClaudeSkills(
 		return { kind: "needs-overwrite-confirm", modified };
 	}
 
+	const newRels = new Set(all.map((file) => file.rel));
+	const touched = [
+		...all.map((file) => toDisk(appRoot, file.rel)),
+		...(mode === "separate" ? [claudeMdPath] : []),
+		toDisk(appRoot, MANIFEST_REL),
+		...Object.keys(old?.files ?? {})
+			.filter((rel) => !newRels.has(rel))
+			.map((rel) => toDisk(appRoot, rel))
+			.filter((dest) => fs.existsSync(dest)),
+	];
+	for (const dest of touched) {
+		assertInsideStand(appRoot, dest);
+	}
+
 	const files: Record<string, string> = {};
 	for (const file of all) {
 		const dest = toDisk(appRoot, file.rel);
@@ -204,7 +227,7 @@ export function installClaudeSkills(
 		addImport(claudeMdPath);
 	}
 
-	const removed = removeStale(appRoot, old, new Set(all.map((file) => file.rel)));
+	const removed = removeStale(appRoot, old, newRels);
 
 	const manifest: Manifest = {
 		appVersion: options.appVersion,

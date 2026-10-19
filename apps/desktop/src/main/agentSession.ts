@@ -10,6 +10,15 @@ import { upsertChat, getChat } from './chatIndex'
 import { chatTitle } from './chatReplay'
 import type { AgentProvider } from '../shared/types'
 
+/** Sends to the window unless it is closed (a turn may outlive its window); false when not sent. */
+export function sendToWindow(window: BrowserWindow, channel: string, payload: unknown): boolean {
+  if (window.isDestroyed() || window.webContents.isDestroyed()) {
+    return false
+  }
+  window.webContents.send(channel, payload)
+  return true
+}
+
 /**
  * Cleans a pasted API key: removes whitespace and invisible characters (zero-width
  * spaces, BOM) that often come with copy-paste. Returns undefined when the key
@@ -408,7 +417,9 @@ export async function sendAgentMessage(
     const requestToolPermission = (request: ToolPermissionRequest): Promise<boolean> => {
       const { id, wait } = createPendingPermissionRequest()
       logChatRecord('permission_request', { id, toolName: request.toolName, input: request.input })
-      window.webContents.send('agent:permissionRequest', { id, toolName: request.toolName, input: request.input })
+      if (!sendToWindow(window, 'agent:permissionRequest', { id, toolName: request.toolName, input: request.input })) {
+        resolvePermissionRequest(id, false)
+      }
       return wait.then((approved) => {
         logChatRecord('permission_response', { id, approved })
         return approved
@@ -521,7 +532,7 @@ export async function sendAgentMessage(
     const send = (event: AgentEvent): void => {
       if (detached) return
       if (event.type === 'result') resultSent = true
-      window.webContents.send('agent:event', event)
+      sendToWindow(window, 'agent:event', event)
     }
     let contextLost = false
     const consume = (async (): Promise<void> => {

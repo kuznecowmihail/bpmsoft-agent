@@ -24,6 +24,25 @@ function hasEntry(id: string): boolean {
   return Object.prototype.hasOwnProperty.call(entries, id)
 }
 
+/** An index entry with the fields the app relies on; anything else is dropped on load. */
+function isValidEntry(id: string, value: unknown): value is ChatIndexEntry {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    return false
+  }
+  const e = value as Record<string, unknown>
+  const strings = ['title', 'updatedAt', 'createdAt', 'projectPath', 'modelName']
+  return (
+    e.id === id &&
+    strings.every((key) => typeof e[key] === 'string') &&
+    (e.provider === 'claude' || e.provider === 'cursor') &&
+    typeof e.contextLost === 'boolean' &&
+    typeof e.lastTurnInterrupted === 'boolean' &&
+    typeof e.lastTurnStopped === 'boolean' &&
+    (e.sessionId === null || typeof e.sessionId === 'string') &&
+    (e.model === null || typeof e.model === 'object')
+  )
+}
+
 function saveIndex(): void {
   if (!indexPath) {
     return
@@ -55,17 +74,26 @@ function backfill(dir: string): void {
     } catch {
       continue
     }
-    for (const name of readdirSync(dayDir)) {
+    let names: string[]
+    try {
+      names = readdirSync(dayDir)
+    } catch {
+      continue
+    }
+    for (const name of names) {
       if (!name.endsWith(JSONL_EXT)) {
         continue
       }
       const jsonlPath = join(dayDir, name)
+      const id = chatIdFromLogPath(dir, jsonlPath)
+      if (hasEntry(id)) {
+        continue
+      }
       try {
         const parsed = parseChatLog(readFileSync(jsonlPath, 'utf8'))
         if (!parsed.projectPath || !parsed.provider) {
           continue
         }
-        const id = chatIdFromLogPath(dir, jsonlPath)
         const mtime = statSync(jsonlPath).mtime.toISOString()
         const createdAt = parsed.startedAt ?? parsed.updatedAt ?? mtime
         entries[id] = {
@@ -109,7 +137,22 @@ export function initChatIndex(dir: string): void {
     console.error('Error loading chat index:', err)
   }
   if (loaded) {
-    entries = loaded
+    const kept: Record<string, ChatIndexEntry> = {}
+    let dropped = 0
+    for (const id of Object.keys(loaded)) {
+      const value: unknown = loaded[id]
+      if (isValidEntry(id, value)) {
+        kept[id] = value
+      } else {
+        dropped++
+      }
+    }
+    entries = kept
+    if (dropped > 0) {
+      console.error(`Dropped ${dropped} invalid chat index entries`)
+      backfill(dir)
+      saveIndex()
+    }
     return
   }
   entries = {}

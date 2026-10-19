@@ -247,6 +247,15 @@ describe("claudeExport", () => {
 		expect(fs.readFileSync(escaped, "utf8")).toBe("keep me too\n");
 	});
 
+	it.skipIf(process.platform === "win32")("symlinked .claude pointing outside the stand is refused and nothing is written", () => {
+		const outside = path.join(tmp, "outside");
+		fs.mkdirSync(outside, { recursive: true });
+		fs.symlinkSync(outside, path.join(appRoot, ".claude"), "dir");
+
+		expect(() => installClaudeSkills(appRoot, sources(), opts)).toThrow("за пределы папки проекта");
+		expect(fs.readdirSync(outside)).toEqual([]);
+	});
+
 	it("hash changes when the core changes", () => {
 		const a = sources().hash;
 		put(path.join(exportDir, "CLAUDE.md"), `${MARKER}\n# Другое ядро\n`);
