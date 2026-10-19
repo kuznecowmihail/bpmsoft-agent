@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { AgentProvider, AgentSettings } from '../../../shared/types'
 import { projectName } from '../chatFormat'
-import { IconFolder, IconGlobe, IconLogo, IconLogout, IconPlus, IconSettings, IconTerminal } from './icons'
+import { IconFolder, IconGlobe, IconLogo, IconLogout, IconPlus, IconSettings, IconSidebar, IconTerminal } from './icons'
 import { SettingsMenu } from './SettingsMenu'
 
 interface HeaderProps {
@@ -10,7 +10,6 @@ interface HeaderProps {
   isRunning: boolean
   showDebug: boolean
   onToggleDebug: (value: boolean) => void
-  onNewChat: () => void
   onOpenLogs: () => void
   onOpenLogsFolder: () => void
   settings: AgentSettings | null
@@ -25,6 +24,11 @@ interface HeaderProps {
   onMenuOpenChange?: (open: boolean) => void
   /** Returns to the project picker. */
   onChangeProject: () => void
+  /** Chat sidebar (chat history) is shown. */
+  sidebarOpen: boolean
+  onToggleSidebar: () => void
+  /** Starts a new chat (shown in the header while the sidebar is hidden). */
+  onNewChat: () => void
 }
 
 type BadgeStatus = { state: 'checking' | 'ok' | 'error'; text: string }
@@ -99,7 +103,6 @@ export function Header({
   isRunning,
   showDebug,
   onToggleDebug,
-  onNewChat,
   onOpenLogs,
   onOpenLogsFolder,
   settings,
@@ -109,7 +112,10 @@ export function Header({
   browserOpen,
   onToggleBrowser,
   onMenuOpenChange,
-  onChangeProject
+  onChangeProject,
+  sidebarOpen,
+  onToggleSidebar,
+  onNewChat
 }: HeaderProps): React.JSX.Element {
   const [menuOpen, setMenuOpen] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -154,6 +160,16 @@ export function Header({
   return (
     <header className="header">
       <div className="header-brand">
+        <button
+          type="button"
+          className={`btn btn-ghost btn-sm btn-icon sidebar-toggle${sidebarOpen ? ' is-active' : ''}`}
+          onClick={onToggleSidebar}
+          title={sidebarOpen ? 'Скрыть список чатов' : 'Показать список чатов'}
+          aria-label={sidebarOpen ? 'Скрыть список чатов' : 'Показать список чатов'}
+          aria-pressed={sidebarOpen}
+        >
+          <IconSidebar size={16} />
+        </button>
         <div className="logo">
           <IconLogo size={15} />
         </div>
@@ -230,16 +246,18 @@ export function Header({
           <IconTerminal size={14} />
           <span className="btn-label">Логи</span>
         </button>
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={onNewChat}
-          disabled={isRunning}
-          title={isRunning ? 'Дождитесь окончания ответа агента' : 'Начать новый чат'}
-        >
-          <IconPlus size={14} />
-          <span className="btn-label">Новый чат</span>
-        </button>
+        {!sidebarOpen && (
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={onNewChat}
+            disabled={isRunning}
+            title={isRunning ? 'Дождитесь окончания ответа агента' : 'Начать новый чат'}
+          >
+            <IconPlus size={14} />
+            <span className="btn-label">Новый чат</span>
+          </button>
+        )}
         <div className="popover-anchor" ref={menuRef}>
           {(() => {
             const keyReady = settings ? (settings.provider === 'cursor' ? settings.hasCursorKey : settings.hasClaudeKey) : true

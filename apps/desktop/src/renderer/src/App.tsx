@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import type { ProjectValidationResult, AgentProvider, AgentSettings, RecentProject } from '../../shared/types'
+import type { ProjectValidationResult, AgentProvider, AgentSettings, ChatSummary, RecentProject } from '../../shared/types'
 import {
   agentEventToLog,
   describeToolCall,
@@ -9,10 +9,12 @@ import {
   newEntryId,
   newLogEvent,
   permissionSubject,
-  projectName
+  projectName,
+  replayToEntries
 } from './chatFormat'
 import type { ChatEntry, LogEvent } from './chatFormat'
 import { BrowserPanel } from './components/BrowserPanel'
+import { ChatSidebar } from './components/ChatSidebar'
 import { Composer } from './components/Composer'
 import { EmptyState } from './components/EmptyState'
 import { Header } from './components/Header'
@@ -22,6 +24,9 @@ import type { PermissionRequestEntry } from './components/MessageList'
 import { IconAlert, IconFolder, IconLogo, IconX } from './components/icons'
 
 type Screen = 'picker' | 'chat'
+
+const CONTEXT_LOST_MESSAGE = 'Контекст чата не восстановлен'
+const CONTEXT_LOST_READ_ONLY = 'Контекст этого чата потерян — продолжить его нельзя. Начните новый чат.'
 
 function App(): React.JSX.Element {
   const [screen, setScreen] = useState<Screen>('picker')
@@ -33,9 +38,14 @@ function App(): React.JSX.Element {
   const [agentSettings, setAgentSettings] = useState<AgentSettings | null>(null)
 
   const [entries, setEntries] = useState<ChatEntry[]>([])
+  const [chats, setChats] = useState<ChatSummary[]>([])
+  const [activeChatId, setActiveChatId] = useState<string | null>(null)
+  const [readOnlyReason, setReadOnlyReason] = useState<string | null>(null)
   const [prompt, setPrompt] = useState('')
   const [isRunning, setIsRunning] = useState(false)
   const [isStopping, setIsStopping] = useState(false)
+  const [isOpeningChat, setIsOpeningChat] = useState(false)
+  const openRequestRef = useRef(0)
   const [showDebug, setShowDebug] = useState(false)
   const unsubscribeRef = useRef<(() => void) | null>(null)
 
@@ -48,6 +58,7 @@ function App(): React.JSX.Element {
 
   const [browserOpen, setBrowserOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(() => localStorage.getItem('chatSidebarOpen') !== '0')
 
   const feedRef = useRef<HTMLDivElement | null>(null)
   const stickToBottomRef = useRef(true)
@@ -94,6 +105,12 @@ function App(): React.JSX.Element {
     }
   }
 
+  const loadChats = async (pkgRoot: string): Promise<ChatSummary[]> => {
+    const list = await window.api.listChats(pkgRoot)
+    setChats(list)
+    return list
+  }
+
   const loadRecentProjects = async (): Promise<void> => {
     setRecentProjects(await window.api.listRecentProjects())
   }
@@ -102,12 +119,17 @@ function App(): React.JSX.Element {
     setSelectedPath(projectPath)
     setValidation(null)
     setEntries([])
+    setActiveChatId(null)
+    setReadOnlyReason(null)
     setIsChecking(true)
     try {
       const result = await window.api.validateProject(projectPath)
       setValidation(result)
       if (result.isValid) {
         await refreshSettings()
+        if (result.pkgRoot) {
+          await loadChats(result.pkgRoot)
+        }
         subscribeToAgent()
         setScreen('chat')
       } else {
@@ -144,7 +166,7 @@ function App(): React.JSX.Element {
   }
 
   const sendText = async (text: string): Promise<void> => {
-    if (!text || !validation?.pkgRoot || isRunning) {
+    if (!text || !validation?.pkgRoot || isRunning || isOpeningChat || readOnlyReason) {
       return
     }
     setEntries((prev) => [...prev, { id: newEntryId(), ts: Date.now(), role: 'user', content: text }])
@@ -166,9 +188,51 @@ function App(): React.JSX.Element {
         { id: newEntryId(), ts: Date.now(), role: 'agent-result', level: 'error', content: `Ошибка: ${message}` }
       ])
       pushLog(newLogEvent('error', 'app', message))
+      if (message.includes(CONTEXT_LOST_MESSAGE)) {
+        setReadOnlyReason(CONTEXT_LOST_READ_ONLY)
+      }
     } finally {
       setIsRunning(false)
       setIsStopping(false)
+      if (validation?.pkgRoot) {
+        const previousIds = new Set(chats.map((chat) => chat.id))
+        const refreshed = await loadChats(validation.pkgRoot)
+        if (activeChatId === null && refreshed[0] && !previousIds.has(refreshed[0].id)) {
+          setActiveChatId(refreshed[0].id)
+        }
+      }
+    }
+  }
+
+  const handleSelectChat = async (id: string): Promise<void> => {
+    // a read-only chat may be opened again: its view is what the user sees, the session is not restored
+    if (isRunning || isOpeningChat || (id === activeChatId && !readOnlyReason) || !validation?.pkgRoot) {
+      return
+    }
+    const token = ++openRequestRef.current
+    setIsOpeningChat(true)
+    try {
+      const opened = await window.api.openChat(id, validation.pkgRoot)
+      if (token !== openRequestRef.current) return
+      resetChatView()
+      const noteEntries: ChatEntry[] = opened.note
+        ? [{ id: newEntryId(), ts: Date.now(), role: 'agent-result', level: 'warn', content: opened.note }]
+        : []
+      setEntries([...replayToEntries(opened.items), ...noteEntries])
+      setActiveChatId(id)
+      setReadOnlyReason(opened.readOnlyReason)
+      await refreshSettings()
+    } catch (error) {
+      const message = (error as Error).message
+      setEntries((prev) => [
+        ...prev,
+        { id: newEntryId(), ts: Date.now(), role: 'agent-result', level: 'error', content: `Ошибка: ${message}` }
+      ])
+      pushLog(newLogEvent('error', 'app', message))
+    } finally {
+      if (token === openRequestRef.current) {
+        setIsOpeningChat(false)
+      }
     }
   }
 
@@ -206,6 +270,8 @@ function App(): React.JSX.Element {
     await window.api.setProvider(provider)
     await refreshSettings()
     resetChatView()
+    setActiveChatId(null)
+    setReadOnlyReason(null)
   }
 
   const handleNewChat = async (): Promise<void> => {
@@ -214,6 +280,11 @@ function App(): React.JSX.Element {
     }
     await window.api.newChat()
     resetChatView()
+    setActiveChatId(null)
+    setReadOnlyReason(null)
+    if (validation?.pkgRoot) {
+      await loadChats(validation.pkgRoot)
+    }
   }
 
   const handleChangeProject = async (): Promise<void> => {
@@ -222,6 +293,9 @@ function App(): React.JSX.Element {
     }
     await window.api.newChat()
     resetChatView()
+    setActiveChatId(null)
+    setReadOnlyReason(null)
+    setChats([])
     setBrowserOpen(false)
     await window.api.setCrmBrowserVisible(false)
     await window.api.closeCrmBrowser()
@@ -240,6 +314,12 @@ function App(): React.JSX.Element {
   }
 
   const handleCloseLogs = useCallback(() => setLogsOpen(false), [])
+
+  const handleToggleSidebar = (): void => {
+    const next = !sidebarOpen
+    setSidebarOpen(next)
+    localStorage.setItem('chatSidebarOpen', next ? '1' : '0')
+  }
 
   // the agent uses the CRM browser: open its panel
   useEffect(() => window.api.onCrmBrowserActivity(() => setBrowserOpen(true)), [])
@@ -326,7 +406,6 @@ function App(): React.JSX.Element {
         isRunning={isRunning}
         showDebug={showDebug}
         onToggleDebug={setShowDebug}
-        onNewChat={handleNewChat}
         onOpenLogs={() => setLogsOpen(true)}
         onOpenLogsFolder={handleOpenLogsFolder}
         settings={agentSettings}
@@ -338,8 +417,22 @@ function App(): React.JSX.Element {
         onToggleBrowser={() => setBrowserOpen((value) => !value)}
         onMenuOpenChange={setMenuOpen}
         onChangeProject={handleChangeProject}
+        sidebarOpen={sidebarOpen}
+        onToggleSidebar={handleToggleSidebar}
+        onNewChat={handleNewChat}
       />
       <div className="workspace">
+        {sidebarOpen && (
+          <ChatSidebar
+            chats={chats}
+            activeChatId={activeChatId}
+            disabled={isRunning || isOpeningChat}
+            onSelect={(id) => {
+              void handleSelectChat(id)
+            }}
+            onNewChat={handleNewChat}
+          />
+        )}
         <main className="main">
           <div ref={feedRef} onScroll={handleFeedScroll} className={`feed${isEmpty ? ' is-empty' : ''}`}>
             {isEmpty ? (
@@ -350,9 +443,13 @@ function App(): React.JSX.Element {
                 isRunning={isRunning}
                 permissionRequests={permissionRequests}
                 onPermissionResponse={handlePermissionResponse}
-                onChoiceSubmit={(text) => {
-                  void sendText(text)
-                }}
+                onChoiceSubmit={
+                  readOnlyReason
+                    ? undefined
+                    : (text) => {
+                        void sendText(text)
+                      }
+                }
               />
             )}
           </div>
@@ -365,6 +462,7 @@ function App(): React.JSX.Element {
             onStop={handleStop}
             isStopping={isStopping}
             stopOnEscape={!logsOpen && !menuOpen}
+            disabledReason={readOnlyReason ?? (isOpeningChat ? 'Открываю чат…' : undefined)}
           />
         </main>
         {browserPanelShown && (

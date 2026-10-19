@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { IpcRendererEvent } from 'electron'
-import type { ProjectValidationResult, AgentProvider, AgentSettings, CursorModelOption, ClaudeModelOption, CursorModelParam, ClaudeEffort, DbSettingsPatch, CrmSettingsPatch, CrmBrowserState, RecentProject } from '../shared/types'
+import type { ProjectValidationResult, AgentProvider, AgentSettings, CursorModelOption, ClaudeModelOption, CursorModelParam, ClaudeEffort, DbSettingsPatch, CrmSettingsPatch, CrmBrowserState, RecentProject, ChatSummary, OpenedChat } from '../shared/types'
 import type { AgentEvent, ClaudeSkillsStatus, ClaudeMdChoice, InstallOutcome } from '@bpmsoft-agent/agent-runtime'
 
 export interface AgentPermissionRequest {
@@ -42,6 +42,8 @@ const api = {
   clearCursorApiKey: (): Promise<void> => ipcRenderer.invoke('cursor:clearApiKey'),
   listCursorModels: (): Promise<CursorModelOption[]> => ipcRenderer.invoke('cursor:listModels'),
   listClaudeModels: (): Promise<ClaudeModelOption[]> => ipcRenderer.invoke('claude:listModels'),
+  listChats: (pkgRoot: string): Promise<ChatSummary[]> => ipcRenderer.invoke('chat:list', pkgRoot),
+  openChat: (id: string, pkgRoot: string): Promise<OpenedChat> => ipcRenderer.invoke('chat:open', id, pkgRoot),
   setDbSettings: (patch: DbSettingsPatch): Promise<void> => ipcRenderer.invoke('settings:setDb', patch),
   setDbPassword: (password: string): Promise<void> => ipcRenderer.invoke('db:setPassword', password),
   clearDbPassword: (): Promise<void> => ipcRenderer.invoke('db:clearPassword'),

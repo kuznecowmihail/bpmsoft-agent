@@ -1,5 +1,6 @@
 import type { AgentEvent } from '@bpmsoft-agent/agent-runtime'
 import { formatUsage } from '../../shared/usage'
+import type { ChatReplayItem } from '../../shared/types'
 
 export type ChatRole = 'user' | 'agent-text' | 'agent-tool' | 'agent-result' | 'agent-other'
 
@@ -250,6 +251,18 @@ export function mapAgentEventToEntry(event: AgentEvent): ChatEntry {
     return { id, ts, role: 'agent-tool', level: 'warn', content: `Ошибка: ${oneLine(failed.text, 160)}`, details: failed.text }
   }
   return { id, ts, role: 'agent-other', content: 'Служебное событие', details: JSON.stringify(event.raw, null, 2) }
+}
+
+/** Chat replay items (from the chat log) → feed entries, in order, keeping the original timestamps. */
+export function replayToEntries(items: ChatReplayItem[]): ChatEntry[] {
+  return items.map((item) => {
+    const parsed = Date.parse(item.ts)
+    const ts = Number.isNaN(parsed) ? Date.now() : parsed
+    if (item.kind === 'user') {
+      return { id: newEntryId(), ts, role: 'user', content: item.text }
+    }
+    return { ...mapAgentEventToEntry(item.event), ts }
+  })
 }
 
 export type LogLevel = EntryLevel

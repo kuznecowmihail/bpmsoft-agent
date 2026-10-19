@@ -1,5 +1,7 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import * as path from 'path'
+import { tmpdir } from 'os'
+import type { AgentEvent } from '@bpmsoft-agent/agent-runtime'
 
 const store = new Map<string, string>()
 
@@ -30,8 +32,25 @@ import {
   setCrmPassword,
   hasCrmPassword,
   clearCrmPassword,
-  dropLegacyConnectionSecrets
+  dropLegacyConnectionSecrets,
+  restoreAgentSession,
+  isContextLost,
+  isSessionNotFoundError
 } from '../src/main/agentSession'
+
+describe('isSessionNotFoundError', () => {
+  it('recognizes a missing conversation', () => {
+    expect(isSessionNotFoundError('No conversation found with session ID: x')).toBe(true)
+  })
+
+  it('recognizes a missing agent', () => {
+    expect(isSessionNotFoundError('Agent not found')).toBe(true)
+  })
+
+  it('does not treat other errors as a missing session', () => {
+    expect(isSessionNotFoundError('network error')).toBe(false)
+  })
+})
 
 describe('normalizeApiKey', () => {
   it('removes leading and trailing whitespace', () => {
@@ -254,5 +273,44 @@ describe('agentSession conversation continuity', () => {
     // No public getter for provider, but we verify through resetAgentSession
     resetAgentSession()
     expect(getCurrentSessionId()).toBeUndefined()
+  })
+})
+
+describe('agentSession restore from chat history', () => {
+  afterEach(() => {
+    resetAgentSession()
+  })
+
+  it('restoreAgentSession sets session id', () => {
+    restoreAgentSession({
+      sessionId: 'sid-1',
+      projectPath: '/pkg',
+      provider: 'claude',
+      chatStartedAt: Date.now(),
+      lastTurnStopped: false,
+      lastTurnInterrupted: false,
+      jsonlPath: path.join(tmpdir(), 'restore-test', '10-00-00.jsonl')
+    })
+    expect(getCurrentSessionId()).toBe('sid-1')
+  })
+})
+
+describe('agentSession isContextLost', () => {
+  const init = (sessionId: string): AgentEvent => ({ type: 'system_init', model: 'm', mcpServers: [], sessionId })
+
+  it('is false when nothing was resumed', () => {
+    expect(isContextLost(undefined, init('a'))).toBe(false)
+  })
+
+  it('is false when the provider resumed the same session', () => {
+    expect(isContextLost('a', init('a'))).toBe(false)
+  })
+
+  it('is true when the provider started a different session', () => {
+    expect(isContextLost('a', init('b'))).toBe(true)
+  })
+
+  it('is false for events other than system_init', () => {
+    expect(isContextLost('a', { type: 'text', text: 'x' })).toBe(false)
   })
 })

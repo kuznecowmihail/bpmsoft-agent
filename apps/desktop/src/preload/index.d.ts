@@ -1,4 +1,4 @@
-import type { ProjectValidationResult, AgentProvider, AgentSettings, CursorModelOption, ClaudeModelOption, CursorModelParam, ClaudeEffort, DbSettingsPatch, CrmSettingsPatch, CrmBrowserState, RecentProject } from '../shared/types'
+import type { ProjectValidationResult, AgentProvider, AgentSettings, CursorModelOption, ClaudeModelOption, CursorModelParam, ClaudeEffort, DbSettingsPatch, CrmSettingsPatch, CrmBrowserState, RecentProject, ChatSummary, OpenedChat } from '../shared/types'
 import type { AgentEvent, ClaudeSkillsStatus, ClaudeMdChoice, InstallOutcome } from '@bpmsoft-agent/agent-runtime'
 
 export interface AgentPermissionRequest {
@@ -29,6 +29,8 @@ export interface BpmsoftDesktopApi {
   clearCursorApiKey: () => Promise<void>
   listCursorModels: () => Promise<CursorModelOption[]>
   listClaudeModels: () => Promise<ClaudeModelOption[]>
+  listChats: (pkgRoot: string) => Promise<ChatSummary[]>
+  openChat: (id: string, pkgRoot: string) => Promise<OpenedChat>
   setDbSettings: (patch: DbSettingsPatch) => Promise<void>
   setDbPassword: (password: string) => Promise<void>
   clearDbPassword: () => Promise<void>

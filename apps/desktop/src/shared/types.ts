@@ -1,3 +1,5 @@
+import type { AgentEvent } from '@bpmsoft-agent/agent-runtime'
+
 export type BpmsoftLayoutKind = 'app-root' | 'configuration' | 'pkg' | 'package' | 'unknown'
 
 export interface ProjectValidationResult {
@@ -103,4 +105,48 @@ export interface CrmSettingsPatch {
 	crmBrowserEnabled?: boolean
 	crmUrl?: string
 	crmUser?: string
+}
+
+/** One entry of the chat replay: a user message or an agent event, in log order. */
+export type ChatReplayItem =
+	| { kind: 'user'; ts: string; text: string }
+	| { kind: 'agent'; ts: string; event: AgentEvent }
+
+/** Model used by a chat turn, as recorded in the chat log. */
+export interface ChatModelRef {
+	id: string | null
+	effort?: string | null
+	params?: CursorModelParam[]
+}
+
+/** Result of reading a chat .jsonl log for replay and metadata. */
+export interface ParsedChatLog {
+	projectPath: string | null
+	readRoot: string | null
+	startedAt: string | null
+	title: string
+	provider: AgentProvider | null
+	model: ChatModelRef | null
+	sessionId: string | null
+	lastTurnInterrupted: boolean
+	lastTurnStopped: boolean
+	updatedAt: string | null
+	items: ChatReplayItem[]
+}
+
+/** Строка списка чатов текущего стенда. */
+export interface ChatSummary {
+	id: string
+	title: string
+	provider: AgentProvider
+	updatedAt: string
+	contextLost: boolean
+}
+
+/** Чат, открытый из истории: лента для показа и причина, почему его нельзя продолжить. */
+export interface OpenedChat {
+	id: string
+	items: ChatReplayItem[]
+	readOnlyReason: string | null
+	note: string | null
 }
