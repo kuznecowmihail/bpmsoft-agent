@@ -14,9 +14,11 @@ interface ComposerProps {
   isStopping: boolean
   /** Esc stops the turn only when no overlay (logs, menu) is open. */
   stopOnEscape: boolean
+  /** When set, the input is replaced by this notice (e.g. a read-only chat). */
+  disabledReason?: string
 }
 
-export function Composer({ value, onChange, onSend, isRunning, focusKey, onStop, isStopping, stopOnEscape }: ComposerProps): React.JSX.Element {
+export function Composer({ value, onChange, onSend, isRunning, focusKey, onStop, isStopping, stopOnEscape, disabledReason }: ComposerProps): React.JSX.Element {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
   const canSend = !isRunning && value.trim().length > 0
 
@@ -48,6 +50,14 @@ export function Composer({ value, onChange, onSend, isRunning, focusKey, onStop,
       textareaRef.current?.focus()
     }
   }, [isRunning, focusKey])
+
+  if (disabledReason) {
+    return (
+      <div className="composer-wrap">
+        <div className="composer-notice">{disabledReason}</div>
+      </div>
+    )
+  }
 
   return (
     <div className="composer-wrap">

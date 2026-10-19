@@ -13,10 +13,12 @@ import {
   parseChoices,
   formatChoiceAnswers,
   isPlanWithoutChoices,
+  replayToEntries,
   type ChatEntry,
   type ChoiceQuestion,
   type ChoiceAnswer
 } from '../src/renderer/src/chatFormat'
+import type { ChatReplayItem } from '../src/shared/types'
 
 describe('chatFormat', () => {
   describe('shortPath', () => {
@@ -730,5 +732,22 @@ describe('describeToolCall pkg_lint', () => {
   it('describes the pkg_lint tool with and without the app prefix', () => {
     expect(describeToolCall('mcp__app__pkg_lint', {})).toBe('Проверяет изменённые схемы (pkg_lint)')
     expect(describeToolCall('pkg_lint', {})).toBe('Проверяет изменённые схемы (pkg_lint)')
+  })
+
+  describe('replayToEntries', () => {
+    it('keeps order and timestamps', () => {
+      const userTs = '2026-10-19T10:00:00.000Z'
+      const agentTs = '2026-10-19T10:00:05.000Z'
+      const items = [
+        { kind: 'user', ts: userTs, text: 'опиши' },
+        { kind: 'agent', ts: agentTs, event: { type: 'text', text: 'ответ' } }
+      ] as ChatReplayItem[]
+      const entries = replayToEntries(items)
+      expect(entries.map((entry) => entry.role)).toEqual(['user', 'agent-text'])
+      expect(entries[0].content).toBe('опиши')
+      expect(entries[1].content).toBe('ответ')
+      expect(entries[0].ts).toBe(Date.parse(userTs))
+      expect(entries[1].ts).toBe(Date.parse(agentTs))
+    })
   })
 })

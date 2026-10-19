@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { AgentProvider, AgentSettings } from '../../../shared/types'
 import { projectName } from '../chatFormat'
-import { IconFolder, IconGlobe, IconLogo, IconLogout, IconPlus, IconSettings, IconTerminal } from './icons'
+import { IconFolder, IconGlobe, IconLogo, IconLogout, IconSettings, IconTerminal } from './icons'
 import { SettingsMenu } from './SettingsMenu'
 
 interface HeaderProps {
@@ -10,7 +10,6 @@ interface HeaderProps {
   isRunning: boolean
   showDebug: boolean
   onToggleDebug: (value: boolean) => void
-  onNewChat: () => void
   onOpenLogs: () => void
   onOpenLogsFolder: () => void
   settings: AgentSettings | null
@@ -99,7 +98,6 @@ export function Header({
   isRunning,
   showDebug,
   onToggleDebug,
-  onNewChat,
   onOpenLogs,
   onOpenLogsFolder,
   settings,
@@ -229,16 +227,6 @@ export function Header({
         <button type="button" className="btn btn-ghost" onClick={onOpenLogs} title="Логи сессии">
           <IconTerminal size={14} />
           <span className="btn-label">Логи</span>
-        </button>
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={onNewChat}
-          disabled={isRunning}
-          title={isRunning ? 'Дождитесь окончания ответа агента' : 'Начать новый чат'}
-        >
-          <IconPlus size={14} />
-          <span className="btn-label">Новый чат</span>
         </button>
         <div className="popover-anchor" ref={menuRef}>
           {(() => {
