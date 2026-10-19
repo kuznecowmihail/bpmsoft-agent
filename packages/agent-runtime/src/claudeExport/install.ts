@@ -74,6 +74,9 @@ function modifiedFiles(appRoot: string, old: Manifest): string[] {
 	return Object.keys(old.files)
 		.filter((rel) => {
 			const dest = toDisk(appRoot, rel);
+			if (rel === "CLAUDE.md" && !hasMarker(dest)) {
+				return false;
+			}
 			return fs.existsSync(dest) && fileSha256(dest) !== old.files[rel];
 		})
 		.sort();

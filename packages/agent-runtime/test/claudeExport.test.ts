@@ -175,6 +175,23 @@ describe("claudeExport", () => {
 		expect(JSON.parse(read(".claude", "skills", ".bpmsoft-agent.json")).claudeMd).toBe("root");
 	});
 
+	it("root CLAUDE.md that lost the marker asks only for the CLAUDE.md choice", () => {
+		installClaudeSkills(appRoot, sources(), opts);
+		put(path.join(appRoot, "CLAUDE.md"), "# my own\n");
+
+		expect(installClaudeSkills(appRoot, sources(), opts)).toEqual({ kind: "needs-claude-md-choice" });
+
+		const outcome = installClaudeSkills(appRoot, sources(), { ...opts, claudeMd: "separate" });
+		expect(outcome.kind).toBe("installed");
+		expect(read("CLAUDE.md").startsWith("# my own")).toBe(true);
+		const imports = read("CLAUDE.md").split(/\r?\n/).filter((l) => l.trim() === "@.claude/bpmsoft-agent.md");
+		expect(imports.length).toBe(1);
+		expect(exists(".claude", "bpmsoft-agent.md")).toBe(true);
+		const manifest = JSON.parse(read(".claude", "skills", ".bpmsoft-agent.json"));
+		expect(manifest.claudeMd).toBe("separate");
+		expect(exists("CLAUDE.md")).toBe(true);
+	});
+
 	it("settings.local.json is untouched", () => {
 		put(path.join(appRoot, ".claude", "settings.local.json"), '{"permissions":{}}');
 		installClaudeSkills(appRoot, sources(), opts);
