@@ -120,6 +120,8 @@ details: {
 - `alternateClassName` мискина — это ТОЧНО та строка, которую другие схемы указывают в своём блоке `mixins: { <ЛокальноеИмя>: "BPMSoft.<Name>" }` (подтверждено сопоставлением на реальном замещении раздела).
 - Использование методов мискина из хост-схемы — через `this.mixins.<ЛокальноеИмя>.<метод>.call(this, ...)` (подтверждено на нескольких реальных схемах).
 
+- ✅ Слои `z-index` клиентского ядра (подтверждено по коду платформы, `[app]/Resources/ui/combined/all-combined.css`, `[app]/Resources/ui/ExtJs/extjs-base-debug.js`): подсказка `.tip` — 10000, меню `.menu` — 3000, окно сообщения `.ts-messagebox-box` — 2500, маска загрузки `.ts-mask-container` — 1020; плавающие окна ExtJS — от 19000 и выше (`Ext.ZIndexManager.zBase` 9000, каждое новое окно `+= 10000`). Своё модальное окно поверх маски, но под меню и подсказками — между 1020 и 2500.
+
 ## Патч существующего класса (`Ext override`) — отдельный вид схемы, не миксин
 - Схема `SchemaType: Module`, без `Parent`; в `.js` — `Ext.define("<ИмяКлассаПатча>", { override: "<полное имя патчимого класса>", <методы> })`. Методы патча заменяют методы класса на месте (механизм Ext.js `override`); `this.callParent(arguments)` внутри вызывает исходный метод.
 - **Пространство имён класса патча — по патчимому классу, а не `.mixins.`**: в реальном проекте патчи объявлены в `BPMSoft.configuration.*`, в корне `BPMSoft.*`, в `BPMSoft.configuration.mixins.*` (в основном патчи самих миксинов), `BPMSoft.controls.*`, `BPMSoft.utilities.*`, `BPMSoft.data.filters.*`. Примеры: патч `BPMSoft.controls.Grid` объявлен как `BPMSoft.configuration.<Имя>`, патч утилиты — как `BPMSoft.utilities.<Имя>`. Исключение — патч модуля `BPMSoft.SummaryModule`, объявленный в `.mixins.`.
