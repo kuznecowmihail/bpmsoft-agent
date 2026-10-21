@@ -60,6 +60,7 @@
 - [x] Системные операции: `SysAdminOperation` + `SysAdminOperationGrantee`; в коде — `DBSecurityEngine.CheckCanExecuteOperation` / `GetCanExecuteOperation`. Подтверждены `GetCanExecuteOperation`/`CheckCanExecuteOperation` (SecurityException).
 - [x] Права записи из кода: `SetEntitySchemaRecordRightLevel`, `RightsHelper`.
 Тест: `TestRightsEnt` с администрированием по записям, операция `TestCanDo…`.
+- [x] Права по операциям (`D15`, `SysEntitySchemaOperationRight`, данными) и по колонкам (`D16`, `SysEntitySchemaColumnRight`, SQL) — проверено 21.10.2026; карточка с закрытой колонкой — 🧪.
 
 ## 6. Процессы
 - [x] Асинхронное своё действие: `return false` + `CompleteExecuting`; `CancelExecuting` при отмене; `Owner` / `OwnerUId`. Тест: `TestAsyncUserTask` в `TestProcAsync`.

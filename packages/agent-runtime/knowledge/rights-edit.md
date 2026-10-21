@@ -2,6 +2,11 @@
 
 Факты и коды — `rights.md`.
 
+## ✅ Права по операциям — данными пакета
+**Подтверждено записью в CRM (21.10.2026).** Включи `D15` и `AdministratedByOperations` (`rights.md`), затем набор данных по `data-edit.md` на объект `SysEntitySchemaOperationRight` (`f028c2c5-facc-4109-8cfa-75b2b6620527`). Колонки: `Id` (`ae0e45ca-c495-4fe7-a39d-3ab7278e1617`, ключ), `SubjectSchemaUId` (`134c280f-f7a7-4ac5-beeb-4ab1ed9e4ff5`, тип Guid `23018567-a13c-4320-8687-fd6f9e3699bd`, значение — UId объекта), `SysAdminUnit` (`d27e9964-a7a6-46dd-9f9a-7cb470c33b98`, справочник, `DisplayValue` — название роли), `CanRead` (`a3dc68d6-f74e-4a57-8411-77a88dfe0bbb`), `CanAppend` (`21a61238-45dc-4089-9882-cc1be097cbf8`), `CanEdit` (`379b41a2-dfb5-4069-a267-88ec0653e391`), `CanDelete` (`2cda2c20-d48a-44d0-b266-5542730b1ad9`) — логические `true`/`false`, `Position` (`a72532ba-4755-4b2f-8079-c382ae6d0e9a`, целое, `0` числом).
+- Одна строка на роль. Роли без строки не могут ничего, кроме администраторов (системные операции «… любых данных»).
+- Предупреди пользователя до включения: без строк прав обычные пользователи перестанут видеть записи объекта и не смогут их создавать.
+
 ## ✅ Включить администрирование по записям у своего объекта
 **Подтверждено записью в CRM (21.10.2026).**
 - `metadata.json` объекта: `"D17": true` (в построчном формате — строка `= MetaData.Schema.D17 true`); `properties.json`: `"AdministratedByRecords": "True"`; `ModifiedOnUtc` в `descriptor.json`.
@@ -50,3 +55,22 @@ UserConnection.DBSecurityEngine.SetEntitySchemaRecordRightLevel(<Id пользо
 - `SysAdminOperationGrantee_<Код>` — объект `SysAdminOperationGrantee` (`3987bdc6-38bb-4b41-bcf7-90bb3995117a`). Колонки: `Id` (ключ), `SysAdminOperation` (`a64eb826-4dc1-45fb-a5ac-d768275eb719`, справочник, `DisplayValue` — название операции), `SysAdminUnit` (`423b165f-9759-437b-b532-95ef1b78063b`, справочник, `DisplayValue` — название роли), `CanExecute` (`e1f978af-3b07-4c9f-a422-c6170cd1b1a4`, `true`), `Position` (`9d032101-3db5-4bba-ab16-294104cd15ad`, целое, `0` числом).
 - Без выдачи операцию не выполнит никто, даже администратор: выдай её и роли «Системные администраторы», если они должны её выполнять.
 - В коде: `UserConnection.DBSecurityEngine.CheckCanExecuteOperation("<Код>")` в начале метода сервиса — исключение с понятным текстом, если прав нет; на клиенте — кнопку прячь по результату проверки (сервис или `RightUtilities` 🧪).
+
+## ✅ Права на колонки — SQL-скриптом
+**Подтверждено записью в CRM (21.10.2026).** Включи `D16` и `AdministratedByColumns` (`rights.md`). Права — SQL-скрипт по `sql-script-edit.md` (`InstallType: 1`, PostgreSQL), идемпотентный:
+```sql
+DO $$
+DECLARE
+	schemaUId UUID := '<UId объекта>';
+	roleId UUID := '<Id роли>';
+BEGIN
+	DELETE FROM "SysEntitySchemaColumnRight"
+		WHERE "SubjectSchemaUId" = schemaUId AND "SysAdminUnitId" = roleId;
+	INSERT INTO "SysEntitySchemaColumnRight" ("SubjectSchemaUId", "SubjectColumnUId", "SysAdminUnitId", "RightLevel", "Position")
+	VALUES
+		(schemaUId, '<UId колонки 1>', roleId, 0, 0),  -- нет доступа
+		(schemaUId, '<UId колонки 2>', roleId, 1, 0);  -- только чтение
+END $$;
+```
+- UId колонки — из `metadata.json` объекта (у колонки), не из имени.
+- Закрытая колонка читается пустым значением без ошибки — если её выгружает интеграция, предупреди пользователя.
