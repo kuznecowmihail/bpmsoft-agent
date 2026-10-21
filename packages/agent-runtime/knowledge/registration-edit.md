@@ -74,3 +74,11 @@ UId целевых таблиц (`Descriptor.Schema.UId` в `descriptor.json`): 
   (так делают `ContactSectionV2`, `AccountSectionV2` и др.; в `BaseDataView` атрибут по умолчанию `false`). Статическая группа — тип `Static` (`9dc5f6e6-2a61-4de8-a059-de30f4e74f24`), записи — строки `<Объект>InFolder` (`FolderId`, `<Объект>Id`).
 - Группы вкладываются друг в друга через `ParentId` (статическая внутри динамической — проверено).
 - 🧪 Обязательно ли имя колонки-ссылки в `<Объект>InFolder` совпадает с именем объекта — проверялось только с совпадающим именем.
+
+## ✅ Новое рабочее место
+**Подтверждено записью в CRM (21.10.2026)**: рабочее место появилось в меню у пользователя роли, внутри — раздел. Три набора данных по `data-edit.md`:
+1. `SysWorkplace_<Имя>` — объект `SysWorkplace` (`f54121e1-d75d-42e0-b790-bc8aa0bb216c`, наследник `BaseEntityWithPosition`). Колонки: `Id` (ключ); `Name` (`215e82ee-20b0-4aa2-af3b-ff06cbc6da52`) — локализуемая, только в `Localization/data.<культура>.json` (переводы — в `SysWorkplaceLcz`); `Position` (`bd12ea8e-2bc2-42bf-925a-3ab766cc0b9f`, порядок в меню); `IsPersonal` (`cd8bcb82-b061-468d-bcce-a5a9312866e4`, `false`); `LoaderId` (`8fe2b261-a69f-4846-bf82-f36e564d0aa4`, Guid — как у остальных рабочих мест стенда, `3707a058-e6a8-4d2c-99cc-d01d9e6b70c6`); `SysApplicationClientType` (`445c4583-2f21-4d2b-a6ba-c33108797ae0`, Browser `195785b4-f55a-4e72-ace3-6480b54c8fa5`); `Type` (`dae36990-bfb4-4f13-ae18-1b18b6081983`, General `000a9225-728b-4778-a951-c42439ffe024`).
+2. `SysModuleInWorkplace_<Имя>` — разделы рабочего места: формат как у набора раздела (`SysModule`, `SysWorkplace`, `Position`).
+3. `SysAdminUnitInWorkplace_<Имя>` — кому видно: объект `SysAdminUnitInWorkplace` (`c24608d4-6299-45ab-8b08-84cbdff67d9a`), колонки `SysWorkplace` (`d5cfaf4a-0900-4ef9-aee8-2ede7f9d97fb`) и `SysAdminUnit` (`b96bb4ca-a133-44f1-aa7d-24495d89e278`, пользователь или роль). Без этой строки рабочее место не видно никому.
+- Применяется «Обновить из файловой системы», без компиляции; у пользователя — Ctrl+F5.
+- Удаление наборов из пакета не удаляет записи — убирай SQL (`data-edit.md`, «Удалить записи данных»): `SysAdminUnitInWorkplace`, `SysModuleInWorkplace`, `SysWorkplaceLcz`, затем `SysWorkplace`.

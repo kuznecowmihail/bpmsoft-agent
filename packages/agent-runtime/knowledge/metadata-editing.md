@@ -195,6 +195,7 @@ Age: {
 | Набор данных с `InstallType: 2` при «Обновить из файловой системы» (обновляет существующие записи, новые не добавляет) | Data | ✅ подтверждено (21.10.2026), `data.md` |
 | Иерархический справочник (наследник `BaseHierarchicalLookup`, переопределение `Parent`), деактивация записей `D32`, значения по умолчанию `CurrentDate`/`CurrentUser`/`SequentialGuid`, ссылка на представление с `E8` | Entity | ✅ подтверждено (21.10.2026), `entity-edit.md` |
 | Группы в разделе: `<Объект>Folder` (`BaseFolder`) и `<Объект>InFolder` (`BaseItemInFolder`), `FolderMode`, `UseStaticFolders` в разделе | Entity / Data / ClientUnit | ✅ подтверждено (21.10.2026), `registration-edit.md` |
+| Новое рабочее место (`SysWorkplace` + `SysModuleInWorkplace` + `SysAdminUnitInWorkplace` данными) | Data | ✅ подтверждено (21.10.2026), `registration-edit.md` |
 
 ## Расширение — новые типы схем
 Этот же формат `metadata.json` встречается и у других менеджеров схем:

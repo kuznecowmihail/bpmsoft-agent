@@ -92,7 +92,7 @@
 - [x] Системные значения по умолчанию: `CurrentDate`, `CurrentUser`, `CurrentUserAccount`, `SequentialGuid` — UId считать из Designer.
 - [x] `D32` (деактивация записей), `D26`. Подтверждено: `RecordInactive`, фильтр только с `useRecordDeactivation`; `D26` — открыт.
 - [ ] Карточки по типам: `ActionKindCaption`, `ActionKindName`, остальные колонки `SysModuleEdit`.
-- [ ] Новое рабочее место: `SysWorkplace` + `SysAdminUnitInWorkplace`.
+- [x] Новое рабочее место: `SysWorkplace` + `SysAdminUnitInWorkplace`. Подтверждено 21.10.2026.
 - [ ] Системная настройка: смысл `IsPersonal`, `IsCacheable`.
 
 ## Есть в Creatio, нет в BPMSoft
