@@ -17,7 +17,8 @@ const skillNames = [
 	"bpm-source-code",
 	"bpm-data",
 	"bpm-sql-script",
-	"bpm-registration"
+	"bpm-registration",
+	"bpm-web-service"
 ];
 
 const appSectionHeading = "## Как читать знания: имена из приложения";

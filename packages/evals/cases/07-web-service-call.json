@@ -1,0 +1,26 @@
+{
+  "title": "REST-сервис и его вызов из процесса",
+  "provider": "claude",
+  "task": "Сделай REST веб-сервис {{prefix}}EvalEchoService («Эхо-сервис (эвал)») с адресом https://httpbin.org и методом {{prefix}}EvalEcho: POST /post, в теле обязательное поле name (текст), в заголовке X-Eval (текст), из ответа читаем json.name. И процесс {{prefix}}EvalWebServiceProcess («Вызов эхо-сервиса (эвал)»): на входе текст Name, процесс вызывает этот метод с name = Name и X-Eval = «eval», а в выходные параметры кладёт имя из ответа и HTTP-код.",
+  "answers": [
+    { "when": "в как\\S* пакет", "text": "{{package}}" },
+    { "when": "зависимост|связ\\S* пакет|совмест", "text": "Не связывать пакеты: делай только в {{package}}, зависимости пакета не меняй" },
+    { "when": "Подтверждаете план", "text": "Делай" }
+  ],
+  "maxTurns": 10,
+  "checks": [
+    { "type": "file_exists", "path": "Schemas/{{prefix}}EvalEchoService/metadata.json" },
+    { "type": "file_contains", "path": "Schemas/{{prefix}}EvalEchoService/descriptor.json", "pattern": "\"ManagerName\":\\s*\"ServiceSchemaManager\"" },
+    { "type": "file_contains", "path": "Schemas/{{prefix}}EvalEchoService/metadata.json", "pattern": "\"IT2\":\\s*2" },
+    { "type": "file_contains", "path": "Schemas/{{prefix}}EvalEchoService/metadata.json", "pattern": "\\$\\.json\\.name" },
+    { "type": "file_contains", "path": "Schemas/{{prefix}}EvalEchoService/metadata.json", "pattern": "\"IU1\":\\s*\"X-Eval\"" },
+    { "type": "file_exists", "path": "Resources/{{prefix}}EvalEchoService.Service/resource.en-US.xml" },
+    { "type": "file_contains", "path": "Schemas/{{prefix}}EvalWebServiceProcess/metadata.json", "pattern": "BPMSoft\\.Core\\.Process\\.ProcessSchemaWebService" },
+    { "type": "file_contains", "path": "Schemas/{{prefix}}EvalWebServiceProcess/metadata.json", "pattern": "652b598d-cdd5-49d5-a86d-aafac88213f3" },
+    { "type": "file_contains", "path": "Schemas/{{prefix}}EvalWebServiceProcess/metadata.json", "pattern": "_Out\"" },
+    { "type": "lint_clean" },
+    { "type": "crm_update_ok" },
+    { "type": "crm_compile_ok" },
+    { "type": "tool_called", "name": "pkg_lint" }
+  ]
+}

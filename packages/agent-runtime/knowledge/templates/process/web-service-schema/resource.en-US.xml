@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Resources Culture="en-US">
+	<Group Type="String">
+		<Items>
+			<Item Name="Caption" Value="Test web service" />
+			<Item Name="ServiceMethods.TestEcho.Caption" Value="Echo" />
+			<Item Name="ServiceMethods.TestEcho.Request.Parameters.TestHeader.Caption" Value="X-Test-Header" />
+			<Item Name="ServiceMethods.TestEcho.Request.Parameters.TestItems.Caption" Value="Items" />
+			<Item Name="ServiceMethods.TestEcho.Request.Parameters.TestItems.ItemProperties.TestIName.Caption" Value="Name" />
+			<Item Name="ServiceMethods.TestEcho.Request.Parameters.TestItems.ItemProperties.TestIValue.Caption" Value="Value" />
+			<Item Name="ServiceMethods.TestEcho.Request.Parameters.TestName.Caption" Value="Name" />
+			<Item Name="ServiceMethods.TestEcho.Request.Parameters.TestSource.Caption" Value="Source" />
+			<Item Name="ServiceMethods.TestEcho.Response.Parameters.TestRespHeader.Caption" Value="Header from response" />
+			<Item Name="ServiceMethods.TestEcho.Response.Parameters.TestRespName.Caption" Value="Name from response" />
+			<Item Name="ServiceMethods.TestEcho.Response.Parameters.TestRespSource.Caption" Value="Source from response" />
+		</Items>
+	</Group>
+</Resources>

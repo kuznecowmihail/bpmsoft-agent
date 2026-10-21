@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Resources Culture="ru-RU">
+	<Group Type="String">
+		<Items>
+			<Item Name="Caption" Value="Test веб-сервис" />
+			<Item Name="ServiceMethods.TestEcho.Caption" Value="Echo" />
+			<Item Name="ServiceMethods.TestEcho.Request.Parameters.TestHeader.Caption" Value="X-Test-Header" />
+			<Item Name="ServiceMethods.TestEcho.Request.Parameters.TestItems.Caption" Value="Элементы" />
+			<Item Name="ServiceMethods.TestEcho.Request.Parameters.TestItems.ItemProperties.TestIName.Caption" Value="Название" />
+			<Item Name="ServiceMethods.TestEcho.Request.Parameters.TestItems.ItemProperties.TestIValue.Caption" Value="Значение" />
+			<Item Name="ServiceMethods.TestEcho.Request.Parameters.TestName.Caption" Value="Имя" />
+			<Item Name="ServiceMethods.TestEcho.Request.Parameters.TestSource.Caption" Value="Источник" />
+			<Item Name="ServiceMethods.TestEcho.Response.Parameters.TestRespHeader.Caption" Value="Заголовок из ответа" />
+			<Item Name="ServiceMethods.TestEcho.Response.Parameters.TestRespName.Caption" Value="Имя из ответа" />
+			<Item Name="ServiceMethods.TestEcho.Response.Parameters.TestRespSource.Caption" Value="Источник из ответа" />
+		</Items>
+	</Group>
+</Resources>

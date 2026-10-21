@@ -1,0 +1,10 @@
+{
+  "Descriptor": {
+    "UId": "<UId схемы сервиса>",
+    "Name": "TestWebService",
+    "ModifiedOnUtc": "\/Date(1792572791681)\/",
+    "ManagerName": "ServiceSchemaManager",
+    "Caption": "Test веб-сервис",
+    "DependsOn": []
+  }
+}

@@ -1,0 +1,312 @@
+{
+  "about": "Шаблон элемента «Вызвать веб-сервис» из тестового процесса, подтверждённого записью в CRM (21.10.2026). Как вставлять — web-service-edit.md, раздел «Элемент «Вызвать веб-сервис» в процессе»; сам сервис — папка web-service-schema/. Плейсхолдеры <UId процесса>, <UId пакета>, <UId дорожки>, <UId элемента>, <UId схемы сервиса> замени на свои; <UId параметра процесса …> и <UId свойства …> — на UId своих параметров процесса (FJ1) или убери значение. IX2 — A2 своего метода. Параметры BP2 (_In, _Out) пересобери по параметрам своего метода: A2 = <Код>_In / <Код>_Out, L17 = <Код>, тип L1 — по таблице web-service.md; четыре стандартных (Success, Response, StatusCode, RequestBody) оставь. UId параметров BP2, маппингов BK15 и подписи label — новые GUID, согласованно (GT2/GT3 маппинга = UId параметра). Константы: BL7, BN2, BO2, BO3, L1 стандартных параметров. Ресурсы — строки BaseElements.<Имя элемента>.* в обе локали; у текстовых констант ещё .Value. Результат вызова в параметр процесса — формулой или значением параметра процесса (оба ✅, web-service-edit.md, п. 8); в задании-сценарии — Get<T>(\"<Элемент>.<Параметр>\").",
+  "bl7": "652b598d-cdd5-49d5-a86d-aafac88213f3",
+  "element": {
+    "BL1": "BPMSoft.Core.Process.ProcessSchemaWebService",
+    "UId": "<UId элемента>",
+    "A2": "WebService1",
+    "A3": "<UId процесса>",
+    "A4": "<UId процесса>",
+    "A5": "<UId пакета>",
+    "IL2": "<UId дорожки>",
+    "BL3": "150;172",
+    "BL7": "652b598d-cdd5-49d5-a86d-aafac88213f3",
+    "BL8": "<UId процесса>",
+    "BN2": "69;55",
+    "BO2": true,
+    "BO3": true,
+    "BP2": [
+      {
+        "BL1": "BPMSoft.Core.Process.ProcessSchemaParameter",
+        "UId": "80fec093-a875-4f3e-9764-dda7a85bb13d",
+        "A2": "TestHeader_In",
+        "A3": "<UId процесса>",
+        "A4": "<UId процесса>",
+        "IL2": "<UId элемента>",
+        "L1": "c0f04627-4620-4bc0-84e5-9419dc8516b1",
+        "L8": {
+          "GS1": 1,
+          "GS5": "<UId процесса>"
+        },
+        "L17": "TestHeader",
+        "L12": 0
+      },
+      {
+        "BL1": "BPMSoft.Core.Process.ProcessSchemaParameter",
+        "UId": "5bf82189-008b-447a-a289-79df3292f398",
+        "A2": "TestSource_In",
+        "A3": "<UId процесса>",
+        "A4": "<UId процесса>",
+        "IL2": "<UId элемента>",
+        "L1": "c0f04627-4620-4bc0-84e5-9419dc8516b1",
+        "L8": {
+          "GS1": 1,
+          "GS5": "<UId процесса>"
+        },
+        "L17": "TestSource",
+        "L12": 0
+      },
+      {
+        "BL1": "BPMSoft.Core.Process.ProcessSchemaParameter",
+        "UId": "9409dbd5-4ba0-47a3-9ff1-01d63b4941fb",
+        "A2": "TestName_In",
+        "A3": "<UId процесса>",
+        "A4": "<UId процесса>",
+        "IL2": "<UId элемента>",
+        "L1": "c0f04627-4620-4bc0-84e5-9419dc8516b1",
+        "L8": {
+          "GS1": 3,
+          "GS2": "[#[IsOwnerSchema:false].[IsSchema:false].[Parameter:{<UId параметра процесса PName>}]#]",
+          "GS5": "<UId процесса>"
+        },
+        "L6": true,
+        "L17": "TestName",
+        "L12": 0
+      },
+      {
+        "BL1": "BPMSoft.Core.Process.ProcessSchemaParameter",
+        "UId": "29ff5a8b-b959-46a8-99c5-dc6d21e4ea7d",
+        "A2": "TestItems_In",
+        "A3": "<UId процесса>",
+        "A4": "<UId процесса>",
+        "IL2": "<UId элемента>",
+        "L1": "651ec16f-d140-46db-b9e2-825c985a8ac2",
+        "L8": {
+          "GS1": 3,
+          "GS2": "[#[IsOwnerSchema:false].[IsSchema:false].[Parameter:{<UId параметра процесса PItems>}]#]",
+          "GS5": "<UId процесса>"
+        },
+        "L17": "TestItems",
+        "L12": 0,
+        "L18": [
+          {
+            "BL1": "BPMSoft.Core.Process.ProcessSchemaParameter",
+            "UId": "36cba34e-de74-43cb-8cce-fc77fef7c1f5",
+            "A2": "TestIName_In",
+            "A3": "<UId процесса>",
+            "A4": "<UId процесса>",
+            "IL2": "<UId элемента>",
+            "L1": "c0f04627-4620-4bc0-84e5-9419dc8516b1",
+            "L8": {
+              "GS1": 3,
+              "GS2": "[#[IsOwnerSchema:false].[IsSchema:false].[Parameter:{<UId свойства TestIName параметра процесса PItems>}]#]",
+              "GS5": "<UId процесса>"
+            },
+            "L17": "TestIName",
+            "L12": 0
+          },
+          {
+            "BL1": "BPMSoft.Core.Process.ProcessSchemaParameter",
+            "UId": "a276d258-bc67-4630-bfc9-7d567250ee19",
+            "A2": "TestIValue_In",
+            "A3": "<UId процесса>",
+            "A4": "<UId процесса>",
+            "IL2": "<UId элемента>",
+            "L1": "c0f04627-4620-4bc0-84e5-9419dc8516b1",
+            "L8": {
+              "GS1": 3,
+              "GS2": "[#[IsOwnerSchema:false].[IsSchema:false].[Parameter:{<UId свойства TestIValue параметра процесса PItems>}]#]",
+              "GS5": "<UId процесса>"
+            },
+            "L17": "TestIValue",
+            "L12": 0
+          }
+        ]
+      },
+      {
+        "BL1": "BPMSoft.Core.Process.ProcessSchemaParameter",
+        "UId": "66cf7c0c-cbaa-4a55-8bc9-88df679e8561",
+        "A2": "TestRespName_Out",
+        "A3": "<UId процесса>",
+        "A4": "<UId процесса>",
+        "IL2": "<UId элемента>",
+        "L1": "c0f04627-4620-4bc0-84e5-9419dc8516b1",
+        "L8": {},
+        "L17": "TestRespName",
+        "L12": 1
+      },
+      {
+        "BL1": "BPMSoft.Core.Process.ProcessSchemaParameter",
+        "UId": "599576e2-13ef-406c-bf3d-8eaad8229185",
+        "A2": "TestRespSource_Out",
+        "A3": "<UId процесса>",
+        "A4": "<UId процесса>",
+        "IL2": "<UId элемента>",
+        "L1": "c0f04627-4620-4bc0-84e5-9419dc8516b1",
+        "L8": {},
+        "L17": "TestRespSource",
+        "L12": 1
+      },
+      {
+        "BL1": "BPMSoft.Core.Process.ProcessSchemaParameter",
+        "UId": "eaab47da-8d33-4d01-bccb-db03e3636bb6",
+        "A2": "TestRespHeader_Out",
+        "A3": "<UId процесса>",
+        "A4": "<UId процесса>",
+        "IL2": "<UId элемента>",
+        "L1": "c0f04627-4620-4bc0-84e5-9419dc8516b1",
+        "L8": {},
+        "L17": "TestRespHeader",
+        "L12": 1
+      },
+      {
+        "BL1": "BPMSoft.Core.Process.ProcessSchemaParameter",
+        "UId": "7d02c6e8-d197-4fcb-8fca-13a0a7794ecf",
+        "A2": "Success",
+        "A3": "<UId процесса>",
+        "A4": "<UId процесса>",
+        "IL2": "<UId элемента>",
+        "L1": "90b65bf8-0ffc-4141-8779-2420877af907",
+        "L8": {
+          "GS2": "false",
+          "GS5": "<UId процесса>"
+        },
+        "L12": 1
+      },
+      {
+        "BL1": "BPMSoft.Core.Process.ProcessSchemaParameter",
+        "UId": "39410e9c-1606-4cdc-bca1-5a60f605a496",
+        "A2": "Response",
+        "A3": "<UId процесса>",
+        "A4": "<UId процесса>",
+        "IL2": "<UId элемента>",
+        "L1": "8b3f29bb-ea14-4ce5-a5c5-293a929b6ba2",
+        "L8": {},
+        "L12": 1
+      },
+      {
+        "BL1": "BPMSoft.Core.Process.ProcessSchemaParameter",
+        "UId": "89efd563-9e34-4d88-92a2-deb29bd4dd4f",
+        "A2": "StatusCode",
+        "A3": "<UId процесса>",
+        "A4": "<UId процесса>",
+        "IL2": "<UId элемента>",
+        "L1": "6b6b74e2-820d-490e-a017-2b73d4ccf2b0",
+        "L8": {},
+        "L12": 1
+      },
+      {
+        "BL1": "BPMSoft.Core.Process.ProcessSchemaParameter",
+        "UId": "5f1629e4-456f-42a4-8c29-9c97f74164c5",
+        "A2": "RequestBody",
+        "A3": "<UId процесса>",
+        "A4": "<UId процесса>",
+        "IL2": "<UId элемента>",
+        "L1": "8b3f29bb-ea14-4ce5-a5c5-293a929b6ba2",
+        "L8": {},
+        "L12": 0
+      }
+    ],
+    "IX1": "<UId схемы сервиса>",
+    "IX2": "TestEcho"
+  },
+  "mappings": [
+    {
+      "BL1": "BPMSoft.Core.Process.ProcessSchemaMapping",
+      "UId": "c88f70ad-4458-4cb8-b743-875fbf628d07",
+      "A2": "WebService1",
+      "A3": "<UId процесса>",
+      "A4": "<UId процесса>",
+      "GT2": "[Element:{<UId элемента>}].[Parameter:{7d02c6e8-d197-4fcb-8fca-13a0a7794ecf}]",
+      "GT3": "7d02c6e8-d197-4fcb-8fca-13a0a7794ecf",
+      "GT5": "fd06437d-053a-43d0-b620-27ccf9ea7502",
+      "GT1": {
+        "GS2": "false"
+      }
+    },
+    {
+      "BL1": "BPMSoft.Core.Process.ProcessSchemaMapping",
+      "UId": "d32e0e49-9b8c-4798-bbd8-274d33c81d42",
+      "A2": "WebService1",
+      "A3": "<UId процесса>",
+      "A4": "<UId процесса>",
+      "GT2": "[Element:{<UId элемента>}].[Parameter:{39410e9c-1606-4cdc-bca1-5a60f605a496}]",
+      "GT3": "39410e9c-1606-4cdc-bca1-5a60f605a496",
+      "GT5": "7fac9448-8016-4e8e-849a-00c8d69985b4",
+      "GT1": {}
+    },
+    {
+      "BL1": "BPMSoft.Core.Process.ProcessSchemaMapping",
+      "UId": "9bf1660f-5796-4404-b823-85cf9e6e0c23",
+      "A2": "WebService1",
+      "A3": "<UId процесса>",
+      "A4": "<UId процесса>",
+      "GT2": "[Element:{<UId элемента>}].[Parameter:{89efd563-9e34-4d88-92a2-deb29bd4dd4f}]",
+      "GT3": "89efd563-9e34-4d88-92a2-deb29bd4dd4f",
+      "GT5": "a13f5ee1-d26a-497e-9ab4-45880163bc9f",
+      "GT1": {}
+    },
+    {
+      "BL1": "BPMSoft.Core.Process.ProcessSchemaMapping",
+      "UId": "b66fe00e-861e-4ecb-8804-f9670e1c424d",
+      "A2": "WebService1",
+      "A3": "<UId процесса>",
+      "A4": "<UId процесса>",
+      "GT2": "[Element:{<UId элемента>}].[Parameter:{5f1629e4-456f-42a4-8c29-9c97f74164c5}]",
+      "GT3": "5f1629e4-456f-42a4-8c29-9c97f74164c5",
+      "GT5": "f017109b-dd37-46f1-ae8b-efdcece61801",
+      "GT1": {}
+    }
+  ],
+  "labels": [
+    {
+      "BL1": "BPMSoft.Core.Process.ProcessSchemaLabel",
+      "UId": "621e42ca-c3e3-4832-a794-d54740aa03b2",
+      "A2": "WebService1_label1",
+      "A3": "<UId процесса>",
+      "A4": "<UId процесса>",
+      "ParentUId": "<UId элемента>",
+      "X": -29
+    }
+  ],
+  "resources": {
+    "ru-RU": [
+      "<Item Name=\"BaseElements.WebService1.Caption\" Value=\"Test Echo\" />",
+      "<Item Name=\"BaseElements.WebService1.Parameters.RequestBody.Caption\" Value=\"Тело запроса сервиса\" />",
+      "<Item Name=\"BaseElements.WebService1.Parameters.Response.Caption\" Value=\"Тело ответа сервиса\" />",
+      "<Item Name=\"BaseElements.WebService1.Parameters.StatusCode.Caption\" Value=\"Http код состояния\" />",
+      "<Item Name=\"BaseElements.WebService1.Parameters.Success.Caption\" Value=\"Успешно выполнен\" />",
+      "<Item Name=\"BaseElements.WebService1.Parameters.TestHeader_In.Caption\" Value=\"X-Test-Header\" />",
+      "<Item Name=\"BaseElements.WebService1.Parameters.TestHeader_In.DisplayValue\" Value=\"header-from-process\" />",
+      "<Item Name=\"BaseElements.WebService1.Parameters.TestHeader_In.Value\" Value=\"header-from-process\" />",
+      "<Item Name=\"BaseElements.WebService1.Parameters.TestItems_In.Caption\" Value=\"Элементы\" />",
+      "<Item Name=\"BaseElements.WebService1.Parameters.TestItems_In.DisplayValue\" Value=\"[#Элементы#]\" />",
+      "<Item Name=\"BaseElements.WebService1.Parameters.TestItems_In.TestIName_In.Caption\" Value=\"Название\" />",
+      "<Item Name=\"BaseElements.WebService1.Parameters.TestItems_In.TestIName_In.DisplayValue\" Value=\"[#Элементы:Название#]\" />",
+      "<Item Name=\"BaseElements.WebService1.Parameters.TestItems_In.TestIValue_In.Caption\" Value=\"Значение\" />",
+      "<Item Name=\"BaseElements.WebService1.Parameters.TestItems_In.TestIValue_In.DisplayValue\" Value=\"[#Элементы:Значение#]\" />",
+      "<Item Name=\"BaseElements.WebService1.Parameters.TestName_In.Caption\" Value=\"Имя\" />",
+      "<Item Name=\"BaseElements.WebService1.Parameters.TestName_In.DisplayValue\" Value=\"[#Имя#]\" />",
+      "<Item Name=\"BaseElements.WebService1.Parameters.TestRespHeader_Out.Caption\" Value=\"Заголовок из ответа\" />",
+      "<Item Name=\"BaseElements.WebService1.Parameters.TestRespName_Out.Caption\" Value=\"Имя из ответа\" />",
+      "<Item Name=\"BaseElements.WebService1.Parameters.TestRespSource_Out.Caption\" Value=\"Источник из ответа\" />",
+      "<Item Name=\"BaseElements.WebService1.Parameters.TestSource_In.Caption\" Value=\"Источник\" />",
+      "<Item Name=\"BaseElements.WebService1.Parameters.TestSource_In.DisplayValue\" Value=\"eval\" />",
+      "<Item Name=\"BaseElements.WebService1.Parameters.TestSource_In.Value\" Value=\"eval\" />"
+    ],
+    "en-US": [
+      "<Item Name=\"BaseElements.WebService1.Caption\" Value=\"Test Echo\" />",
+      "<Item Name=\"BaseElements.WebService1.Parameters.RequestBody.Caption\" Value=\"Request body\" />",
+      "<Item Name=\"BaseElements.WebService1.Parameters.Response.Caption\" Value=\"Response body\" />",
+      "<Item Name=\"BaseElements.WebService1.Parameters.StatusCode.Caption\" Value=\"HTTP status code\" />",
+      "<Item Name=\"BaseElements.WebService1.Parameters.Success.Caption\" Value=\"Success\" />",
+      "<Item Name=\"BaseElements.WebService1.Parameters.TestHeader_In.Caption\" Value=\"X-Test-Header\" />",
+      "<Item Name=\"BaseElements.WebService1.Parameters.TestHeader_In.DisplayValue\" Value=\"header-from-process\" />",
+      "<Item Name=\"BaseElements.WebService1.Parameters.TestHeader_In.Value\" Value=\"header-from-process\" />",
+      "<Item Name=\"BaseElements.WebService1.Parameters.TestItems_In.Caption\" Value=\"Items\" />",
+      "<Item Name=\"BaseElements.WebService1.Parameters.TestItems_In.DisplayValue\" Value=\"[#Items#]\" />",
+      "<Item Name=\"BaseElements.WebService1.Parameters.TestItems_In.TestIName_In.Caption\" Value=\"Name\" />",
+      "<Item Name=\"BaseElements.WebService1.Parameters.TestItems_In.TestIName_In.DisplayValue\" Value=\"[#Items:Name#]\" />",
+      "<Item Name=\"BaseElements.WebService1.Parameters.TestItems_In.TestIValue_In.Caption\" Value=\"Value\" />",
+      "<Item Name=\"BaseElements.WebService1.Parameters.TestItems_In.TestIValue_In.DisplayValue\" Value=\"[#Items:Value#]\" />",
+      "<Item Name=\"BaseElements.WebService1.Parameters.TestName_In.Caption\" Value=\"Name\" />",
+      "<Item Name=\"BaseElements.WebService1.Parameters.TestName_In.DisplayValue\" Value=\"[#Name#]\" />",
+      "<Item Name=\"BaseElements.WebService1.Parameters.TestRespHeader_Out.Caption\" Value=\"Header from response\" />",
+      "<Item Name=\"BaseElements.WebService1.Parameters.TestRespName_Out.Caption\" Value=\"Name from response\" />",
+      "<Item Name=\"BaseElements.WebService1.Parameters.TestRespSource_Out.Caption\" Value=\"Source from response\" />",
+      "<Item Name=\"BaseElements.WebService1.Parameters.TestSource_In.Caption\" Value=\"Source\" />",
+      "<Item Name=\"BaseElements.WebService1.Parameters.TestSource_In.DisplayValue\" Value=\"eval\" />",
+      "<Item Name=\"BaseElements.WebService1.Parameters.TestSource_In.Value\" Value=\"eval\" />"
+    ]
+  }
+}

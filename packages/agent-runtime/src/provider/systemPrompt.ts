@@ -112,6 +112,7 @@ export function buildBpmsoftSystemPrompt(knowledgeDir: string, options: { dbQuer
 - sql-script.md — SQL-скрипты пакета: descriptor.json, InstallType, DBEngineType.
 - data.md — данные пакета: descriptor.json, data.json, Localization, InstallType, справочные колонки.
 - registration.md — регистрация в интерфейсе: SysModule, SysModuleEntity, SysModuleEdit, SysModuleInWorkplace, SysDetail.
+- web-service.md — веб-сервисы (ServiceSchemaManager): сервис, методы, параметры запроса и ответа (коды IQ/IR/IT/IW/IU), элемент процесса «Вызвать веб-сервис» (BL7, IX1/IX2, параметры _In/_Out и стандартные Success/Response/StatusCode/RequestBody), ресурсы.
 
 Файлы «рецептов» (как СОЗДАТЬ, ИЗМЕНИТЬ или УДАЛИТЬ схему файлами — читай перед записью):
 - metadata-editing.md — общая механика для всех типов, читай первым: новый пакет (зависимость спроси, по умолчанию ProductCore), два формата metadata.json, операторы =/+/~/-, поля-штампы, ModifiedOnUtc, ресурсы на двух языках, UId и колонки залоченных схем, журнал обновления из файловой системы и откат через git, таблица «что подтверждено записью».
@@ -124,7 +125,8 @@ export function buildBpmsoftSystemPrompt(knowledgeDir: string, options: { dbQuer
 - sql-script-edit.md — ✅ новый скрипт выполняется при «Обновить из файловой системы», повторно — только после смены ModifiedOnUtc.
 - data-edit.md — ✅ системная настройка и её значение, записи справочника с переводом, набор для таблицы со справочными колонками, датами и числами, IsForceUpdate, InstallType при обновлении из файловой системы; данные не удаляются — удаление записей только SQL.
 - registration-edit.md — ✅ регистрация нового раздела целиком, отдельной карточки и мини-карточки, детали, справочника в разделе «Справочники» (таблица Lookup).
-- templates/ — готовые шаблоны из подтверждённых тестов: элементы процесса (templates/process/*.json) и схемы-спутники (страница преднастроенной страницы, своё действие процесса), наборы данных регистрации, справочника и системной настройки (templates/data/) для проекта без своих образцов; перечень — templates/README.md. Бери шаблон, если в проекте нет своего образца с тем же J6.
+- web-service-edit.md — ✅ REST-сервис файлами, элемент «Вызвать веб-сервис» в процессе, чтение результата через Get<T>("<Элемент>.<Параметр>"), удаление сервиса; 🧪 новый метод в существующем сервисе.
+- templates/ — готовые шаблоны из подтверждённых тестов: элементы процесса (templates/process/*.json) и схемы-спутники (страница преднастроенной страницы, своё действие процесса, REST-сервис для «Вызвать веб-сервис»), наборы данных регистрации, справочника и системной настройки (templates/data/) для проекта без своих образцов; перечень — templates/README.md. Бери шаблон, если в проекте нет своего образца с тем же J6.
 - browser-check.md — проверка реализации во встроенном браузере CRM: адреса раздела, карточки и новой записи, кэш после обновления, поиска элементов по data-item-marker, что проверять по типу правки, шум консоли.
 
 ${options.dbQuery ? DB_QUERY_SECTION + "\n\n" : ""}${options.crmActions ? CRM_ACTIONS_SECTION + "\n\n" : ""}${options.crmBrowser ? CRM_BROWSER_SECTION + "\n\n" : ""}Прочие правила:
