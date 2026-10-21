@@ -87,10 +87,10 @@
 - [ ] Вебхуки (`WebhookSchemaManager`) — отдельный тип схемы, изучить metadata.
 
 ## 8. Объекты и регистрация
-- [ ] Базовые родители: `BaseCodeLookup`, `BaseImageLookup`, `BaseHierarchicalLookup` (`D7` — колонка иерархии), `BaseEntityWithPosition`, `BaseFolder`, `BaseItemInFolder`, `BaseTag`, `BaseEntityInTag`, `BaseFile` (UId — в `SectionDesignerEnums.js`, блок `BaseSchemeUIds`).
+- [x] Базовые родители: `BaseCodeLookup`, `BaseImageLookup`, `BaseHierarchicalLookup` (`D7` — колонка иерархии), `BaseEntityWithPosition`, `BaseFolder`, `BaseItemInFolder`, `BaseTag`, `BaseEntityInTag`, `BaseFile` (UId — в `SectionDesignerEnums.js`, блок `BaseSchemeUIds`). Подтверждено: `BaseHierarchicalLookup` требует переопределения `Parent`.
 - [ ] Раздел с группами: `<Объект>Folder`, `<Объект>InFolder`; третий `FolderMode`.
-- [ ] Системные значения по умолчанию: `CurrentDate`, `CurrentUser`, `CurrentUserAccount`, `SequentialGuid` — UId считать из Designer.
-- [ ] `D32` (деактивация записей), `D26`.
+- [x] Системные значения по умолчанию: `CurrentDate`, `CurrentUser`, `CurrentUserAccount`, `SequentialGuid` — UId считать из Designer.
+- [x] `D32` (деактивация записей), `D26`. Подтверждено: `RecordInactive`, фильтр только с `useRecordDeactivation`; `D26` — открыт.
 - [ ] Карточки по типам: `ActionKindCaption`, `ActionKindName`, остальные колонки `SysModuleEdit`.
 - [ ] Новое рабочее место: `SysWorkplace` + `SysAdminUnitInWorkplace`.
 - [ ] Системная настройка: смысл `IsPersonal`, `IsCacheable`.
