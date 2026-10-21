@@ -88,7 +88,7 @@
 
 ## 8. Объекты и регистрация
 - [x] Базовые родители: `BaseCodeLookup`, `BaseImageLookup`, `BaseHierarchicalLookup` (`D7` — колонка иерархии), `BaseEntityWithPosition`, `BaseFolder`, `BaseItemInFolder`, `BaseTag`, `BaseEntityInTag`, `BaseFile` (UId — в `SectionDesignerEnums.js`, блок `BaseSchemeUIds`). Подтверждено: `BaseHierarchicalLookup` требует переопределения `Parent`.
-- [ ] Раздел с группами: `<Объект>Folder`, `<Объект>InFolder`; третий `FolderMode`.
+- [x] Раздел с группами: `<Объект>Folder`, `<Объект>InFolder`; третий `FolderMode`. Подтверждено 21.10.2026: динамические и статические группы; статические — только с `UseStaticFolders` в разделе.
 - [x] Системные значения по умолчанию: `CurrentDate`, `CurrentUser`, `CurrentUserAccount`, `SequentialGuid` — UId считать из Designer.
 - [x] `D32` (деактивация записей), `D26`. Подтверждено: `RecordInactive`, фильтр только с `useRecordDeactivation`; `D26` — открыт.
 - [ ] Карточки по типам: `ActionKindCaption`, `ActionKindName`, остальные колонки `SysModuleEdit`.
