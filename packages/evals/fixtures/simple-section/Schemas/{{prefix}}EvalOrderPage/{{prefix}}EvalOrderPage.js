@@ -1,0 +1,20 @@
+define("{{prefix}}EvalOrderPage", [], function() {
+	return {
+		entitySchemaName: "{{prefix}}EvalOrder",
+		details: /**SCHEMA_DETAILS*/{}/**SCHEMA_DETAILS*/,
+		diff: /**SCHEMA_DIFF*/[
+			{
+				"operation": "insert",
+				"name": "Name",
+				"values": {
+					"layout": {"colSpan": 24, "rowSpan": 1, "column": 0, "row": 0},
+					"bindTo": "Name"
+				},
+				"parentName": "Header",
+				"propertyName": "items",
+				"index": 0
+			}
+		]/**SCHEMA_DIFF*/,
+		methods: {}
+	};
+});

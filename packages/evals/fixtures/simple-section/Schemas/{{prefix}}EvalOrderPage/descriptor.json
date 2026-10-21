@@ -1,0 +1,14 @@
+{
+  "Descriptor": {
+    "UId": "80c3ae13-eb1d-4d02-8bb7-44bb2f04560e",
+    "Name": "{{prefix}}EvalOrderPage",
+    "ModifiedOnUtc": "\/Date({{now}})\/",
+    "Parent": {
+      "UId": "d62293c0-7f14-44b1-b547-735fb40499cd",
+      "Name": "BaseModulePageV2"
+    },
+    "ManagerName": "ClientUnitSchemaManager",
+    "Caption": "Eval order page",
+    "DependsOn": []
+  }
+}

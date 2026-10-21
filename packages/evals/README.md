@@ -85,6 +85,7 @@ npm run eval -w @bpmsoft-agent/evals -- --case 04
 | `10-server-transaction.json` | REST-метод: контакт и задача по нему атомарно в одной транзакции `DBExecutor` |
 | `11-anonymous-service.json` | Анонимный REST-сервис: код через `SystemUserConnection`, маршрут в `appsettings.json` агент поручает пользователю |
 | `12-record-rights.json` | Объект с доступом по записям; право чтения по умолчанию — SQL-скриптом пакета, а не данными |
+| `13-section-folders.json` | Группы в существующем разделе (фикстура `simple-section`): объекты `<Объект>Folder`/`<Объект>InFolder`, режим групп в регистрации раздела, `UseStaticFolders` в схеме раздела |
 
 Все кейсы — нереализованные задачи: на чистом стенде их результатные проверки не проходят до старта агента.
 
@@ -95,6 +96,8 @@ npm run eval -w @bpmsoft-agent/evals -- --case 04
 В путях и тексте файлов фикстуры подставляются `{{package}}`, `{{prefix}}`, `{{packageUId}}` (UId пакета) и `{{now}}` (текущее время в миллисекундах).
 
 Фикстура `source-code-helper` добавляет исходную C#-схему `{{prefix}}EvalHelper` с ресурсами на `ru-RU` и `en-US`.
+
+Фикстура `simple-section` добавляет раздел «Заказы (эвал)» без групп: объект `{{prefix}}EvalOrder` (наследник `BaseLookup`), схемы раздела `{{prefix}}EvalOrderSection` и карточки `{{prefix}}EvalOrderPage` с ресурсами на `ru-RU` и `en-US`, наборы данных `SysModuleEntity`, `SysModule` (`FolderMode` «Не использовать группы») и `SysModuleEdit` с постоянными `Id`. Раздел не добавлен в рабочее место. Кейс с этой фикстурой удаляет записи регистрации и таблицы объекта в `teardownSql` (образец — `13-section-folders.json`).
 
 ## Известные ограничения
 
