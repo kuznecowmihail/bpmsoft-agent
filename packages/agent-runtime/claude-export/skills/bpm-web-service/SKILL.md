@@ -14,6 +14,7 @@ description: Use when the task creates or changes a REST web service description
 3. `.claude/skills/bpm-knowledge/web-service-edit.md` — рецепты: ✅ сервис, параметры, элемент в процессе, чтение результата, удаление; 🧪 новый метод в существующем сервисе.
 4. `.claude/skills/bpm-knowledge/templates/process/web-service.json` и папка `templates/process/web-service-schema/` — шаблоны элемента и сервиса, если в проекте нет своего образца.
 5. Для элемента в процессе — подскилл `bpm-process` (чек-лист `process-edit.md`).
+6. `.claude/skills/bpm-knowledge/integration-api.md` — вызов CRM извне (вход, `BPMCSRF`, OData, DataService), анонимный сервис, коды ошибок своего REST-сервиса, исходящий HTTP из C#.
 
 ## Обязательные правила
 

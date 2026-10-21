@@ -15,6 +15,7 @@ description: Use when the task needs C# source code in a BPMSoft package, for ex
 4. `.claude/skills/bpm-knowledge/source-code.md` — факты: `.cs`, `metadata.json` (плоский JSON), локализуемые строки `B2`.
 5. `.claude/skills/bpm-knowledge/source-code-edit.md` — рецепты (✅): класс-помощник, локализуемые строки, REST-сервис и вызов с клиента, слушатель событий объекта, вызов из процесса, слушатель событий приложения и `ClassFactory`, подмена платформенного класса через `ReBind`, чтение системной настройки, удаление, частые ошибки компиляции, сообщение в браузер пользователю (`ServerChannel`) и уведомление в «колокольчике» (`Reminding`); асинхронная операция из слушателя, отмена `e.IsCanceled`, порядок «скрипт события — слушатель», `DefaultBinding`.
 6. `.claude/skills/bpm-knowledge/metadata-editing.md` — общая механика записи схем, читай перед записью.
+7. `.claude/skills/bpm-knowledge/integration-api.md` — адреса, атрибуты маршрутов и коды ошибок своего REST-сервиса, анонимный сервис, исходящий HTTP.
 
 ## Обязательные правила
 

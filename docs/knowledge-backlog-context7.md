@@ -71,16 +71,16 @@
 - [ ] Старый запуск: `ProcessSchemaManager.GetInstanceByName(...).CreateProcess(uc)`, `SetPropertyValue`, `Execute`.
 - [ ] Страница свойств своего действия (`FK11`, наследник `BaseUserTaskPropertiesPage`) — низкий приоритет.
 
-## 7. Интеграции (новый `integration-api.md`, строка в индексе `systemPrompt.ts`)
-- [ ] Анонимный сервис на .NET Core: `appsettings.json` → `ConfigurationServices.AnonymousRoutes`, `"<полное имя класса>": ["/ServiceModel/<Класс>.svc"]`, перезапуск. Файл вне `Pkg` — правит пользователь. Для .NET Framework — `ServiceModel/.../Web.config` (🧪).
-- [ ] `UserConnection` в анонимном сервисе — `SystemUserConnection`, `SessionHelper.SpecifyWebOperationIdentity`.
-- [ ] Атрибуты маршрута: `DefaultServiceRoute`, `SspServiceRoute`, `ServiceRoute("x")`.
-- [ ] GET с параметрами: `UriTemplate`, `WebGet`; стили `BodyStyle`.
-- [ ] Ошибки: `ConfigurationServiceResponse`, `WebFaultException<T>`.
-- [ ] Вход снаружи: `POST /ServiceModel/AuthService.svc/Login`, cookie `BPMCSRF` (+ `BPMSESSIONID` на .NET Core — 🧪), заголовок `BPMCSRF` для POST, без него 403.
-- [ ] OData 4 (`/odata/<Объект>`, на .NET Framework `/0/odata`), операции `CanUseODataService` и др.; `DataService` (`/DataService/json/SyncReply/...`).
+## 7. Интеграции → `integration-api.md`
+- [x] Анонимный сервис на .NET Core: `appsettings.json` → `ConfigurationServices.AnonymousRoutes`, `"<полное имя класса>": ["/ServiceModel/<Класс>.svc"]`, перезапуск. Файл вне `Pkg` — правит пользователь. Для .NET Framework — `ServiceModel/.../Web.config` (🧪).
+- [x] `UserConnection` в анонимном сервисе — `SystemUserConnection`, `SessionHelper.SpecifyWebOperationIdentity`. Подтверждено: `UserConnection` = null, `SystemUserConnection` работает; `SpecifyWebOperationIdentity` — открыт.
+- [x] Атрибуты маршрута: `DefaultServiceRoute`, `SspServiceRoute`, `ServiceRoute("x")`.
+- [x] GET с параметрами: `UriTemplate`, `WebGet`; стили `BodyStyle`.
+- [x] Ошибки: `ConfigurationServiceResponse`, `WebFaultException<T>`. Подтверждено: необработанное исключение — 400 с HTML «Request Error».
+- [x] Вход снаружи: `POST /ServiceModel/AuthService.svc/Login`, cookie `BPMCSRF` (+ `BPMSESSIONID` на .NET Core — 🧪), заголовок `BPMCSRF` для POST, без него 403.
+- [x] OData 4 (`/odata/<Объект>`, на .NET Framework `/0/odata`), операции `CanUseODataService` и др.; `DataService` (`/DataService/json/SyncReply/...`). DataService: тело в camelCase, PascalCase молча игнорируется.
 - [ ] Вызов REST-схемы из C#: `ClassFactory.Get<IServiceSchemaClient>().Execute(...)`.
-- [ ] Внешний HTTP из C#: `ClassFactory.Get<IHttpClientFactory>()`.
+- [x] Внешний HTTP из C#: `ClassFactory.Get<IHttpClientFactory>()`.
 - [ ] Белый список исходящих вызовов: `whitelistUriConfig.json`, список `WebService`.
 - [ ] Аутентификация REST-схемы: Basic и Digest хранятся в metadata — секреты попадут в git.
 - [ ] Вебхуки (`WebhookSchemaManager`) — отдельный тип схемы, изучить metadata.
