@@ -22,6 +22,15 @@
 
 ✅ Дробная настройка (06.10.2026, ` TestMaxDiscount`): в `SysSettings_<Код>/data.json` — `ValueTypeName: "Float"`; в `SysSettingsValue_<Код>/data.json` значение — JSON-числом в ячейке `FloatValue` (`b1ffd2d8-2bd3-4c46-b9c0-782afb0996c0`), например `15.00`, остальные колонки значений — как у образца. Образец в проекте — `SysSettings_PercentageTestGroup`. Лишнюю локализацию образца (`es-ES`) можно не переносить. После «Обновить из файловой системы» настройка появилась с типом «Дробное число» и значением 15, REST-метод прочитал 15.
 
+✅ **`IsPersonal` и `IsCacheable`** (проверено 21.10.2026 сервисами `DataService` под администратором и обычным пользователем, клиентский код — `Resources/ui/BPMSoft/core/sys-settings.js`):
+- Значения настройки — строки `SysSettingsValue`: общее — на роль «Все сотрудники» (`Position` `2147483647`), персональное — на пользователя (`SysAdminUnit` = пользователь, `Position` `0`). Строка пользователя перекрывает общую только для него.
+- Персональное значение пишет запрос `PostSysSettingsValues` с `"isPersonal": true` (клиент — `BPMSoft.SysSettings.postPersonalSysSettingsValue(<Код>, <значение>)`), общее — с `"isPersonal": false` (`postSysSettingsValue`). Флаг запроса работает для **любой** настройки, в том числе с `IsPersonal: false`.
+- `IsPersonal` («Сохранять значение для текущего пользователя») — только поведение карточки настройки: пользователь, меняющий значение, по умолчанию сохраняет своё персональное, а не общее. Хранение и чтение от флага не зависят.
+- Обычный пользователь без ограничений доступа к настройке меняет и **общее** значение тем же запросом. Ограничить — правами на настройку (`GetSysSettingsRightsRequest` / `SetSysSettingsRightsRequest`, 🧪 не проверено).
+- `IsCacheable` («Кэшируется») — клиентский кеш: значения кешируемых настроек приходят со страницей (`BPMSoft.preLoadedSysSettings`) и хранятся в `BPMSoft.SysSettings.cachedSettings`; `querySysSettingsItem` отдаёт их без запроса к серверу. Некешируемая настройка читается запросом `QuerySysSettings` при каждом обращении. Кеш сбрасывается по сообщению сервера `SysSettingsChanged` и при сохранении значения с этой страницы. Делай настройку некешируемой, если её значение меняет сервер (счётчики, даты синхронизации) и клиенту нужно свежее.
+- Запросы: `POST /0/DataService/json/SyncReply/QuerySysSettings` `{"sysSettingsNameCollection": ["<Код>"]}`; `POST /0/DataService/json/SyncReply/PostSysSettingsValues` `{"isPersonal": true, "sysSettingsValues": {"<Код>": <значение>}}` — в ответе `saveResult` по коду; `success: false` при успешной записи — так отвечает сервис, смотри `saveResult`.
+- Персональная строка, удалённая SQL, перестаёт действовать сразу (серверный кеш значения не мешал при проверке).
+
 ## ✅ Записи справочника с переводом (`<Объект>_data`)
 **Подтверждено 05.10.2026** на `Lookup_TestSrcEntity` (объект `TestSrcEntity`, наследник `BaseLookup`): три записи с названием и описанием на ru/en появились после «Обновить из файловой системы».
 

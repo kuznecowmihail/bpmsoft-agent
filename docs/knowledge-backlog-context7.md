@@ -93,7 +93,7 @@
 - [x] `D32` (деактивация записей), `D26`. Подтверждено: `RecordInactive`, фильтр только с `useRecordDeactivation`; `D26` — открыт.
 - [x] Карточки по типам: `ActionKindCaption`, `ActionKindName`, остальные колонки `SysModuleEdit`. Подтверждено 21.10.2026: свой пункт «Добавить» и своя карточка на значение типа; тип без строки — основная карточка.
 - [x] Новое рабочее место: `SysWorkplace` + `SysAdminUnitInWorkplace`. Подтверждено 21.10.2026.
-- [ ] Системная настройка: смысл `IsPersonal`, `IsCacheable`.
+- [x] Системная настройка: смысл `IsPersonal`, `IsCacheable`. Подтверждено 21.10.2026: персональное значение — строка на пользователя, флаг влияет только на карточку настройки; `IsCacheable` — клиентский кеш.
 
 ## Есть в Creatio, нет в BPMSoft
 `BackwardInstall`; расширения прав по записям (Creatio 8.3+); доступ к отдельным системным настройкам; галка «Продолжать при ошибке» у «Вызвать веб-сервис»; `Terrasoft.Nui.ServiceModel.WebService.BaseService` (в BPMSoft — `BPMSoft.Web.Common.BaseService`).
