@@ -199,13 +199,45 @@ export function newEntryId(): string {
   return `e${nextGeneratedId}`
 }
 
+/**
+ * Cost of one turn. Claude reports total_cost_usd cumulatively over the session; this gives the cost of one turn.
+ * A total below the previous one means the session restarted, so the total itself is the turn cost.
+ */
+export function turnCostUsd(total: number | undefined, previousTotal: number | undefined): number | undefined {
+  if (total === undefined) {
+    return undefined
+  }
+  if (previousTotal === undefined || total < previousTotal) {
+    return total
+  }
+  return total - previousTotal
+}
+
+/** "$0.30 · токены: вход 10 · выход 6 тыс. · шагов: 5" — only the parts that are known for the turn. */
+export function formatTurnStats(
+  event: { totalCostUsd?: number; usage?: { inputTokens: number; outputTokens: number; cacheReadTokens: number; cacheWriteTokens: number }; numTurns?: number },
+  costUsd: number | undefined
+): string {
+  const parts: string[] = []
+  if (costUsd != null) {
+    parts.push(`$${costUsd.toFixed(2)}`)
+  }
+  if (event.usage) {
+    parts.push(formatUsage(event.usage))
+  }
+  if (event.numTurns != null) {
+    parts.push(`шагов: ${event.numTurns}`)
+  }
+  return parts.join(' · ')
+}
+
 /** Maps an agent event to a chat entry. Service events become `agent-other` (hidden unless debug is on). */
 /** Service Cursor SDK messages (raw.type "cursor_sdk"): shown only in the log panel, not in the chat. */
 export function isDiagnosticEvent(event: AgentEvent): boolean {
   return event.type === 'other' && field(event.raw, 'type') === 'cursor_sdk'
 }
 
-export function mapAgentEventToEntry(event: AgentEvent): ChatEntry {
+export function mapAgentEventToEntry(event: AgentEvent, previousCostUsd?: number): ChatEntry {
   const id = newEntryId()
   const ts = Date.now()
   if (event.type === 'text') {
@@ -222,13 +254,15 @@ export function mapAgentEventToEntry(event: AgentEvent): ChatEntry {
   }
   if (event.type === 'result') {
     const seconds = Math.max(1, Math.round(event.durationMs / 1000))
+    const stats = formatTurnStats(event, turnCostUsd(event.totalCostUsd, previousCostUsd))
+    const suffix = stats ? ` · ${stats}` : ''
     if (event.stopped) {
       return {
         id,
         ts,
         role: 'agent-result',
         level: 'warn',
-        content: `Остановлено пользователем (${seconds} с). Если шло обновление или компиляция CRM, на стенде они могут ещё выполняться.`
+        content: `Остановлено пользователем (${seconds} с)${suffix}. Если шло обновление или компиляция CRM, на стенде они могут ещё выполняться.`
       }
     }
     return {
@@ -236,7 +270,7 @@ export function mapAgentEventToEntry(event: AgentEvent): ChatEntry {
       ts,
       role: 'agent-result',
       level: event.success ? 'info' : 'error',
-      content: event.success ? `Готово за ${seconds} с` : `Агент остановился с ошибкой (${seconds} с)`
+      content: event.success ? `Готово за ${seconds} с${suffix}` : `Агент остановился с ошибкой (${seconds} с)${suffix}`
     }
   }
   if (event.type === 'system_init') {
@@ -255,14 +289,30 @@ export function mapAgentEventToEntry(event: AgentEvent): ChatEntry {
 
 /** Chat replay items (from the chat log) → feed entries, in order, keeping the original timestamps. */
 export function replayToEntries(items: ChatReplayItem[]): ChatEntry[] {
+  let lastCost: number | undefined
   return items.map((item) => {
     const parsed = Date.parse(item.ts)
     const ts = Number.isNaN(parsed) ? Date.now() : parsed
     if (item.kind === 'user') {
       return { id: newEntryId(), ts, role: 'user', content: item.text }
     }
-    return { ...mapAgentEventToEntry(item.event), ts }
+    const entry = { ...mapAgentEventToEntry(item.event, lastCost), ts }
+    if (item.event.type === 'result' && item.event.totalCostUsd != null) {
+      lastCost = item.event.totalCostUsd
+    }
+    return entry
   })
+}
+
+/** Cumulative total_cost_usd of the last agent result in the chat log that has one, or undefined. */
+export function lastTotalCostUsd(items: ChatReplayItem[]): number | undefined {
+  for (let i = items.length - 1; i >= 0; i--) {
+    const item = items[i]
+    if (item.kind === 'agent' && item.event.type === 'result' && item.event.totalCostUsd != null) {
+      return item.event.totalCostUsd
+    }
+  }
+  return undefined
 }
 
 export type LogLevel = EntryLevel
@@ -302,7 +352,7 @@ export function agentEventToLog(event: AgentEvent): LogEvent {
         : `Ход завершён ${event.success ? 'успешно' : 'с ошибкой'} за ${seconds} с`
     ]
     if (event.totalCostUsd != null) {
-      parts.push(`$${event.totalCostUsd.toFixed(3)}`)
+      parts.push(`сессия $${event.totalCostUsd.toFixed(3)}`)
     }
     if (event.usage) {
       parts.push(formatUsage(event.usage))

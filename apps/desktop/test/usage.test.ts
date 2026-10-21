@@ -26,6 +26,11 @@ describe('formatUsage', () => {
     expect(formatUsage({ inputTokens: 453000, outputTokens: 8000, cacheReadTokens: 333000, cacheWriteTokens: 0 }))
       .toBe('токены: вход 453 тыс. · кэш 333 тыс. · выход 8 тыс.')
   })
+
+  it('includes the cache-write part when there are cache writes', () => {
+    expect(formatUsage({ inputTokens: 22, outputTokens: 4000, cacheReadTokens: 580000, cacheWriteTokens: 30000 }))
+      .toBe('токены: вход 22 · кэш 580 тыс. · запись в кэш 30 тыс. · выход 4 тыс.')
+  })
 })
 
 describe('agentEventToLog with usage', () => {

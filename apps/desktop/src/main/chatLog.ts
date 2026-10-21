@@ -159,7 +159,7 @@ function renderMarkdown(kind: string, data: Record<string, any>): string {
         const outcome = event.stopped ? 'Ход остановлен пользователем' : `Ход завершён · ${event.success ? 'успешно' : 'с ошибкой'}`
         const parts = [`_${outcome} · ${(event.durationMs / 1000).toFixed(1)} с`]
         if (event.totalCostUsd != null) {
-          parts.push(`$${event.totalCostUsd.toFixed(3)}`)
+          parts.push(`сессия $${event.totalCostUsd.toFixed(3)}`)
         }
         if (event.usage) {
           parts.push(formatUsage(event.usage))

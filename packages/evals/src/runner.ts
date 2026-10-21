@@ -372,7 +372,8 @@ export async function runCase(
 					timeline.push({ turn: turns, kind: "tool", name: event.name, input: event.input });
 				}
 				if (event.type === "result") {
-					costUsd += event.totalCostUsd ?? 0;
+					// total_cost_usd is cumulative over the session: keep the latest total, do not sum.
+					if (event.totalCostUsd !== undefined) costUsd = Math.max(costUsd, event.totalCostUsd);
 					if (event.totalCostUsd !== undefined) {
 						costReported = true;
 					}

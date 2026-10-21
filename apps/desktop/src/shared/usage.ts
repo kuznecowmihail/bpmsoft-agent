@@ -9,11 +9,17 @@ export function formatTokens(n: number): string {
   return `${(n / 1_000_000).toFixed(1).replace('.', ',')} млн`
 }
 
-/** "токены: вход 453 тыс. · кэш 333 тыс. · выход 8 тыс." — the cache part is omitted when there are no cache reads. */
+/**
+ * "токены: вход 453 тыс. · кэш 333 тыс. · запись в кэш 12 тыс. · выход 8 тыс.".
+ * The cache part is omitted when there are no cache reads, the cache-write part when there are no cache writes.
+ */
 export function formatUsage(u: { inputTokens: number; outputTokens: number; cacheReadTokens: number; cacheWriteTokens: number }): string {
   const parts = [`вход ${formatTokens(u.inputTokens)}`]
   if (u.cacheReadTokens > 0) {
     parts.push(`кэш ${formatTokens(u.cacheReadTokens)}`)
+  }
+  if (u.cacheWriteTokens > 0) {
+    parts.push(`запись в кэш ${formatTokens(u.cacheWriteTokens)}`)
   }
   parts.push(`выход ${formatTokens(u.outputTokens)}`)
   return `токены: ${parts.join(' · ')}`

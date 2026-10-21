@@ -211,6 +211,19 @@ describe('chatFormat', () => {
       expect(entry.content.startsWith('Остановлено пользователем')).toBe(true)
     })
 
+    it('shows the turn cost as the delta from the previous cumulative total, with tokens and steps', () => {
+      const event = {
+        type: 'result' as const,
+        success: true,
+        durationMs: 294000,
+        totalCostUsd: 0.9,
+        numTurns: 5,
+        usage: { inputTokens: 10, outputTokens: 6120, cacheReadTokens: 448053, cacheWriteTokens: 12420 }
+      }
+      const entry = mapAgentEventToEntry(event, 0.6)
+      expect(entry.content).toBe('Готово за 294 с · $0.30 · токены: вход 10 · кэш 448 тыс. · запись в кэш 12 тыс. · выход 6 тыс. · шагов: 5')
+    })
+
     it('maps unknown event to agent-other', () => {
       const event = { type: 'other' as const, raw: {} }
       const entry = mapAgentEventToEntry(event)
@@ -748,6 +761,16 @@ describe('describeToolCall pkg_lint', () => {
       expect(entries[1].content).toBe('ответ')
       expect(entries[0].ts).toBe(Date.parse(userTs))
       expect(entries[1].ts).toBe(Date.parse(agentTs))
+    })
+
+    it('shows the cost of each turn from cumulative totals', () => {
+      const items = [
+        { kind: 'agent', ts: '2026-10-19T10:00:00.000Z', event: { type: 'result', success: true, durationMs: 1000, totalCostUsd: 0.2 } },
+        { kind: 'agent', ts: '2026-10-19T10:01:00.000Z', event: { type: 'result', success: true, durationMs: 1000, totalCostUsd: 0.5 } }
+      ] as ChatReplayItem[]
+      const entries = replayToEntries(items)
+      expect(entries[0].content).toBe('Готово за 1 с · $0.20')
+      expect(entries[1].content).toBe('Готово за 1 с · $0.30')
     })
   })
 })

@@ -5,6 +5,7 @@ import {
   describeToolCall,
   isDiagnosticEvent,
   isEntryVisible,
+  lastTotalCostUsd,
   mapAgentEventToEntry,
   newEntryId,
   newLogEvent,
@@ -62,6 +63,8 @@ function App(): React.JSX.Element {
 
   const feedRef = useRef<HTMLDivElement | null>(null)
   const stickToBottomRef = useRef(true)
+  /** Cumulative total_cost_usd of the last result, to show the cost of each turn. */
+  const lastCostRef = useRef<number | undefined>(undefined)
 
   useLayoutEffect(() => {
     const feed = feedRef.current
@@ -83,8 +86,13 @@ function App(): React.JSX.Element {
   const subscribeToAgent = (): void => {
     if (!unsubscribeRef.current) {
       unsubscribeRef.current = window.api.onAgentEvent((event) => {
+        const previousCost = lastCostRef.current
+        if (event.type === 'result' && event.totalCostUsd != null) {
+          lastCostRef.current = event.totalCostUsd
+        }
         if (!isDiagnosticEvent(event)) {
-          setEntries((prev) => [...prev, mapAgentEventToEntry(event)])
+          const entry = mapAgentEventToEntry(event, previousCost)
+          setEntries((prev) => [...prev, entry])
         }
         setLogEvents((prev) => [...prev, agentEventToLog(event)])
       })
@@ -119,6 +127,7 @@ function App(): React.JSX.Element {
     setSelectedPath(projectPath)
     setValidation(null)
     setEntries([])
+    lastCostRef.current = undefined
     setActiveChatId(null)
     setReadOnlyReason(null)
     setIsChecking(true)
@@ -219,6 +228,7 @@ function App(): React.JSX.Element {
         ? [{ id: newEntryId(), ts: Date.now(), role: 'agent-result', level: 'warn', content: opened.note }]
         : []
       setEntries([...replayToEntries(opened.items), ...noteEntries])
+      lastCostRef.current = lastTotalCostUsd(opened.items)
       setActiveChatId(id)
       setReadOnlyReason(opened.readOnlyReason)
       await refreshSettings()
@@ -257,6 +267,7 @@ function App(): React.JSX.Element {
 
   const resetChatView = (): void => {
     setEntries([])
+    lastCostRef.current = undefined
     setPermissionRequests([])
     setLogEvents([])
     stickToBottomRef.current = true

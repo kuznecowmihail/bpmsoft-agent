@@ -236,6 +236,25 @@ describe("runCase turn loop and tokens", () => {
 		expect(run.tokens).toEqual({ inputTokens: 12, outputTokens: 20, cacheReadTokens: 200, cacheWriteTokens: 0 });
 		expect(run.costReported).toBe(false);
 	});
+
+	it("keeps the latest cumulative totalCostUsd instead of summing results", async () => {
+		const { config, resultsDir } = makeApp();
+		const twoResults: AgentEvent[][] = [
+			[
+				{ type: "text", text: "<choices>" } as AgentEvent,
+				{ type: "result", success: true, durationMs: 1, totalCostUsd: 0.2 } as AgentEvent,
+				{ type: "result", success: true, durationMs: 1, totalCostUsd: 0.5 } as AgentEvent,
+			],
+		];
+		const run = await runCase(makeCase({ checks: [] }), config, "claude", 1, {
+			query: fakeQuery(twoResults, []),
+			resultsDir,
+			reset: noReset,
+		});
+
+		expect(run.costUsd).toBe(0.5);
+		expect(run.costReported).toBe(true);
+	});
 });
 
 describe("runCase answers from rules and recommendations", () => {
