@@ -13,6 +13,7 @@ description: Use when the task touches a BPMSoft object or its columns, indexes 
 2. `.claude/skills/bpm-knowledge/metadata-codes.md` — словарь кодов полей `metadata.json`; смотри, когда встречаешь незнакомый код.
 3. `.claude/skills/bpm-knowledge/entity.md` — факты: колонки `D2` и их свойства `E*`, схема верхнего уровня, процесс событий объекта `EG1`/`CK2`, флаги событий `D20.FA<N>`, индексы `D6`, ресурсы.
 4. `.claude/skills/bpm-knowledge/entity-edit.md` — рецепты: новый объект, колонки любых типов и свойств, override существующего объекта с lookup-колонкой, индексы, изменение и удаление колонок, события объекта, скрипты «Перед сохранением» и «После сохранения», удаление схемы с проверкой зависимостей.
+5. `.claude/skills/bpm-knowledge/rights.md` и `rights-edit.md` — администрирование по записям, права по умолчанию, системные операции.
 
 ## Колонки и UId
 

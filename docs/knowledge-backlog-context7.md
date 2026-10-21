@@ -55,10 +55,10 @@
 - [ ] `userConnection.GetLocalizableString(schema, name)`.
 Тест: объекты `TestTxEntity`, `TestTxLog`, сервис и слушатель.
 
-## 5. Права (новая пара `rights.md` + `rights-edit.md`, строка в индексе `systemPrompt.ts`)
-- [ ] Права по записям: таблица `Sys<Объект>Right` (`D30`), права по умолчанию — данные `SysEntitySchemaRecordDefRight`, права на операции объекта — `SysEntitySchemaOperationRight`.
-- [ ] Системные операции: `SysAdminOperation` + `SysAdminOperationGrantee`; в коде — `DBSecurityEngine.CheckCanExecuteOperation` / `GetCanExecuteOperation`. Подтверждены `GetCanExecuteOperation`/`CheckCanExecuteOperation` (SecurityException).
-- [ ] Права записи из кода: `SetEntitySchemaRecordRightLevel`, `RightsHelper`.
+## 5. Права → `rights.md`, `rights-edit.md`
+- [x] Права по записям: таблица `Sys<Объект>Right` (`D30`), права по умолчанию — данные `SysEntitySchemaRecordDefRight`, права на операции объекта — `SysEntitySchemaOperationRight`. Правило по умолчанию данными пакета не привязать (enum-колонки) — только SQL; актуализация — процесс `ObjectRecordRightsActualizationProcess`.
+- [x] Системные операции: `SysAdminOperation` + `SysAdminOperationGrantee`; в коде — `DBSecurityEngine.CheckCanExecuteOperation` / `GetCanExecuteOperation`. Подтверждены `GetCanExecuteOperation`/`CheckCanExecuteOperation` (SecurityException).
+- [x] Права записи из кода: `SetEntitySchemaRecordRightLevel`, `RightsHelper`.
 Тест: `TestRightsEnt` с администрированием по записям, операция `TestCanDo…`.
 
 ## 6. Процессы

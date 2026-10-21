@@ -104,6 +104,7 @@ export function buildBpmsoftSystemPrompt(knowledgeDir: string, options: { dbQuer
 
 Файлы «фактов» (что означают поля metadata — когда нужно понять существующую схему):
 - entity.md — объекты: колонки D2 и их свойства E*, схема верхнего уровня, процесс событий объекта EG1/CK2 и заглушки базовых событий, флаги событий D20.FA<N>, индексы D6, ресурсы.
+- rights.md — права: таблица Sys<Объект>Right и коды операций и уровней, права автора и по умолчанию (SysEntitySchemaRecordDefRight), актуализация прав, системные операции (SysAdminOperation, SysAdminOperationGrantee).
 - processes.md — бизнес-процессы: элементы BK4, связи и условия CI*, параметры FJ1/BP2, маппинги BK15 (GT2–GT5), дорожки, пользовательские задачи; журнал процессов в БД (SysProcessLog, SysProcessElementLog, ErrorDescription) для диагностики.
 - client-schemas.md — клиентские схемы (Section/Page/MiniPage/Detail/Module/Mixin): форматы metadata.json, SchemaType, Parent/ExtendParent, признак замещения B7, словарь строк B2, полная иерархия слоёв и применение diff (в том числе одноимённые элементы).
 - source-code.md — исходный код C#: .cs, metadata.json плоским JSON, локализуемые строки B2.
@@ -124,6 +125,7 @@ export function buildBpmsoftSystemPrompt(knowledgeDir: string, options: { dbQuer
 - source-code-edit.md — ✅ класс-помощник, локализуемые строки, REST-сервис и вызов с клиента, слушатель событий объекта, вызов из процесса, слушатель событий приложения и ClassFactory, подмена платформенного класса через ReBind, чтение системной настройки, удаление, частые ошибки компиляции, сообщение в браузер пользователю (ServerChannel) и уведомление в «колокольчике» (Reminding); асинхронная операция из слушателя, отмена e.IsCanceled, порядок «скрипт события — слушатель», DefaultBinding.
 - sql-script-edit.md — ✅ новый скрипт выполняется при «Обновить из файловой системы», повторно — только после смены ModifiedOnUtc.
 - data-edit.md — ✅ системная настройка и её значение, записи справочника с переводом, набор для таблицы со справочными колонками, датами и числами, IsForceUpdate, InstallType при обновлении из файловой системы; данные не удаляются — удаление записей только SQL.
+- rights-edit.md — ✅ включить администрирование по записям, права по умолчанию SQL-скриптом, актуализация существующих записей, право на запись из кода, системная операция и её выдача данными.
 - registration-edit.md — ✅ регистрация нового раздела целиком, отдельной карточки и мини-карточки, детали, справочника в разделе «Справочники» (таблица Lookup).
 - web-service-edit.md — ✅ REST-сервис файлами, элемент «Вызвать веб-сервис» в процессе, чтение результата через Get<T>("<Элемент>.<Параметр>"), удаление сервиса; 🧪 новый метод в существующем сервисе.
 - integration-api.md — ✅ вход извне (AuthService, cookie, заголовок BPMCSRF), OData 4, DataService (camelCase), адреса и коды ошибок своего REST-сервиса, анонимный сервис (appsettings.json, SystemUserConnection), исходящий HTTP через IHttpClientFactory.
