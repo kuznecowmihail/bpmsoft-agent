@@ -108,6 +108,25 @@
 - `IJ3` — IsLogging процесса, по умолчанию true; `"IJ3": false` = «Журналировать» снят (✅ записью 29.09.2026). Гипотеза подтверждена.
 - `CI6` — VisualType связи; платформа всегда пишет `1` (AutoPolyline). `CI9` — CurveCenterPosition (центр кривой, для связи-кривой).
 
+## ✅ Диагностика выполнения: журнал процессов в БД
+
+**Подтверждено записью в CRM (21.10.2026).** Где и почему упал или завис процесс, видно запросом к БД, без интерфейса:
+- `SysProcessLog` — экземпляры процессов: `Id` — UId экземпляра (это `ProcessDescriptor.UId` и `OwnerUId` в действии процесса), `Name` — заголовок процесса, `StatusId` → `SysProcessStatus`, `StartDate`, `CompleteDate`. Есть представление `VwSysProcessLog`.
+- `SysProcessElementLog` — выполненные элементы: `Id` — UId элемента (свойство `UId` в действии процесса; его передают в `ProcessEngine.CompleteExecuting`), `SysProcessId` → экземпляр, `Caption`, `Type` (класс элемента, например `BPMSoft.Core.Process.ProcessSchemaUserTask`), `StatusId`, `ErrorDescription` (полный текст исключения со стеком), `SchemaElementUId`, `StartDate`, `CompleteDate`. Есть представление `VwSysProcessElementLog`.
+- `SysProcessStatus` (колонка `Name`): `Running` `ed2ae277-b6e2-df11-971b-001d60e938c6`, `Completed` `815c9586-b6e2-df11-971b-001d60e938c6`, `Error` `f942c08d-b6e2-df11-971b-001d60e938c6`, `Inactive` `67700d9c-28ac-46ef-9037-b81a53b7b330`, `Canceled` `1be78f3e-234d-4d6a-869a-dc07253fd2f3`, `Cancelling` `006f6d7a-6d9a-4e8c-bf5f-2ddac8b3df9a`.
+- Последние запуски процесса и шаги экземпляра:
+  ```sql
+  SELECT l."Id", s."Name" AS "Status", l."StartDate"
+  FROM "SysProcessLog" l JOIN "SysProcessStatus" s ON s."Id" = l."StatusId"
+  WHERE l."Name" = '<Заголовок процесса>' ORDER BY l."StartDate" DESC LIMIT 5;
+
+  SELECT e."Caption", s."Name" AS "Status", e."ErrorDescription"
+  FROM "SysProcessElementLog" e JOIN "SysProcessStatus" s ON s."Id" = e."StatusId"
+  WHERE e."SysProcessId" = '<Id экземпляра>' ORDER BY e."StartDate";
+  ```
+- Исключение в действии процесса не доходит до вызывающего `ProcessExecutor.Execute`: процесс и элемент получают статус `Error`, текст — в `ErrorDescription`, а `Execute` возвращает `ProcessDescriptor` с `ProcessStatus = Error`. Проверяй статус в коде, который запускает процесс. Для задания-сценария тот же механизм — 🧪 не проверено отдельно.
+- Процесс, который ждёт элемент, — `Running` и у экземпляра, и у элемента. После отмены — `Canceled` у обоих.
+
 ## Не проверено пока
 - ✅ `ShowExecutionPage` = «Показывать страницу автоматически» (подтверждено Designer, шаг 19).
 - `UseCardProcessModule` — подпись в ресурсах «Использовать стандартный генератор страниц»; влияние не проверено.

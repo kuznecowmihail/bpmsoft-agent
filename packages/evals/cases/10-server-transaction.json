@@ -1,0 +1,21 @@
+{
+  "title": "REST-метод: контакт и задача по нему в одной транзакции",
+  "provider": "claude",
+  "task": "Сделай REST веб-сервис в исходном коде {{prefix}}EvalContactTaskService (класс с тем же именем) с POST-методом CreateContactWithTask(string name, string taskTitle): создаёт контакт с ФИО name и активность-задачу с темой taskTitle, связанную с этим контактом (колонка Contact активности). Обе записи создаются атомарно, в одной транзакции БД: если задача не создалась, контакт тоже не должен остаться. Метод возвращает Id контакта.",
+  "answers": [
+    { "when": "в как\\S* пакет", "text": "{{package}}" },
+    { "when": "зависимост|связ\\S* пакет|совмест", "text": "Не связывать пакеты: делай только в {{package}}, зависимости пакета не меняй" },
+    { "when": "Подтверждаете план", "text": "Делай" }
+  ],
+  "maxTurns": 10,
+  "checks": [
+    { "type": "file_exists", "path": "Schemas/{{prefix}}EvalContactTaskService/{{prefix}}EvalContactTaskService.cs" },
+    { "type": "file_contains", "path": "Schemas/{{prefix}}EvalContactTaskService/{{prefix}}EvalContactTaskService.cs", "pattern": "StartTransaction" },
+    { "type": "file_contains", "path": "Schemas/{{prefix}}EvalContactTaskService/{{prefix}}EvalContactTaskService.cs", "pattern": "RollbackTransaction" },
+    { "type": "file_contains", "path": "Schemas/{{prefix}}EvalContactTaskService/{{prefix}}EvalContactTaskService.cs", "pattern": "CommitTransaction" },
+    { "type": "file_contains", "path": "Schemas/{{prefix}}EvalContactTaskService/{{prefix}}EvalContactTaskService.cs", "pattern": "EnsureDBConnection" },
+    { "type": "lint_clean" },
+    { "type": "crm_update_ok" },
+    { "type": "crm_compile_ok" }
+  ]
+}

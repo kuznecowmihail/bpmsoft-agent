@@ -314,6 +314,74 @@ define("<Имя>", ["BusinessRuleModule", "<Имя>Resources"], function(Busines
 
 **Подтверждено в CRM (14.10.2026).** Чтобы ограничить список значений простого справочника на карточке, переопредели `getLookupQuery` схемы: для своей колонки добавь в запрос фильтр по `Id` (список разрешённых записей из модуля констант), для остальных колонок верни `this.callParent(arguments)`. Без условия видны все значения справочника, с условием — только перечисленные. Очистку уже выбранного недопустимого значения делай отдельно, в обработчике изменения управляющей колонки.
 
+## ✅ Клиентский ESQ и запросы данных (JS)
+
+**Подтверждено записью в CRM (21.10.2026)**, результаты сверены с SQL. Нужен, когда данные требуются прямо на странице (счётчик, проверка, подсказка). Массовую или важную логику держи на сервере.
+- Запрос: `var esq = Ext.create("BPMSoft.EntitySchemaQuery", {rootSchemaName: "<Объект>"});`, колонки — `esq.addColumn("<Путь>", "<Псевдоним>")`.
+- Список: `esq.getEntityCollection(function(result) { … }, this)`. Проверь `result.success`, затем `result.collection.getCount()`, `getByIndex(i)`, `each(function(item) { item.get("<Псевдоним>"); })`.
+- Одна запись: `esq.getEntity(<Id>, function(result) { var entity = result.entity; }, this)`. Метод `getEntityAsync` есть, его поведение 🧪 не проверено.
+- Справочная колонка в результате — объект `{value, displayValue, primaryImageValue, …}`, а не Guid.
+- Фильтр по значению: `esq.filters.add("<ключ>", BPMSoft.createColumnFilterWithParameter(BPMSoft.ComparisonType.EQUAL, "<Колонка>", <значение>))` или `esq.filters.addItem(<фильтр>)`. Справочная колонка — имя без `Id`, значение — Guid.
+- `IN`: `BPMSoft.createColumnInFilterWithParameters("<Колонка>", [<Id>, …], BPMSoft.DataValueType.GUID)`.
+- Пусто: `BPMSoft.createColumnIsNullFilter("<Колонка>")`.
+- Группа «ИЛИ»: `var group = Ext.create("BPMSoft.FilterGroup"); group.logicalOperation = BPMSoft.LogicalOperatorType.OR; group.addItem(<фильтр>);`, затем `esq.filters.addItem(group)`.
+- Есть связанные записи: `BPMSoft.createExistsFilter("[<Деталь>:<Колонка связи>].Id")` (или `esq.createExistsFilter(…)`). Нет связанных записей: `esq.createNotExistsFilter(…)`. Условие на запись детали: `filter.subFilters.addItem(BPMSoft.createColumnFilterWithParameter(BPMSoft.ComparisonType.EQUAL, "<Колонка детали>", <значение>))`.
+- Количество записей детали у каждой записи: `esq.addAggregationSchemaColumn("[<Деталь>:<Колонка связи>].Id", BPMSoft.AggregationType.COUNT, "<Псевдоним>", BPMSoft.AggregationEvalType.ALL)`. В документации Creatio встречается `addAggregationSchemaColumnFunctionColumn` — в BPMSoft такого метода нет.
+- Колонка отображения объекта: `esq.addMacrosColumn(BPMSoft.QueryMacrosType.PRIMARY_DISPLAY_COLUMN, "<Псевдоним>")`.
+- Системная настройка: `BPMSoft.SysSettings.querySysSettingsItem("<Код>", function(value) { … }, this)`. Если значение кешируемой настройки уже загружено, колбэк вызывается синхронно (так было при проверке). По коду ядра без кеша вызов асинхронный, поэтому используй значение только внутри колбэка. Есть `querySysSettingsItemAsync` (возвращает Promise, 🧪 не проверено).
+- Вставка: `var insert = Ext.create("BPMSoft.InsertQuery", {rootSchemaName: "<Объект>"}); insert.setParameterValue("<Колонка>", <значение>, BPMSoft.DataValueType.TEXT);` Справочная колонка — имя без `Id`, тип `BPMSoft.DataValueType.GUID`.
+- Удаление: `var del = Ext.create("BPMSoft.DeleteQuery", {rootSchemaName: "<Объект>"}); del.filters.addItem(del.createColumnFilterWithParameter(BPMSoft.ComparisonType.EQUAL, "<Колонка>", <значение>));`.
+- Выполнение: `query.execute(function(response) { … }, this)`. Пакет запросов: `var batch = Ext.create("BPMSoft.BatchQuery"); batch.add(<запрос>); batch.execute(function(response) { … }, this);`.
+- Ответ пакета: `{queryResults: [{id, rowsAffected, success, …}], success}`, у вставки `id` — Id новой записи. Ответ `DeleteQuery`: `{rowsAffected, success}`.
+- Срабатывают ли события объекта (слушатель, подпроцессы) при `InsertQuery` и `DeleteQuery` — 🧪 не проверено. `UpdateQuery`, `addParameterColumn`, `addDatePartFunctionColumn`, агрегат с условием через `BPMSoft.SubQueryExpression` — 🧪 не проверены.
+
+## ✅ Карточка: фильтр-правило, проверка по БД, значения и фильтр детали, сортировка списка, сообщения
+
+**Подтверждено записью в CRM (21.10.2026).**
+- Фильтр справочного поля правилом `FILTRATION` в `rules` (модуль `BusinessRuleModule` — в зависимостях схемы):
+  ```js
+  "<Колонка справочника>": {
+  	"<ИмяПравила>": {
+  		ruleType: BusinessRuleModule.enums.RuleType.FILTRATION,
+  		autocomplete: false,
+  		baseAttributePatch: "<Колонка справочного объекта>",
+  		comparisonType: BPMSoft.ComparisonType.EQUAL,
+  		type: BusinessRuleModule.enums.ValueType.CONSTANT,
+  		value: <значение>
+  	}
+  }
+  ```
+  Фильтр действует и в окне выбора, и в выпадающем списке. Уже заполненное значение, которое не проходит фильтр, остаётся в поле. Id записи в `value` выноси в клиентский модуль констант (раздел ниже). Фильтр по другому полю карточки — `type: BusinessRuleModule.enums.ValueType.ATTRIBUTE, attribute: "<Колонка карточки>"` и `autoClean: true` (очистить поле при смене значения), 🧪 не проверено.
+- Коды `BusinessRuleModule.enums` (по коду ядра `[app]/conf/content/BusinessRuleModule.js`; в `businessRules` Designer пишет числа): `RuleType` — `DISABLED` -1, `BINDPARAMETER` 0, `FILTRATION` 1, `AUTOCOMPLETE` 2, `POPULATE_ATTRIBUTE` 3; `ValueType` — `CONSTANT` 0, `ATTRIBUTE` 1, `SYSSETTING` 2, `SYSVALUE` 3, `CARDSTATE` 4, `PARAMETER` 5, `FORMULA` 6.
+- Сортировка справочного поля: атрибут `"<Колонка>": {lookupListConfig: {orders: [{columnPath: "Name", direction: BPMSoft.OrderDirection.DESC}]}}`. Действует только в выпадающем списке поля (подсказки при вводе: `getLookupQuery` → `applyColumnsOrderToLookupQuery` в `BasePageV2.js`). Окно выбора справочника строит свой запрос и порядок не меняет — проверено.
+- Проверка по БД перед сохранением — переопредели `asyncValidate`:
+  ```js
+  asyncValidate: function(callback, scope) {
+  	this.callParent([function(response) {
+  		if (!this.validateResponse(response)) {
+  			return;
+  		}
+  		var esq = Ext.create("BPMSoft.EntitySchemaQuery", {rootSchemaName: "<Объект>"});
+  		esq.addColumn("Id");
+  		esq.filters.addItem(BPMSoft.createColumnFilterWithParameter(
+  			BPMSoft.ComparisonType.EQUAL, "<Колонка>", this.get("<Колонка>")));
+  		esq.filters.addItem(BPMSoft.createColumnFilterWithParameter(
+  			BPMSoft.ComparisonType.NOT_EQUAL, "Id", this.get("Id")));
+  		esq.getEntityCollection(function(result) {
+  			if (result.success && result.collection.getCount() > 0) {
+  				callback.call(scope, {success: false, message: resources.localizableStrings.<Строка>});
+  				return;
+  			}
+  			callback.call(scope, response);
+  		}, this);
+  	}, this]);
+  }
+  ```
+  Карточка не сохраняется и показывает `message` в окне. Синхронные проверки полей — `setValidationConfig` (раздел «Атрибуты, методы, правила, валидация»).
+- Деталь в `details`: `"defaultValues": {"<Колонка детали>": {"masterColumn": "<Колонка карточки>"}, "<Колонка>": {"value": <значение>}}` — значения подставляются в новую запись детали (проверено на редактируемой детали: строка добавления заполнена, запись сохранилась с этими значениями). `"filterMethod": "<метод карточки>"` — метод возвращает `BPMSoft.FilterGroup` и полностью заменяет `filter`, поэтому связь с карточкой добавь в группу сам: `group.addItem(BPMSoft.createColumnFilterWithParameter(BPMSoft.ComparisonType.EQUAL, "<Колонка связи>", this.get("Id")))`. Есть `BPMSoft.ComparisonType.NOT_START_WITH`.
+- Публикация сообщения, не объявленного в `messages`, бросает исключение «Message <Имя> is not defined in <Модуль> (<sandbox.id>) module» — сообщение не уходит. Объявляй каждое сообщение.
+- Окно «Да/Нет»: `this.showConfirmationDialog("<Текст>", function(returnCode) { if (returnCode === BPMSoft.MessageBoxButtons.YES.returnCode) { … } }, [BPMSoft.MessageBoxButtons.YES.returnCode, BPMSoft.MessageBoxButtons.NO.returnCode])`. `returnCode` — строки `"yes"`/`"no"`, `this` в обработчике — карточка. Свои кнопки — `source-code-edit.md`.
+
 ## ✅ Константы: клиентский модуль идентификаторов
 
 **Подтверждено в CRM (14.10.2026).** Сырые идентификаторы записей (UId справочников и т.п.) в карточках, модулях и деталях не пишем — они лежат в отдельном Module-модуле констант пакета, по одному на объект или тему. Внутри модуля — по вложенному объекту на справочник: одна переменная — одна таблица, идентификаторы в корне не лежат.
