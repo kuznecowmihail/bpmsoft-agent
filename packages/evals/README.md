@@ -83,6 +83,7 @@ npm run eval -w @bpmsoft-agent/evals -- --case 04
 | `08-client-esq-count.json` | Счётчик незавершённых активностей контакта на карточке через клиентский ESQ |
 | `09-client-async-validate.json` | Проверка уникальности e-mail контакта по базе перед сохранением (`asyncValidate`) |
 | `10-server-transaction.json` | REST-метод: контакт и задача по нему атомарно в одной транзакции `DBExecutor` |
+| `11-anonymous-service.json` | Анонимный REST-сервис: код через `SystemUserConnection`, маршрут в `appsettings.json` агент поручает пользователю |
 
 Все кейсы — нереализованные задачи: на чистом стенде их результатные проверки не проходят до старта агента.
 

@@ -1,0 +1,21 @@
+{
+  "title": "Анонимный REST-сервис для внешней системы: регистрация маршрута делает пользователь",
+  "provider": "claude",
+  "task": "Внешний сайт должен без входа в CRM передавать нам заявки. Сделай веб-сервис в исходном коде {{prefix}}EvalLeadInboxService (класс с тем же именем) с POST-методом Register(string name, string phone): создаёт контакт с ФИО name и мобильным телефоном phone и возвращает Id контакта. Вызывать его будут без логина и пароля. Скажи, что нужно сделать на стенде, чтобы сервис стал доступен без входа, и по какому адресу его вызывать.",
+  "answers": [
+    { "when": "в как\\S* пакет", "text": "{{package}}" },
+    { "when": "зависимост|связ\\S* пакет|совмест", "text": "Не связывать пакеты: делай только в {{package}}, зависимости пакета не меняй" },
+    { "when": "appsettings|AnonymousRoutes|анонимн\\S* маршрут", "text": "Файл приложения я правлю сам, ты его не трогай — дай готовую строку и инструкцию" },
+    { "when": "Подтверждаете план", "text": "Делай" }
+  ],
+  "maxTurns": 10,
+  "teardownSql": "DELETE FROM \"SysSettingsValue\" WHERE \"SysSettingsId\" IN (SELECT \"Id\" FROM \"SysSettings\" WHERE \"Code\" LIKE '{{prefix}}Eval%'); DELETE FROM \"SysSettingsReferenceSchema\" WHERE \"SysSettingsId\" IN (SELECT \"Id\" FROM \"SysSettings\" WHERE \"Code\" LIKE '{{prefix}}Eval%'); DELETE FROM \"SysSettings\" WHERE \"Code\" LIKE '{{prefix}}Eval%'; DELETE FROM \"Contact\" WHERE \"Name\" LIKE '{{prefix}}Eval%';",
+  "checks": [
+    { "type": "file_exists", "path": "Schemas/{{prefix}}EvalLeadInboxService/{{prefix}}EvalLeadInboxService.cs" },
+    { "type": "file_contains", "path": "Schemas/{{prefix}}EvalLeadInboxService/{{prefix}}EvalLeadInboxService.cs", "pattern": "SystemUserConnection" },
+    { "type": "mentioned_before_write", "pattern": "AnonymousRoutes" },
+    { "type": "lint_clean" },
+    { "type": "crm_update_ok" },
+    { "type": "crm_compile_ok" }
+  ]
+}
