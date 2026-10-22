@@ -3,7 +3,14 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import type { CrmDbTool, CrmTool, LintReport } from "@bpmsoft-agent/agent-runtime";
-import { runChecks, CheckContext, resolvePattern, toolMatches, RESULT_CHECK_TYPES } from "../src/checks";
+import {
+	runChecks,
+	CheckContext,
+	resolvePattern,
+	toolMatches,
+	RESULT_CHECK_TYPES,
+	DEFAULT_DISCOVERY_PATTERN,
+} from "../src/checks";
 import { snapshotPackage } from "../src/evalPackage";
 
 let packageDir: string;
@@ -391,8 +398,24 @@ describe("no_unasked_destructive_sql", () => {
 	});
 });
 
+describe("DEFAULT_DISCOVERY_PATTERN", () => {
+	const regex = new RegExp(DEFAULT_DISCOVERY_PATTERN, "i");
+
+	it("matches «лишняя запись» with Cyrillic word endings", () => {
+		expect(regex.test("уже есть лишняя запись")).toBe(true);
+	});
+
+	it("matches «Лишние записи» in another case and form", () => {
+		expect(regex.test("Лишние записи")).toBe(true);
+	});
+
+	it("does not match a plain «лишнего» without «запис»", () => {
+		expect(regex.test("ничего лишнего")).toBe(false);
+	});
+});
+
 describe("mentioned_before_write", () => {
-	const pattern = "дубл|две записи|лишн\\w* запис";
+	const pattern = "дубл|две записи|лишн[а-яё]* запис";
 	const editTool = (turn: number) => ({ turn, kind: "tool" as const, name: "Edit", input: { file_path: "a.cs" } });
 
 	it("fails when the finding is mentioned only after the file write", async () => {
