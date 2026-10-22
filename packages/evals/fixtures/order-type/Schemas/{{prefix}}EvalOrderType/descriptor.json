@@ -1,0 +1,14 @@
+{
+  "Descriptor": {
+    "UId": "84a64bba-2b14-40ef-bc7a-51c1feffa2d6",
+    "Name": "{{prefix}}EvalOrderType",
+    "ModifiedOnUtc": "\/Date({{now}})\/",
+    "Parent": {
+      "UId": "11ab4bcb-9b23-4b6d-9c86-520fae925d75",
+      "Name": "BaseLookup"
+    },
+    "ManagerName": "EntitySchemaManager",
+    "Caption": "Eval order type",
+    "DependsOn": []
+  }
+}

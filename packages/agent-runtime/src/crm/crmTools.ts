@@ -389,6 +389,57 @@ export function createCrmTools(options: CrmToolsOptions): CrmTool[] {
 	];
 }
 
+/** Restarts the CRM application and waits until it answers; for the CLI and tools outside the chat flow. */
+export async function restartCrm(options: {
+	connection: CrmConnection;
+	appRoot?: string;
+	fetchImpl?: FetchLike;
+	restartPollMs?: number;
+	restartLimitMs?: number;
+	signal?: AbortSignal;
+}): Promise<{ success: boolean; text: string }> {
+	const stoppedText = "Остановлено пользователем";
+	const logRoot = options.appRoot !== undefined && fs.existsSync(path.join(options.appRoot, "Logs")) ? options.appRoot : undefined;
+	const session = new CrmSession(options.connection, options.fetchImpl);
+	try {
+		await session.login(undefined, options.signal);
+	} catch (e) {
+		if (e instanceof CrmStoppedError) {
+			return { success: false, text: stoppedText };
+		}
+		const message = errorMessage(e).replace(/[.\s]+$/, "");
+		const prefix = e instanceof CrmLoginError ? "Вход в CRM не выполнен" : "CRM недоступна";
+		return { success: false, text: `${prefix}: ${message}.` };
+	}
+
+	const commonMark = logRoot ? markLog(logRoot, "Common.log") : undefined;
+	const restartStarted = Date.now();
+	try {
+		await session.post(RESTART_PATH, RESTART_TIMEOUT_MS, options.signal);
+	} catch (e) {
+		if (e instanceof CrmStoppedError) {
+			return { success: false, text: stoppedText };
+		}
+		// The application may already be restarting; the wait below decides.
+	}
+
+	let ready: boolean;
+	try {
+		ready = await waitForRestart(options, commonMark, restartStarted);
+	} catch (e) {
+		if (e instanceof CrmStoppedError) {
+			return { success: false, text: stoppedText };
+		}
+		throw e;
+	}
+	if (!ready) {
+		const limitSeconds = (options.restartLimitMs ?? DEFAULT_RESTART_LIMIT_MS) / 1000;
+		return { success: false, text: `После перезапуска CRM не поднялась за ${limitSeconds} с.` };
+	}
+	const seconds = Math.round((Date.now() - restartStarted) / 1000);
+	return { success: true, text: `Приложение перезапущено, CRM снова доступна через ${seconds} с.` };
+}
+
 /** Login check for the settings screen. Throws Error with the reason; never includes the password. */
 export async function testCrmConnection(connection: CrmConnection, fetchImpl?: FetchLike): Promise<string> {
 	const session = new CrmSession(connection, fetchImpl);

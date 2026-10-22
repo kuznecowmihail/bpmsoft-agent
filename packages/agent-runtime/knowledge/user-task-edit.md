@@ -154,6 +154,34 @@ namespace BPMSoft.Core.Process.Configuration
 
 ---
 
+## ✅ Асинхронное действие: процесс ждёт, пока элемент завершат
+
+**Подтверждено записью в CRM (21.10.2026).** Когда действие запускает что-то внешнее и результат придёт позже (ответ другой системы, решение пользователя вне CRM), элемент не завершают сразу:
+```csharp
+protected override bool InternalExecute(ProcessExecutingContext context)
+{
+	// запусти внешнее действие и сохрани UId элемента (свойство UId) там,
+	// откуда его возьмёт код, который завершит элемент
+	return false; // элемент и процесс — «Выполняется» (Running), процесс ждёт
+}
+
+public override bool CompleteExecuting(params object[] parameters)
+{
+	// заполни выходные параметры действия
+	return base.CompleteExecuting(parameters);
+}
+
+public override void CancelExecuting(params object[] parameters)
+{
+	// откати то, что сделал InternalExecute
+	base.CancelExecuting(parameters);
+}
+```
+- Завершить элемент из другого кода (сервис, слушатель, другой процесс): `UserConnection.ProcessEngine.CompleteExecuting(<UId элемента>)`. Вызывается переопределённый `CompleteExecuting`, процесс идёт дальше. UId ожидающего элемента — `SysProcessElementLog.Id` (`processes.md`, «Журнал процессов в БД»).
+- Отменить экземпляр: `UserConnection.ProcessEngine.ProcessExecutor.CancelExecutionAsync(<UId экземпляра>)` — экземпляр и элемент получают статус `Canceled`, в действии вызывается `CancelExecuting`.
+- `OwnerUId` — строка с UId экземпляра процесса (`Guid.Parse(OwnerUId)`).
+- Ошибку сообщай исключением, а не `false`: процесс получит статус `Error`.
+
 ## ✅ Вставить своё действие в процесс (элемент «Выполнить действие процесса»)
 **Шаблон**: `templates/process/user-task-call.json` — элемент, маппинги и ресурсы из подтверждённого теста.
 

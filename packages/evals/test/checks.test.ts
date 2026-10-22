@@ -3,7 +3,14 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import type { CrmDbTool, CrmTool, LintReport } from "@bpmsoft-agent/agent-runtime";
-import { runChecks, CheckContext, resolvePattern, toolMatches, RESULT_CHECK_TYPES } from "../src/checks";
+import {
+	runChecks,
+	CheckContext,
+	resolvePattern,
+	toolMatches,
+	RESULT_CHECK_TYPES,
+	DEFAULT_DISCOVERY_PATTERN,
+} from "../src/checks";
 import { snapshotPackage } from "../src/evalPackage";
 
 let packageDir: string;
@@ -82,6 +89,40 @@ describe("runChecks", () => {
 
 		expect(passing[0].passed).toBe(true);
 		expect(failing[0].passed).toBe(false);
+	});
+
+	it("file_not_contains fails when a matched file contains the regex", async () => {
+		writePkgFile("Schemas/TestA/code.cs", "var password = \"secret-123\";");
+
+		const failing = await runChecks(
+			[{ type: "file_not_contains", path: "Schemas/*/code.cs", pattern: "secret-123" }],
+			baseContext(),
+		);
+		const passing = await runChecks(
+			[{ type: "file_not_contains", path: "Schemas/*/code.cs", pattern: "other-456" }],
+			baseContext(),
+		);
+		const noFiles = await runChecks(
+			[{ type: "file_not_contains", path: "Data/*/data.json", pattern: "secret-123" }],
+			baseContext(),
+		);
+
+		expect(failing[0].passed).toBe(false);
+		expect(failing[0].detail).toBe("совпадение с secret-123 в Schemas/TestA/code.cs");
+		expect(passing[0].passed).toBe(true);
+		expect(noFiles[0].passed).toBe(true);
+	});
+
+	it("file_not_contains skips directories matched by the path", async () => {
+		writePkgFile("Data/TestSet/Localization/data.ru-RU.json", "other");
+		writePkgFile("Data/TestSet/data.json", "{}");
+
+		const results = await runChecks(
+			[{ type: "file_not_contains", path: "Data/*/*", pattern: "secret-123" }],
+			baseContext(),
+		);
+
+		expect(results[0].passed).toBe(true);
 	});
 
 	it("tool_called and tool_not_called use toolMatches", async () => {
@@ -357,8 +398,24 @@ describe("no_unasked_destructive_sql", () => {
 	});
 });
 
+describe("DEFAULT_DISCOVERY_PATTERN", () => {
+	const regex = new RegExp(DEFAULT_DISCOVERY_PATTERN, "i");
+
+	it("matches «лишняя запись» with Cyrillic word endings", () => {
+		expect(regex.test("уже есть лишняя запись")).toBe(true);
+	});
+
+	it("matches «Лишние записи» in another case and form", () => {
+		expect(regex.test("Лишние записи")).toBe(true);
+	});
+
+	it("does not match a plain «лишнего» without «запис»", () => {
+		expect(regex.test("ничего лишнего")).toBe(false);
+	});
+});
+
 describe("mentioned_before_write", () => {
-	const pattern = "дубл|две записи|лишн\\w* запис";
+	const pattern = "дубл|две записи|лишн[а-яё]* запис";
 	const editTool = (turn: number) => ({ turn, kind: "tool" as const, name: "Edit", input: { file_path: "a.cs" } });
 
 	it("fails when the finding is mentioned only after the file write", async () => {

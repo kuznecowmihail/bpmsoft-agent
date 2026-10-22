@@ -48,7 +48,7 @@ export class CrmSession {
 	/** Throws CrmLoginError (wrong login, message from the CRM) or CrmUnavailableError (network/HTTP failure). */
 	async login(timeoutMs: number = DEFAULT_LOGIN_TIMEOUT_MS, signal?: AbortSignal): Promise<void> {
 		const body = JSON.stringify({ UserName: this.connection.user, UserPassword: this.connection.password });
-		const response = await this.send(LOGIN_PATH, body, timeoutMs, signal);
+		const response = await this.send("POST", LOGIN_PATH, body, timeoutMs, signal);
 		if (response.status !== 200) {
 			throw new CrmUnavailableError(`HTTP ${response.status}`);
 		}
@@ -63,11 +63,17 @@ export class CrmSession {
 
 	/** POST with body null after login(); throws CrmUnavailableError on network failure or timeout. */
 	async post(path: string, timeoutMs: number, signal?: AbortSignal): Promise<CrmResponse> {
-		const response = await this.send(path, "null", timeoutMs, signal);
+		const response = await this.send("POST", path, "null", timeoutMs, signal);
 		return { status: response.status, text: response.text, json: parseJson(response.text) };
 	}
 
-	private async send(path: string, body: string, timeoutMs: number, signal?: AbortSignal): Promise<RawResponse> {
+	/** Request after login(): GET sends no body, POST sends the given text (null means no body). */
+	async request(method: "GET" | "POST", path: string, body: string | null, timeoutMs: number, signal?: AbortSignal): Promise<CrmResponse> {
+		const response = await this.send(method, path, body, timeoutMs, signal);
+		return { status: response.status, text: response.text, json: parseJson(response.text) };
+	}
+
+	private async send(method: "GET" | "POST", path: string, body: string | null, timeoutMs: number, signal?: AbortSignal): Promise<RawResponse> {
 		const headers: Record<string, string> = { ...JSON_HEADERS };
 		if (this.cookies.size > 0) {
 			headers.Cookie = [...this.cookies].map(([name, value]) => `${name}=${value}`).join("; ");
@@ -85,7 +91,8 @@ export class CrmSession {
 		const onStop = () => controller.abort();
 		signal?.addEventListener("abort", onStop, { once: true });
 		try {
-			const response = await this.fetchImpl(`${this.baseUrl}${path}`, { method: "POST", headers, body, signal: controller.signal });
+			const sendBody = method === "GET" ? undefined : body ?? undefined;
+			const response = await this.fetchImpl(`${this.baseUrl}${path}`, { method, headers, body: sendBody, signal: controller.signal });
 			const text = await response.text();
 			this.absorbCookies(response.headers);
 			return { status: response.status, text, headers: response.headers };

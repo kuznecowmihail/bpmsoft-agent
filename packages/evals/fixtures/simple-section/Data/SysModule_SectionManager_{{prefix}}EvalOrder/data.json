@@ -1,0 +1,62 @@
+{
+  "PackageData": [
+    {
+      "Row": [
+        {
+          "SchemaColumnUId": "ae0e45ca-c495-4fe7-a39d-3ab7278e1617",
+          "Value": "eddc3f78-99dd-4bab-9c4f-34105ef26dbb"
+        },
+        {
+          "SchemaColumnUId": "e0c474a3-e4bc-457e-bb67-c1ec1b399f60",
+          "Value": "{{prefix}}EvalOrder"
+        },
+        {
+          "SchemaColumnUId": "3f098e0d-6cbd-4e8f-bc3e-00709f2d8d82",
+          "Value": "1716990f-3bf8-4862-9518-ec9531bba025",
+          "DisplayValue": "null"
+        },
+        {
+          "SchemaColumnUId": "d3afc924-2d21-4c0e-b2f3-9f8c180221f9",
+          "Value": "a24a734d-3955-e011-981f-00155d043204",
+          "DisplayValue": "Не использовать группы"
+        },
+        {
+          "SchemaColumnUId": "af5bbb5e-9c78-44b7-8fdd-2bfc4353b4a8",
+          "Value": "3b8002f2-3cde-4b6b-9e40-5cd9f17d21ee"
+        },
+        {
+          "SchemaColumnUId": "d57c3c34-e293-4aed-bff6-91dc90408958",
+          "Value": "df58589e-26a6-44d1-b8d4-edf1734d02b4"
+        },
+        {
+          "SchemaColumnUId": "cb4bb1d2-d369-406e-8150-502dd7af2199",
+          "Value": "4e1670dc-10db-4217-929a-669f906e5d75"
+        },
+        {
+          "SchemaColumnUId": "327a0dc4-df63-4f6e-9d33-bc403d284cb6",
+          "Value": "80c3ae13-eb1d-4d02-8bb7-44bb2f04560e"
+        },
+        {
+          "SchemaColumnUId": "eea74681-e019-4885-9a1e-e8261f2665ea",
+          "Value": true
+        },
+        {
+          "SchemaColumnUId": "34dfc288-1b25-4d53-bdf3-16b58a84e276",
+          "Value": true
+        },
+        {
+          "SchemaColumnUId": "a0fd39b2-b680-4515-ac3c-72322db4f1b8",
+          "Value": true
+        },
+        {
+          "SchemaColumnUId": "80769c54-f4f4-43cb-93f8-0824715969a6",
+          "Value": true
+        },
+        {
+          "SchemaColumnUId": "dedaabd6-732d-47ac-b229-50a8ee02292c",
+          "Value": false
+        }
+      ]
+    }
+  ]
+}

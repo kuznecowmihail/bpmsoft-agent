@@ -33,6 +33,7 @@ export interface EvalConfig extends EvalConfigFile {
 export type EvalCheck =
 	| { type: "file_exists"; path: string }
 	| { type: "file_contains"; path: string; pattern: string }
+	| { type: "file_not_contains"; path: string; pattern: string }
 	| { type: "file_changed"; path: string }
 	| { type: "lint_clean" }
 	| { type: "crm_update_ok" }

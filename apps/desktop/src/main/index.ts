@@ -429,7 +429,8 @@ app.whenReady().then(() => {
     installClaudeSkills(requireOpenedAppRoot(appRoot), defaultExportSources(), {
       claudeMd: options?.claudeMd === 'separate' || options?.claudeMd === 'replace' ? options.claudeMd : undefined,
       overwriteModified: options?.overwriteModified === true,
-      appVersion: app.getVersion()
+      appVersion: app.getVersion(),
+      crm: crmConnection()
     })
   )
 

@@ -1,0 +1,26 @@
+{
+  "title": "Группы в существующем разделе: динамические и статические",
+  "provider": "claude",
+  "fixtures": ["simple-section"],
+  "task": "В пакете {{package}} есть раздел «Заказы (эвал)» (объект {{prefix}}EvalOrder, схема раздела {{prefix}}EvalOrderSection). Пользователям нужны в нём группы: динамические — по фильтру, и статические — чтобы вручную включать в группу отмеченные записи реестра. Сделай.",
+  "answers": [
+    { "when": "в как\\S* пакет", "text": "{{package}}" },
+    { "when": "зависимост|связ\\S* пакет|совмест", "text": "Не связывать пакеты: делай только в {{package}}, зависимости пакета не меняй" },
+    { "when": "Подтверждаете план", "text": "Делай" }
+  ],
+  "maxTurns": 10,
+  "teardownSql": "DELETE FROM \"SysModuleEditLcz\" WHERE \"RecordId\" = '46606a3d-65c5-4c99-a149-aacfd4acb421'; DELETE FROM \"SysModuleEdit\" WHERE \"Id\" = '46606a3d-65c5-4c99-a149-aacfd4acb421'; DELETE FROM \"SysModuleLcz\" WHERE \"RecordId\" = 'eddc3f78-99dd-4bab-9c4f-34105ef26dbb'; DELETE FROM \"SysModuleInWorkplace\" WHERE \"SysModuleId\" = 'eddc3f78-99dd-4bab-9c4f-34105ef26dbb'; DELETE FROM \"SysModule\" WHERE \"Id\" = 'eddc3f78-99dd-4bab-9c4f-34105ef26dbb'; DELETE FROM \"SysModuleEntity\" WHERE \"Id\" = '1716990f-3bf8-4862-9518-ec9531bba025'; DROP TABLE IF EXISTS \"{{prefix}}EvalOrderInFolder\"; DROP TABLE IF EXISTS \"Sys{{prefix}}EvalOrderFolderLcz\"; DROP TABLE IF EXISTS \"{{prefix}}EvalOrderFolder\"; DROP TABLE IF EXISTS \"Sys{{prefix}}EvalOrderLcz\"; DROP TABLE IF EXISTS \"{{prefix}}EvalOrder\";",
+  "checks": [
+    { "type": "file_contains", "path": "Schemas/{{prefix}}EvalOrderFolder/descriptor.json", "pattern": "BaseFolder" },
+    { "type": "file_contains", "path": "Schemas/{{prefix}}EvalOrderFolder/metadata.json", "pattern": "527b9e4e-7dbf-4721-a112-72b423b3365a" },
+    { "type": "file_contains", "path": "Schemas/{{prefix}}EvalOrderInFolder/descriptor.json", "pattern": "BaseItemInFolder" },
+    { "type": "file_contains", "path": "Schemas/{{prefix}}EvalOrderInFolder/metadata.json", "pattern": "9e46bb69-9788-423c-b7cd-4c624081082d" },
+    { "type": "file_contains", "path": "Schemas/{{prefix}}EvalOrderSection/{{prefix}}EvalOrderSection.js", "pattern": "UseStaticFolders\"?'?\\s*,\\s*true" },
+    { "type": "lint_clean" },
+    { "type": "crm_update_ok" },
+    { "type": "crm_compile_ok" },
+    { "type": "db_rows", "sql": "SELECT 1 FROM \"SysModule\" WHERE \"Code\" = '{{prefix}}EvalOrder' AND \"FolderModeId\" = 'b659d704-3955-e011-981f-00155d043204'", "min": 1 },
+    { "type": "db_rows", "sql": "SELECT 1 FROM information_schema.columns WHERE table_name = '{{prefix}}EvalOrderInFolder' AND column_name IN ('FolderId', '{{prefix}}EvalOrderId')", "min": 2 },
+    { "type": "db_rows", "sql": "SELECT 1 FROM information_schema.columns WHERE table_name = '{{prefix}}EvalOrderFolder' AND column_name IN ('ParentId', 'SearchData', 'FolderTypeId')", "min": 3 }
+  ]
+}

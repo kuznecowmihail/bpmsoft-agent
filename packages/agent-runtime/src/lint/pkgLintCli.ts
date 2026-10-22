@@ -213,9 +213,3 @@ export function runPkgLintCli(argv: string[], defaultKnowledgeDir: string): PkgL
 	});
 	return { code: report.ok ? 0 : 1, text: report.text };
 }
-
-if (require.main === module) {
-	const result = runPkgLintCli(process.argv.slice(2), path.join(__dirname, ".."));
-	process.stdout.write(result.text + "\n");
-	process.exitCode = result.code;
-}

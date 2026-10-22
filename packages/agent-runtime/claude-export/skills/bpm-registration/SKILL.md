@@ -11,7 +11,7 @@ description: Use when the task registers a section, card, detail or lookup in th
 
 1. `.claude/skills/bpm-knowledge/metadata-editing.md` — общая механика записи, читай первым.
 2. `.claude/skills/bpm-knowledge/registration.md` — факты: `SysModule`, `SysModuleEntity`, `SysModuleEdit`, `SysModuleInWorkplace`, `SysDetail`.
-3. `.claude/skills/bpm-knowledge/registration-edit.md` — рецепты (✅): регистрация нового раздела целиком, отдельной карточки и мини-карточки, детали, справочника в разделе «Справочники» (таблица `Lookup`).
+3. `.claude/skills/bpm-knowledge/registration-edit.md` — рецепты (✅): регистрация нового раздела целиком, отдельной карточки и мини-карточки, детали, справочника в разделе «Справочники» (таблица `Lookup`); группы в разделе (`<Объект>Folder`/`<Объект>InFolder`, `FolderMode`, `UseStaticFolders`); карточки по типам (`TypeColumnUId`, `TypeColumnValue`, `ActionKindCaption`); новое рабочее место (`SysWorkplace`).
 4. `.claude/skills/bpm-knowledge/templates/README.md` и папка `templates/data/` (наборы регистрации `SysModule*`, `SysDetail`, `Lookup`, `LookupRecords`, `SysImage`) — бери шаблон, если в проекте нет своего образца той же таблицы.
 5. Для данных регистрации читай также `data.md` и `data-edit.md`, если нужны значения, не покрытые рецептом.
 

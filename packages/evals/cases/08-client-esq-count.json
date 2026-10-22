@@ -1,0 +1,16 @@
+{
+  "title": "Счётчик незавершённых активностей на карточке контакта через клиентский ESQ",
+  "provider": "claude",
+  "task": "На карточке контакта ContactPageV2 при открытии показывай в отдельном поле только для чтения количество незавершённых активностей контакта (Activity по колонке Contact, у статуса не стоит признак «Конечный статус» — колонка Finish). Считай на клиенте, без нового серверного кода. Подпись поля — на русском и английском.",
+  "answers": [{ "when": "в как\\S* пакет", "text": "{{package}}" }, { "when": "зависимост|связ\\S* пакет|совмест", "text": "Не связывать пакеты: делай только в {{package}}, зависимости пакета не меняй" }, { "when": "Подтверждаете план", "text": "Делай" }],
+  "maxTurns": 8,
+  "checks": [
+    { "type": "file_exists", "path": "Schemas/ContactPageV2/ContactPageV2.js" },
+    { "type": "file_contains", "path": "Schemas/ContactPageV2/ContactPageV2.js", "pattern": "BPMSoft\\.EntitySchemaQuery" },
+    { "type": "file_contains", "path": "Schemas/ContactPageV2/ContactPageV2.js", "pattern": "Status\\.Finish" },
+    { "type": "file_contains", "path": "Schemas/ContactPageV2/ContactPageV2.js", "pattern": "getEntityCollection|getEntity\\(|addAggregationSchemaColumn" },
+    { "type": "crm_update_ok" },
+    { "type": "tool_not_called", "name": "crm_compile" },
+    { "type": "lint_clean" }
+  ]
+}

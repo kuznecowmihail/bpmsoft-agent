@@ -184,6 +184,25 @@ namespace BPMSoft.Configuration
 - В `OnSaved`/`OnInserted`/`OnUpdated` запись уже записана: `SetColumnValue` в БД не попадёт (по опыту пользователя; для скрипта события объекта ✅ проверено 05.10.2026). Дообновить — запросом `Update` по `Id` или заново получить запись и вызвать `Save()` (повторно запустит события — не допускай рекурсии).
 - Слушатель срабатывает на сохранение через приложение (`Entity.Save()`, карточка, процесс), не на прямой SQL.
 - В проекте может быть свой базовый слушатель с типизированным `Entity` — поищи наследников `BaseEntityEventListener` в `Pkg`; стандартный `BaseEntityEventListener` работает без зависимостей от проектного кода.
+- ✅ **Подпроцесс событий объекта раньше слушателя** (подтверждено записью в CRM, 21.10.2026): скрипт события «Перед сохранением» отрабатывает до `OnSaving` слушателя — слушатель уже видит значение, проставленное скриптом. Значит, финальное слово в событии «до» — за слушателем.
+- ✅ **Отмена без ошибки** (21.10.2026): `e.IsCanceled = true;` в `OnInserting` — запись не создаётся, `entity.Save()` возвращает `false`, исключения и сообщения нет. Пользователь не узнает, почему запись не сохранилась, поэтому для запрета с объяснением бросай исключение.
+- ✅ **Колонка не загружена** (21.10.2026): у сущности, созданной `CreateEntity` без `SetDefColumnValues()`, чтение колонки, которую не задавали, — `InvalidObjectStateException: Невозможно получить значение колонки <Колонка>, так как она не была загружена`. Это касается и слушателей, и скриптов событий этого объекта. В коде, который создаёт запись, вызывай `SetDefColumnValues()` или задавай колонку явно.
+- ✅ **Долгая работа после сохранения — асинхронная операция** (подтверждено записью в CRM, 21.10.2026): сохранение не ждёт её (12 мс вместо 2 с работы операции), операция выполняется от имени того же пользователя.
+  ```csharp
+  // using BPMSoft.Core; using BPMSoft.Core.Entities.AsyncOperations;
+  // using BPMSoft.Core.Entities.AsyncOperations.Interfaces; using BPMSoft.Core.Factories;
+  public class <Операция> : IEntityEventAsyncOperation
+  {
+  	public void Execute(UserConnection userConnection, EntityEventAsyncOperationArgs arguments) {
+  		// arguments.EntityId — Id записи; запись уже в БД
+  	}
+  }
+  // в слушателе, OnInserted / OnSaved:
+  var asyncExecutor = ClassFactory.Get<IEntityEventAsyncExecutor>(
+  	new ConstructorArgument("userConnection", entity.UserConnection));
+  asyncExecutor.ExecuteAsync<<Операция>>(new EntityEventAsyncOperationArgs(entity, e));
+  ```
+  Ошибка внутри операции не вернётся пользователю — пиши её в лог.
 
 ✅ **Запрет изменения и удаления, значение по умолчанию** (06.10.2026, `TestTicketCommentEventListener`, объект `TestTicketComment`):
 - `OnUpdating` / `OnDeleting(object sender, EntityBeforeEventArgs e)` — исключение отменяет операцию, пользователь видит его текст: `throw new InvalidOperationException(message);`. Сначала `base.OnUpdating(sender, e)`.
@@ -198,6 +217,12 @@ namespace BPMSoft.Configuration
 - ✅ Изменилась ли колонка в `OnSaving` (подтверждено в CRM, 08.10.2026): `entity.GetTypedOldColumnValue<DateTime>("<Колонка>")` против `entity.GetTypedColumnValue<DateTime>("<Колонка>")`; «сейчас» пользователя — `UserConnection.CurrentUser.GetCurrentDateTime()` (так же в `RemindingSchema.Base.cs`); отмена сохранения — `throw new InvalidOperationException(<текст>)`. При поясе профиля, отличном от UTC, сравнение не проверялось. ✅ (11.10.2026) Если правило зависит от флага, а флаг и колонку меняют в одном сохранении (сняли флаг и сдвинули срок), проверяй и старое, и новое значение флага: `GetTypedOldColumnValue<bool>` возвращает значение до сохранения.
 - ✅ Запись истории через `Entity` (подтверждено в CRM, 08.10.2026): `CreateEntity` → `SetDefColumnValues()` → `SetColumnValue(...)` → `Save(false)` — значения по умолчанию колонок («Текущие дата и время», «Текущий контакт») подставляются сами.
 - ✅ **Справочные значения задачи** (подтверждено в CRM, 12.10.2026; UId базовых записей платформы на проверенном стенде — перед использованием сверь запросом к БД): в `ActivityCategory` две записи «Звонок» — для типа активности «Задача» (`03df85bf-6b19-4dea-8463-d5d49b80bb28`, `ActivityTypeId` = «Задача» `fbe0acdc-cfc0-df11-b00f-001d60e938c6`) и для типа «Звонок» (`e52bd583-7825-e011-8165-00155d043204`); задаче ставь категорию её типа. Приоритет «Высокий» (`ActivityPriority`) — `d625a9fc-7ee6-df11-971b-001d60e938c6`. Срок через час: `DueDate` = начало `.AddHours(1)` от `CurrentUser.GetCurrentDateTime()` — записалось ровно на час позже начала.
+
+✅ **Проверено записью в CRM (22.10.2026):**
+- Несколько атрибутов на одном классе работают: `[EntityEventListener(SchemaName = "<Объект1>")]` и `[EntityEventListener(SchemaName = "<Объект2>")]` — слушатель вызывается для обоих объектов.
+- `[EntityEventListener(IsGlobal = true)]` — слушатель вызывается для записей **всех** объектов; фильтруй по `((Entity)sender).Schema.Name`. Порядок при проверке: сначала слушатель объекта, потом глобальный.
+- `OnDeleteFailed(object sender, EntityErrorEventArgs e)` вызывается, когда удаление упало в БД (например, на запись ссылается другая запись): `e.Exception` — `PostgresException`, `e.KeyValue` — ключ. После него `Entity.Delete()` всё равно бросает `DbOperationException` — слушатель ошибку не гасит.
+- В слушателе `entity.UserConnection` — соединение, через которое сохраняли: пользователь сервиса или системный пользователь, если запись сохраняли через `SystemUserConnection`.
 
 ## ✅ Изменить схему исходного кода
 **Подтверждено 05.10.2026** на `TestSrcService`: в класс добавлен второй метод сервиса (`CreateRecord`), обновлён `ModifiedOnUtc` в `descriptor.json`; после «Обновить из файловой системы» и компиляции новый метод сразу вызывается с клиента. `metadata.json` при правке кода не меняется (если не добавляются локализуемые строки).
@@ -306,6 +331,25 @@ namespace BPMSoft.Configuration
 - `OnAppStart` выполняется только при запуске приложения; компиляция его перезапускает сама (в логе `BPMSoft.WebHost.Application OnStart - Application started`).
 - Несколько типов (интерфейс, реализация, слушатель) в одном `.cs` схемы — допустимо.
 - Время в логах стенда — UTC.
+
+## ✅ Регистрация реализации без `OnAppStart`: `[DefaultBinding]`
+
+**Подтверждено записью в CRM (21.10.2026).** Атрибут на классе-реализации регистрирует его в `ClassFactory` при запуске приложения — слушатель приложения с `ClassFactory.Bind` не нужен:
+```csharp
+// using BPMSoft.Core.Factories;
+public interface I<Сервис>
+{
+	string <Метод>();
+}
+
+[DefaultBinding(typeof(I<Сервис>))]
+public class <Сервис> : I<Сервис>
+{
+	public string <Метод>() { … }
+}
+// вызов: ClassFactory.Get<I<Сервис>>().<Метод>();
+```
+Несколько реализаций одного интерфейса различают по имени: `[DefaultBinding(typeof(I<Сервис>), Name = "<Имя>")]` и `ClassFactory.Get<I<Сервис>>("<Имя>")` (в коде платформы так делают). ✅ Проверено 22.10.2026: две реализации с `Name = "A"` и `Name = "B"` возвращаются по имени; `ClassFactory.Get<I<Сервис>>()` без имени, когда все привязки именованные, — `InstanceActivationException`.
 
 ## ✅ Подменить платформенный класс своим наследником (`ClassFactory.ReBind`)
 **Подтверждено 05.10.2026** на `TestOrderAmountHelper`: после компиляции `OnAppStart` выполнил `ReBind`, и `ClassFactory.Get<OrderAmountHelper>(...)` стал выдавать `BPMSoft.Configuration.TestOrderAmountHelper` (строки в `Common.log`: подмена при старте и создание наследника).

@@ -64,11 +64,13 @@
 **Подтверждено на реальном действии проекта**:
 - `namespace BPMSoft.Core.Process.Configuration` — фиксированное пространство имён для всех действий процесса
 - Класс **`partial`** с ИМЕНЕМ, СОВПАДАЮЩИМ с `Name` схемы
+- Базовый класс `ProcessUserTask` задаёт сгенерированная платформой часть класса; от него доступны `UId` (элемент), `Owner` (экземпляр процесса), `OwnerUId` (строка, `Guid.Parse(OwnerUId)`), `CompleteExecuting` и `CancelExecuting` (✅ подтверждено записью в CRM, 21.10.2026: `OwnerUId` совпал с `ProcessDescriptor.UId`, `UId` — с `SysProcessElementLog.Id`).
 - Переопределяет метод `protected override bool InternalExecute(ProcessExecutingContext context)` — главный метод выполнения кубика
 - Обращается к СВОЙСТВАМ С ИМЕНАМИ, СОВПАДАЮЩИМИ с `A2` каждого параметра из `FJ1` (например `ResponseStatusCode`) — эти свойства-геттеры/сеттеры **генерируются автоматически платформой** на основе `FJ1` при компиляции (сам класс `partial`, видимая часть — только `InternalExecute`)
 - **Входные параметры ЧИТАЮТСЯ** в начале метода (например `var clientId = ClientId;`)
 - **Выходные параметры ЗАПИСЫВАЮТСЯ** перед `return true;` (например `ResponseStatusCode = 200;`)
-- Метод возвращает `true` при успешном выполнении, `false` при ошибке
+- Метод возвращает `true` — элемент выполнен, процесс идёт дальше. `false` — элемент остаётся в статусе «Выполняется», процесс ждёт, пока элемент завершат: `UserConnection.ProcessEngine.CompleteExecuting(UId)` или переопределённый `public override bool CompleteExecuting(params object[] parameters)` с вызовом `base.CompleteExecuting(parameters)`. Ошибку сообщай исключением, а не `false`: процесс перейдёт в статус «Ошибка». ✅ подтверждено записью в CRM (21.10.2026): процесс в статусе `Running` ждёт, `CompleteExecuting` завершает элемент и процесс идёт дальше; рецепт — `user-task-edit.md`, «Асинхронное действие».
+- Опровергнуто: прежняя запись «`false` при ошибке» — по коду платформы `false` означает ожидание завершения, а не ошибку.
 
 ## Ресурсы действия (`Pkg/<Пакет>/Resources/<ИмяДействия>.ProcessUserTask/resource.<culture>.xml`)
 

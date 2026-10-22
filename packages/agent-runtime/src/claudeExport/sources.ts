@@ -54,15 +54,20 @@ export function defaultExportSources(): ExportSources {
 	if (!fs.existsSync(lintBundle)) {
 		throw new Error("Не найден pkg-lint.js: выполните npm run build в packages/agent-runtime");
 	}
+	const crmBundle = path.join(__dirname, "..", "claude-export", "crm.js");
+	if (!fs.existsSync(crmBundle)) {
+		throw new Error("Не найден crm.js: выполните npm run build в packages/agent-runtime");
+	}
 	return collectExportSources({
 		knowledgeDir: path.join(__dirname, "..", "..", "knowledge"),
 		exportDir: path.join(__dirname, "..", "..", "claude-export"),
 		lintBundle,
+		crmBundle,
 	});
 }
 
-/** Collects the export files from the knowledge, skill-text and lint folders, and computes the export hash. */
-export function collectExportSources(dirs: { knowledgeDir: string; exportDir: string; lintBundle: string }): ExportSources {
+/** Collects the export files from the knowledge, skill-text, lint and CRM CLI folders, and computes the export hash. */
+export function collectExportSources(dirs: { knowledgeDir: string; exportDir: string; lintBundle: string; crmBundle: string }): ExportSources {
 	const skillsDir = path.join(dirs.exportDir, "skills");
 	const skillFiles = fs
 		.readdirSync(skillsDir, { withFileTypes: true })
@@ -72,6 +77,7 @@ export function collectExportSources(dirs: { knowledgeDir: string; exportDir: st
 		...skillFiles,
 		...mapTree(dirs.knowledgeDir, KNOWLEDGE_REL),
 		{ rel: `${KNOWLEDGE_REL}/scripts/pkg-lint.js`, source: dirs.lintBundle },
+		{ rel: `${KNOWLEDGE_REL}/scripts/crm.js`, source: dirs.crmBundle },
 	].sort((a, b) => (a.rel < b.rel ? -1 : a.rel > b.rel ? 1 : 0));
 
 	const core = path.join(dirs.exportDir, "CLAUDE.md");

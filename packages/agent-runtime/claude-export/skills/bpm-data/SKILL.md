@@ -11,7 +11,7 @@ description: Use when the task adds or changes package data, for example «до�
 
 1. `.claude/skills/bpm-knowledge/metadata-editing.md` — общая механика, `ModifiedOnUtc`, ресурсы.
 2. `.claude/skills/bpm-knowledge/data.md` — факты: `descriptor.json`, `data.json`, `Localization`, `InstallType`, справочные колонки.
-3. `.claude/skills/bpm-knowledge/data-edit.md` — рецепты (✅): системная настройка и её значение, записи справочника с переводом, набор для таблицы со справочными колонками, датами и числами, `IsForceUpdate`, `InstallType` при обновлении из файловой системы.
+3. `.claude/skills/bpm-knowledge/data-edit.md` — рецепты (✅): системная настройка и её значение, записи справочника с переводом, набор для таблицы со справочными колонками, датами и числами, `IsForceUpdate`, `InstallType` при обновлении из файловой системы. Права по умолчанию и системные операции — `rights-edit.md`.
 4. Шаблоны — `.claude/skills/bpm-knowledge/templates/README.md` и папка `templates/data/<таблица>/`: бери, если в проекте нет своего образца той же таблицы.
 
 ## Обязательные правила

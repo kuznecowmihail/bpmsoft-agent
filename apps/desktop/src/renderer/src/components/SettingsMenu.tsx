@@ -325,7 +325,12 @@ export function SettingsMenu({
         setSkillsPending({ modified: outcome.modified })
       } else {
         setSkillsClaudeMd(undefined)
-        setSkillsNote(`Готово: ${outcome.target}. Чтобы передать коллегам, заархивируйте папку .claude и CLAUDE.md`)
+        const crmNote = outcome.crmEnv === 'written'
+          ? 'Доступ к CRM для Claude Code записан в .claude/settings.local.json.'
+          : outcome.crmEnv === 'invalid-settings'
+            ? 'Файл .claude/settings.local.json не JSON — доступ к CRM не записан.'
+            : ''
+        setSkillsNote(`Готово: ${outcome.target}. Чтобы передать коллегам, заархивируйте папку .claude и CLAUDE.md${crmNote ? `. ${crmNote}` : ''}`)
         await loadClaudeSkillsStatus(appRoot)
       }
     } catch (error) {

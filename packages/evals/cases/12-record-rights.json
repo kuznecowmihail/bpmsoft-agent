@@ -1,0 +1,21 @@
+{
+  "title": "Объект с доступом по записям и правом чтения по умолчанию для всех сотрудников",
+  "provider": "claude",
+  "task": "Сделай объект {{prefix}}EvalDocument («Документ (эвал)») с текстовой колонкой Name. Доступ к документам — по записям: автор видит, меняет и удаляет свои документы, а все сотрудники могут только читать документы, созданные сотрудниками. Раздачу прав по умолчанию заложи в пакет, чтобы она переносилась на другие стенды.",
+  "answers": [
+    { "when": "в как\\S* пакет", "text": "{{package}}" },
+    { "when": "зависимост|связ\\S* пакет|совмест", "text": "Не связывать пакеты: делай только в {{package}}, зависимости пакета не меняй" },
+    { "when": "Подтверждаете план", "text": "Делай" }
+  ],
+  "maxTurns": 10,
+  "teardownSql": "DELETE FROM \"SysEntitySchemaRecordDefRight\" d WHERE NOT EXISTS (SELECT 1 FROM \"SysSchema\" s WHERE s.\"UId\" = d.\"SubjectSchemaUId\"); DROP TABLE IF EXISTS \"Sys{{prefix}}EvalDocumentRight\"; DROP TABLE IF EXISTS \"{{prefix}}EvalDocument\";",
+  "checks": [
+    { "type": "file_contains", "path": "Schemas/{{prefix}}EvalDocument/metadata.json", "pattern": "D17.{0,4}true" },
+    { "type": "file_contains", "path": "Schemas/{{prefix}}EvalDocument/properties.json", "pattern": "\"AdministratedByRecords\":\\s*\"True\"" },
+    { "type": "file_contains", "path": "SqlScripts/*/*", "pattern": "SysEntitySchemaRecordDefRight" },
+    { "type": "lint_clean" },
+    { "type": "crm_update_ok" },
+    { "type": "crm_compile_ok" },
+    { "type": "db_rows", "sql": "SELECT 1 FROM \"SysEntitySchemaRecordDefRight\" d JOIN \"SysSchema\" s ON s.\"UId\" = d.\"SubjectSchemaUId\" WHERE s.\"Name\" = '{{prefix}}EvalDocument' AND d.\"Operation\" = 0 AND d.\"RightLevel\" >= 1", "min": 1 }
+  ]
+}
