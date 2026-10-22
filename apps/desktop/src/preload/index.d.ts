@@ -1,4 +1,4 @@
-import type { ProjectValidationResult, AgentProvider, AgentSettings, CursorModelOption, ClaudeModelOption, CursorModelParam, ClaudeEffort, DbSettingsPatch, CrmSettingsPatch, CrmBrowserState, RecentProject, ChatSummary, OpenedChat } from '../shared/types'
+import type { ProjectValidationResult, AgentProvider, AgentSettings, CursorModelOption, ClaudeModelOption, CursorModelParam, ClaudeEffort, DbSettingsPatch, CrmSettingsPatch, CrmBrowserState, RecentProject, ChatSummary, OpenedChat, EnvironmentReport } from '../shared/types'
 import type { AgentEvent, ClaudeSkillsStatus, ClaudeMdChoice, InstallOutcome } from '@bpmsoft-agent/agent-runtime'
 
 export interface AgentPermissionRequest {
@@ -49,6 +49,8 @@ export interface BpmsoftDesktopApi {
   reloadCrmBrowser: () => Promise<void>
   closeCrmBrowser: () => Promise<void>
   openLogs: () => Promise<void>
+  getEnvironmentReport: () => Promise<EnvironmentReport>
+  recheckEnvironment: () => Promise<EnvironmentReport>
 }
 
 declare global {

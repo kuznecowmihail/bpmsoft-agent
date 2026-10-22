@@ -5,6 +5,10 @@ import * as path from "path";
 import type { AppTool, AppToolParam, AppToolResult } from "./appTool";
 import { checkToolAccess, isAutoApprovedToolCall, SandboxDecision, SandboxPolicy, ShellApprovalOptions } from "../safety/sandboxGuard";
 import { buildSeatbeltProfile } from "../safety/shellSandbox";
+import { resolveGitBash } from "./gitBash";
+
+/** Shown when Git Bash is missing on Windows: the agent cannot run shell commands without it. */
+const GIT_BASH_MISSING = "Не найден Git Bash — установите Git for Windows (git-scm.com)";
 
 export interface LocalToolsOptions {
 	/** Working directory of commands and of relative paths: the project's Pkg folder. */
@@ -228,7 +232,12 @@ export function runShellCommand(
 		// Off Windows the shell gets its own process group (detached), so a timeout can kill the whole tree.
 		let child: ChildProcess;
 		if (platform === "win32") {
-			child = spawn("bash", ["-c", command], { cwd, env: shellEnv(), windowsHide: true });
+			const gitBash = resolveGitBash();
+			if (!gitBash) {
+				resolve({ output: GIT_BASH_MISSING, exitCode: 127, timedOut: false });
+				return;
+			}
+			child = spawn(gitBash, ["-c", command], { cwd, env: shellEnv(), windowsHide: true });
 		} else if (platform === "darwin" && seatbeltProfile) {
 			child = spawn("/usr/bin/sandbox-exec", ["-p", seatbeltProfile, "/bin/bash", "-c", command], { cwd, env: shellEnv(), detached: true });
 		} else {
@@ -262,7 +271,7 @@ export function runShellCommand(
 		child.stderr?.on("data", collect);
 
 		child.on("error", (error: NodeJS.ErrnoException) => {
-			output = platform === "win32" && error.code === "ENOENT" ? "Не найден bash — установите Git for Windows" : `Не удалось запустить команду: ${error.message}`;
+			output = platform === "win32" && error.code === "ENOENT" ? GIT_BASH_MISSING : `Не удалось запустить команду: ${error.message}`;
 			finish(127);
 		});
 		child.on("close", (code: number | null) => finish(code));

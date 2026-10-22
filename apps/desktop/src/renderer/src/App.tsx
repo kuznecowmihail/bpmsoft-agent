@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import type { ProjectValidationResult, AgentProvider, AgentSettings, ChatSummary, RecentProject } from '../../shared/types'
+import type { ProjectValidationResult, AgentProvider, AgentSettings, ChatSummary, EnvironmentReport, RecentProject } from '../../shared/types'
 import {
   agentEventToLog,
   describeToolCall,
@@ -14,10 +14,13 @@ import {
   replayToEntries
 } from './chatFormat'
 import type { ChatEntry, LogEvent } from './chatFormat'
+import { blockingReason } from './environmentFormat'
 import { BrowserPanel } from './components/BrowserPanel'
 import { ChatSidebar } from './components/ChatSidebar'
 import { Composer } from './components/Composer'
 import { EmptyState } from './components/EmptyState'
+import { EnvironmentPanel } from './components/EnvironmentPanel'
+import { FileDesignModeCard } from './components/FileDesignModeCard'
 import { Header } from './components/Header'
 import { LogsDrawer } from './components/LogsDrawer'
 import { MessageList } from './components/MessageList'
@@ -37,6 +40,9 @@ function App(): React.JSX.Element {
   const [recentProjects, setRecentProjects] = useState<RecentProject[]>([])
 
   const [agentSettings, setAgentSettings] = useState<AgentSettings | null>(null)
+
+  const [envReport, setEnvReport] = useState<EnvironmentReport | null>(null)
+  const [envRechecking, setEnvRechecking] = useState(false)
 
   const [entries, setEntries] = useState<ChatEntry[]>([])
   const [chats, setChats] = useState<ChatSummary[]>([])
@@ -274,12 +280,23 @@ function App(): React.JSX.Element {
     setComposerFocusKey((key) => key + 1)
   }
 
+  const handleRecheckEnvironment = async (): Promise<void> => {
+    setEnvRechecking(true)
+    try {
+      setEnvReport(await window.api.recheckEnvironment())
+    } finally {
+      setEnvRechecking(false)
+    }
+  }
+
   const handleProviderChange = async (provider: AgentProvider): Promise<void> => {
     if (isRunning) {
       return
     }
     await window.api.setProvider(provider)
     await refreshSettings()
+    // the blocking requirements depend on the provider
+    setEnvReport(await window.api.getEnvironmentReport())
     resetChatView()
     setActiveChatId(null)
     setReadOnlyReason(null)
@@ -335,6 +352,11 @@ function App(): React.JSX.Element {
   // the agent uses the CRM browser: open its panel
   useEffect(() => window.api.onCrmBrowserActivity(() => setBrowserOpen(true)), [])
 
+  // environment check of the computer: loaded once at start
+  useEffect(() => {
+    void window.api.getEnvironmentReport().then(setEnvReport)
+  }, [])
+
   // start screen: refresh the recent projects list
   useEffect(() => {
     if (screen === 'picker') {
@@ -350,6 +372,9 @@ function App(): React.JSX.Element {
     }
   }, [browserPanelShown])
 
+  // the computer misses a blocking requirement: no project can be opened
+  const envBlocked = Boolean(envReport && !envReport.canOpenProject)
+
   if (screen === 'picker') {
     return (
       <div className="screen">
@@ -361,16 +386,38 @@ function App(): React.JSX.Element {
             </div>
             <h1>BPMSoft AI Agent</h1>
             <p>Откройте папку приложения BPMSoft — агент будет работать с пакетами в BPMSoft.Configuration/Pkg.</p>
-            <button type="button" className="btn btn-primary btn-lg btn-block" onClick={handleSelectFolder} disabled={isChecking}>
+            <button type="button" className="btn btn-primary btn-lg btn-block" onClick={handleSelectFolder} disabled={isChecking || envBlocked}>
               {isChecking ? <span className="spinner" /> : <IconFolder size={16} />}
               {isChecking ? 'Проверяю проект…' : 'Открыть проект'}
             </button>
-            {selectedPath && validation && !validation.isValid && (
+            {selectedPath && validation && !validation.isValid && validation.fileDesignMode && (
+              <FileDesignModeCard
+                check={validation.fileDesignMode}
+                rechecking={isChecking}
+                onRecheck={() => {
+                  void openProject(selectedPath)
+                }}
+              />
+            )}
+            {selectedPath && validation && !validation.isValid && !validation.fileDesignMode && (
               <div className="form-error">
                 <IconAlert size={14} />
                 <span>{validation.reason}</span>
               </div>
             )}
+            {envBlocked && (
+              <div className="form-error">
+                <IconAlert size={14} />
+                <span>Компьютер не готов к работе агента: {blockingReason(envReport)}</span>
+              </div>
+            )}
+            <EnvironmentPanel
+              report={envReport}
+              onRecheck={() => {
+                void handleRecheckEnvironment()
+              }}
+              rechecking={envRechecking}
+            />
             {recentProjects.length > 0 && (
               <div className="recent">
                 <div className="recent-head">Недавние проекты</div>
@@ -379,7 +426,7 @@ function App(): React.JSX.Element {
                     <button
                       type="button"
                       className="recent-item"
-                      disabled={isChecking}
+                      disabled={isChecking || envBlocked}
                       onClick={() => openProject(project.path)}
                       title={project.path}
                     >
@@ -431,6 +478,11 @@ function App(): React.JSX.Element {
         sidebarOpen={sidebarOpen}
         onToggleSidebar={handleToggleSidebar}
         onNewChat={handleNewChat}
+        environment={envReport}
+        onRecheckEnvironment={() => {
+          void handleRecheckEnvironment()
+        }}
+        environmentRechecking={envRechecking}
       />
       <div className="workspace">
         {sidebarOpen && (
@@ -473,7 +525,7 @@ function App(): React.JSX.Element {
             onStop={handleStop}
             isStopping={isStopping}
             stopOnEscape={!logsOpen && !menuOpen}
-            disabledReason={readOnlyReason ?? (isOpeningChat ? 'Открываю чат…' : undefined)}
+            disabledReason={readOnlyReason ?? blockingReason(envReport) ?? (isOpeningChat ? 'Открываю чат…' : undefined)}
           />
         </main>
         {browserPanelShown && (

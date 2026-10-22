@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { IpcRendererEvent } from 'electron'
-import type { ProjectValidationResult, AgentProvider, AgentSettings, CursorModelOption, ClaudeModelOption, CursorModelParam, ClaudeEffort, DbSettingsPatch, CrmSettingsPatch, CrmBrowserState, RecentProject, ChatSummary, OpenedChat } from '../shared/types'
+import type { ProjectValidationResult, AgentProvider, AgentSettings, CursorModelOption, ClaudeModelOption, CursorModelParam, ClaudeEffort, DbSettingsPatch, CrmSettingsPatch, CrmBrowserState, RecentProject, ChatSummary, OpenedChat, EnvironmentReport } from '../shared/types'
 import type { AgentEvent, ClaudeSkillsStatus, ClaudeMdChoice, InstallOutcome } from '@bpmsoft-agent/agent-runtime'
 
 export interface AgentPermissionRequest {
@@ -71,7 +71,9 @@ const api = {
   openCrmBrowserHome: (): Promise<void> => ipcRenderer.invoke('crmBrowser:openHome'),
   reloadCrmBrowser: (): Promise<void> => ipcRenderer.invoke('crmBrowser:reload'),
   closeCrmBrowser: (): Promise<void> => ipcRenderer.invoke('crmBrowser:close'),
-  openLogs: (): Promise<void> => ipcRenderer.invoke('logs:open')
+  openLogs: (): Promise<void> => ipcRenderer.invoke('logs:open'),
+  getEnvironmentReport: (): Promise<EnvironmentReport> => ipcRenderer.invoke('env:report'),
+  recheckEnvironment: (): Promise<EnvironmentReport> => ipcRenderer.invoke('env:recheck')
 }
 
 // Only the app's own API is exposed; the renderer gets no generic ipcRenderer access.

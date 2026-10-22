@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import type { AgentProvider, AgentSettings } from '../../../shared/types'
+import type { AgentProvider, AgentSettings, EnvironmentReport } from '../../../shared/types'
 import { projectName } from '../chatFormat'
-import { IconFolder, IconGlobe, IconLogo, IconLogout, IconPlus, IconSettings, IconSidebar, IconTerminal } from './icons'
+import { problemChecks } from '../environmentFormat'
+import { EnvironmentPanel } from './EnvironmentPanel'
+import { IconAlert, IconFolder, IconGlobe, IconLogo, IconLogout, IconPlus, IconSettings, IconSidebar, IconTerminal } from './icons'
 import { SettingsMenu } from './SettingsMenu'
 
 interface HeaderProps {
@@ -29,6 +31,10 @@ interface HeaderProps {
   onToggleSidebar: () => void
   /** Starts a new chat (shown in the header while the sidebar is hidden). */
   onNewChat: () => void
+  /** Environment check of the computer; the badge is shown while something is missing. */
+  environment?: EnvironmentReport | null
+  onRecheckEnvironment?: () => void
+  environmentRechecking?: boolean
 }
 
 type BadgeStatus = { state: 'checking' | 'ok' | 'error'; text: string }
@@ -115,15 +121,46 @@ export function Header({
   onChangeProject,
   sidebarOpen,
   onToggleSidebar,
-  onNewChat
+  onNewChat,
+  environment,
+  onRecheckEnvironment,
+  environmentRechecking = false
 }: HeaderProps): React.JSX.Element {
   const [menuOpen, setMenuOpen] = useState(false)
+  const [envOpen, setEnvOpen] = useState(false)
   const [copied, setCopied] = useState(false)
   const menuRef = useRef<HTMLDivElement | null>(null)
+  const envRef = useRef<HTMLDivElement | null>(null)
+
+  // the environment popover is shown only while something is missing
+  const problemCount = problemChecks(environment ?? null).length
+  const envPopoverOpen = envOpen && problemCount > 0
 
   useEffect(() => {
-    onMenuOpenChange?.(menuOpen)
-  }, [menuOpen])
+    onMenuOpenChange?.(menuOpen || envPopoverOpen)
+  }, [menuOpen, envPopoverOpen])
+
+  useEffect(() => {
+    if (!envPopoverOpen) {
+      return
+    }
+    const handleMouseDown = (event: MouseEvent): void => {
+      if (envRef.current && !envRef.current.contains(event.target as Node)) {
+        setEnvOpen(false)
+      }
+    }
+    const handleKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') {
+        setEnvOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleMouseDown)
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', handleMouseDown)
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [envPopoverOpen])
 
   useEffect(() => {
     if (!menuOpen) {
@@ -202,6 +239,30 @@ export function Header({
                 deps={[settings.crmUrl, settings.crmUser, settings.hasCrmPassword]}
                 check={() => window.api.testCrmConnection()}
               />
+            )}
+            {environment && problemCount > 0 && (
+              <div className="popover-anchor env-anchor" ref={envRef}>
+                <button
+                  type="button"
+                  className={`env-badge${environment.canOpenProject ? '' : ' is-error'}`}
+                  onClick={() => setEnvOpen(!envOpen)}
+                  aria-expanded={envPopoverOpen}
+                  title="Не всё установлено — нажмите, чтобы посмотреть"
+                >
+                  <IconAlert size={11} />
+                  Окружение
+                </button>
+                {envPopoverOpen && (
+                  <div className="popover env-popover" role="dialog" aria-label="Об устройстве">
+                    <EnvironmentPanel
+                      report={environment}
+                      onRecheck={() => onRecheckEnvironment?.()}
+                      rechecking={environmentRechecking}
+                      defaultOpen
+                    />
+                  </div>
+                )}
+              </div>
             )}
           </span>
           <div className="project-row">
@@ -284,6 +345,7 @@ export function Header({
                     onSettingsChanged={onSettingsChanged}
                     onOpenLogsFolder={onOpenLogsFolder}
                     appRoot={appRoot}
+                    environment={environment}
                     onClose={() => setMenuOpen(false)}
                   />
                 )}

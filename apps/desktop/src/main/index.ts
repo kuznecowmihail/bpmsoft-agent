@@ -1,10 +1,13 @@
 import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
 import { basename, dirname, join, resolve } from 'path'
-import { existsSync, mkdirSync } from 'fs'
+import { existsSync, mkdirSync, writeFileSync } from 'fs'
 import { homedir } from 'os'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { validateBpmsoftProject } from './projectValidation'
 import { trustSystemCertificates } from './systemCertificates'
+import { collectDeviceInfo } from './systemInfo'
+import { evaluateEnvironment } from './environmentCheck'
+import { checkFileDesignMode } from './fileDesignMode'
 import {
   setApiKey,
   sendAgentMessage,
@@ -50,7 +53,7 @@ import { loadLoginShellPath } from './shellPath'
 import { isExternalWebUrl } from './urlPolicy'
 import { listCursorModels, listClaudeModels, claudeSkillsStatus, installClaudeSkills, defaultExportSources } from '@bpmsoft-agent/agent-runtime'
 import type { ClaudeMdChoice } from '@bpmsoft-agent/agent-runtime'
-import type { AgentProvider, CursorModelParam, ClaudeEffort, DbSettingsPatch, CrmSettingsPatch, RecentProject, ProjectValidationResult } from '../shared/types'
+import type { AgentProvider, CursorModelParam, ClaudeEffort, DbSettingsPatch, CrmSettingsPatch, RecentProject, ProjectValidationResult, DeviceInfo, EnvironmentReport, FileDesignModeCheck } from '../shared/types'
 
 if (app.isPackaged) loadLoginShellPath()
 
@@ -64,6 +67,9 @@ const DEV_ICON_PATH = join(__dirname, '../../build/icon.png')
 
 /** The project opened by the user, validated in main: IPC calls may only name its folders. */
 let openedProject: ProjectValidationResult | undefined
+
+/** Facts about the computer, collected once per app run (or again on a forced recheck). */
+let deviceInfo: DeviceInfo | undefined
 
 function samePath(value: unknown, expected: string | undefined): boolean {
   return typeof value === 'string' && value.trim() !== '' && expected !== undefined && resolve(value) === resolve(expected)
@@ -105,6 +111,33 @@ function resolveChatLogDir(): string {
     return join(app.getPath('home'), 'Library', 'Logs', 'bpmsoft-agent')
   }
   return join(app.getPath('userData'), 'logs')
+}
+
+/** Writes the environment report to environment.json in the log folder; best effort. */
+function writeEnvironmentFile(report: EnvironmentReport): void {
+  try {
+    const dir = getChatLogDir()
+    if (!dir) return
+    mkdirSync(dir, { recursive: true })
+    writeFileSync(join(dir, 'environment.json'), JSON.stringify({ collectedAt: new Date().toISOString(), ...report }, null, 2))
+  } catch {
+    // The log file is only a record; a failed write must not affect the app.
+  }
+}
+
+/** Environment report for the computer; device facts are collected again only when `force` is set or nothing is collected yet. */
+async function getEnvironmentReport(force: boolean): Promise<EnvironmentReport> {
+  let info = deviceInfo
+  const collecting = force || !info
+  if (collecting) {
+    info = await collectDeviceInfo()
+    deviceInfo = info
+  }
+  const report = evaluateEnvironment(info!, getAppSettings().provider)
+  if (collecting) {
+    writeEnvironmentFile(report)
+  }
+  return report
 }
 
 function createWindow(): void {
@@ -180,6 +213,9 @@ app.whenReady().then(() => {
   initChatLog(resolveChatLogDir())
   initChatIndex(resolveChatLogDir())
 
+  // Environment report is collected and logged at startup.
+  void getEnvironmentReport(false)
+
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
@@ -201,12 +237,44 @@ app.whenReady().then(() => {
   ipcMain.handle('project:validate', async (_event, projectPath: string) => {
     const result = await validateBpmsoftProject(projectPath)
     if (result.isValid) {
+      const env = await getEnvironmentReport(false)
+      if (!env.canOpenProject) {
+        addRecentProject(projectPath)
+        const missing = env.checks
+          .filter((check) => check.blocking && check.status !== 'ok')
+          .map((check) => check.title)
+          .join(', ')
+        return {
+          ...result,
+          isValid: false,
+          environmentBlocked: true,
+          reason: 'Компьютер не готов к работе агента: ' + missing + '. Подробности — в блоке «Об устройстве».'
+        }
+      }
+
+      const fdm: FileDesignModeCheck = result.appRoot
+        ? checkFileDesignMode(result.appRoot)
+        : { status: 'notFound', problems: ['Не найдена папка приложения с BPMSoft.Configuration'] }
+      if (fdm.status !== 'ok') {
+        addRecentProject(projectPath)
+        return {
+          ...result,
+          isValid: false,
+          fileDesignMode: fdm,
+          reason: fdm.status === 'notFound' ? 'Не найден файл конфигурации стенда' : 'Не включён режим разработки в файловой системе'
+        }
+      }
+
       addRecentProject(projectPath)
       setActiveProject(result.appRoot ?? result.pkgRoot)
       openedProject = result
     }
     return result
   })
+
+  // Environment check: the report for the «Об устройстве» block, and a forced recheck.
+  ipcMain.handle('env:report', () => getEnvironmentReport(false))
+  ipcMain.handle('env:recheck', () => getEnvironmentReport(true))
 
   ipcMain.handle('project:recent', (): RecentProject[] => {
     const home = homedir()

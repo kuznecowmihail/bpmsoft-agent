@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import type { AgentProvider, AgentSettings, CursorModelOption, ClaudeModelOption, DbSettingsPatch, CrmSettingsPatch } from '../../../shared/types'
+import type { AgentProvider, AgentSettings, CursorModelOption, ClaudeModelOption, DbSettingsPatch, CrmSettingsPatch, EnvironmentReport } from '../../../shared/types'
 import type { ClaudeMdChoice, ClaudeSkillsStatus } from '@bpmsoft-agent/agent-runtime'
-import { IconExternal, IconTrash } from './icons'
+import { IconAlert, IconExternal, IconTrash } from './icons'
 import { Toggle } from './Toggle'
 
 interface SettingsMenuProps {
@@ -14,6 +14,8 @@ interface SettingsMenuProps {
   onOpenLogsFolder: () => void
   /** Opened application folder: the root for the CRM database connection check. */
   appRoot?: string
+  /** Environment check of the computer: shows a warning when Git Bash is missing. */
+  environment?: EnvironmentReport | null
   onClose: () => void
 }
 
@@ -59,6 +61,7 @@ export function SettingsMenu({
   onSettingsChanged,
   onOpenLogsFolder,
   appRoot,
+  environment,
   onClose
 }: SettingsMenuProps): React.JSX.Element {
   const [cursorKeyInput, setCursorKeyInput] = useState('')
@@ -401,6 +404,9 @@ export function SettingsMenu({
     }
   }
 
+  const gitBashCheck = environment?.checks.find((check) => check.id === 'gitBash')
+  const gitBashMissing = Boolean(gitBashCheck && gitBashCheck.status !== 'ok')
+
   const currentKey = settings ? modelKey(settings.cursorModel, settings.cursorModelParams) : ''
   const recommended = (models ?? []).filter((m) => m.recommended)
   const others = (models ?? []).filter((m) => !m.recommended)
@@ -435,6 +441,15 @@ export function SettingsMenu({
           ))}
         </div>
         <div className="popover-note">Смена провайдера начинает новый чат.</div>
+        {gitBashMissing && (
+          <div className="popover-warning">
+            <IconAlert size={14} />
+            <span>
+              Git Bash не найден: провайдер Cursor не сможет выполнять команды и проект с ним не откроется. Установите Git for Windows
+              (git-scm.com) или используйте Claude.
+            </span>
+          </div>
+        )}
       </div>
       <div className="popover-divider" />
       {provider === 'claude' ? (
