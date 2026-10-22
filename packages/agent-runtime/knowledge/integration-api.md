@@ -48,4 +48,4 @@
 
 ## Исходящие HTTP-вызовы из C#
 - ✅ `HttpClient client = ClassFactory.Get<IHttpClientFactory>().CreateClient();` (`using System.Net.Http; using BPMSoft.Core.Factories;`) — так делает код платформы; не создавай `new HttpClient()` на каждый вызов. Таймаут — `client.Timeout`; синхронно из метода сервиса — `client.GetAsync(url).GetAwaiter().GetResult()`.
-- Для внешнего API с описанием удобнее REST-схема (ServiceSchemaManager, `web-service-edit.md`); её вызов из C# через `IServiceSchemaClient` — 🧪.
+- Для внешнего API с описанием удобнее REST-схема (ServiceSchemaManager, `web-service-edit.md`); её вызов из C# через `IServiceSchemaClient` — ✅ (`web-service-edit.md`, «Вызвать REST-сервис из C#»).
