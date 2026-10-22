@@ -568,6 +568,11 @@ describe("sandboxGuard", () => {
 			expect(isAutoApprovedToolCall("crm_browser_click", { selector: "button" })).toBe(true);
 		});
 
+		it("returns true for the CRM request tool (app MCP and bare name)", () => {
+			expect(isAutoApprovedToolCall("mcp__app__crm_request", { method: "POST", path: "/x" })).toBe(true);
+			expect(isAutoApprovedToolCall("crm_request", {})).toBe(true);
+		});
+
 		it("returns false for another tool of the app MCP server", () => {
 			expect(isAutoApprovedToolCall("mcp__app__other", {})).toBe(false);
 		});

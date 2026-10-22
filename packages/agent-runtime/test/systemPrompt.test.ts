@@ -41,6 +41,17 @@ describe("buildBpmsoftSystemPrompt", () => {
 		expect(prompt).not.toContain("crm_browser_");
 	});
 
+	it("adds the REST section when crmRequest is enabled", () => {
+		const prompt = buildBpmsoftSystemPrompt("/kn", { crmRequest: true });
+		expect(prompt).toContain("crm_request");
+		expect(prompt).toContain("REST-ЗАПРОСЫ К CRM");
+	});
+
+	it("does not mention crm_request by default", () => {
+		const prompt = buildBpmsoftSystemPrompt("/kn");
+		expect(prompt).not.toContain("crm_request");
+	});
+
 	it("asks the user to verify the implementation in the browser when crmBrowser is enabled", () => {
 		const prompt = buildBpmsoftSystemPrompt("/kn", { crmBrowser: true });
 		expect(prompt).toContain("Проверить реализацию в браузере?");

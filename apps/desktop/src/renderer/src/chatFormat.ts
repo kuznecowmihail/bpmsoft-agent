@@ -137,6 +137,11 @@ export function describeToolCall(name: string, input: unknown): string {
       return 'Смотрит сетевые запросы CRM'
     case 'crm_browser_click':
       return `Нажимает в CRM ${String(field(input, 'selector') ?? field(input, 'text') ?? '')}`.trim()
+    case 'crm_request': {
+      const method = field(input, 'method')
+      const path = field(input, 'path')
+      return `REST-запрос к CRM ${typeof method === 'string' ? method.toUpperCase() : ''} ${typeof path === 'string' ? path : ''}`.replace(/\s+/g, ' ').trim()
+    }
     case 'Read':
       return `Читает файл ${shortPath(field(input, 'file_path'))}`
     case 'Write':

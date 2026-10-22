@@ -1,6 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
-import type { CrmDbTool, CrmTool, LintReport } from "@bpmsoft-agent/agent-runtime";
+import type { CrmDbTool, CrmRequestRecord, CrmTool, LintReport } from "@bpmsoft-agent/agent-runtime";
 import type { EvalCheck } from "./caseFile";
 import { sha256 } from "./evalPackage";
 
@@ -22,6 +22,8 @@ export interface CheckContext {
 	timeline?: TimelineEvent[];
 	crmTools?: CrmTool[];
 	dbTool?: CrmDbTool;
+	/** REST requests of the agent (crm_request) in the case, in order. */
+	crmRequests?: CrmRequestRecord[];
 	lint: () => LintReport;
 	/** Snapshot of the package taken before the agent starts (see snapshotPackage). Needed by file_changed. */
 	baseline?: Map<string, string>;
@@ -266,6 +268,16 @@ async function evaluate(check: EvalCheck, ctx: CheckContext): Promise<{ passed: 
 				return { passed: false, detail: `не удалось определить число строк: ${truncate(result.text)}` };
 			}
 			return { passed: count >= check.min, detail: `строк: ${count}, нужно не меньше ${check.min}` };
+		}
+		case "crm_request_ok": {
+			const pattern = check.pathPattern !== undefined ? new RegExp(check.pathPattern, "i") : undefined;
+			const requests = (ctx.crmRequests ?? []).filter((item) => pattern === undefined || pattern.test(item.path));
+			const ok = requests.find((item) => item.status !== undefined && item.status < 400);
+			if (ok) {
+				return { passed: true, detail: `HTTP ${ok.status}: ${ok.method} ${ok.path}` };
+			}
+			const tried = requests.map((item) => `${item.method} ${item.path} → ${item.status !== undefined ? `HTTP ${item.status}` : item.error ?? "нет ответа"}`);
+			return { passed: false, detail: tried.length > 0 ? truncate(`нет успешного ответа: ${tried.join("; ")}`) : `запросов crm_request${check.pathPattern ? ` по ${check.pathPattern}` : ""} не было` };
 		}
 		case "tool_called": {
 			const called = ctx.toolNames.find((item) => toolMatches(item, check.name));

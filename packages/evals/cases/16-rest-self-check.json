@@ -1,0 +1,22 @@
+{
+  "title": "Свой REST-сервис: агент сам вызывает его на стенде через crm_request и приводит ответ",
+  "provider": "claude",
+  "task": "Сделай веб-сервис в исходном коде {{prefix}}EvalContactCountService (класс с тем же именем) с POST-методом GetCount без параметров: возвращает число контактов, которые видит текущий пользователь (выборка EntitySchemaQuery с учётом прав). После обновления и компиляции сам вызови сервис на стенде и пришли ответ, который он вернул.",
+  "answers": [
+    { "when": "в как\\S* пакет", "text": "{{package}}" },
+    { "when": "зависимост|связ\\S* пакет|совмест", "text": "Не связывать пакеты: делай только в {{package}}, зависимости пакета не меняй" },
+    { "when": "Подтверждаете план", "text": "Делай" },
+    { "when": "Обновить CRM сейчас", "text": "Обнови и скомпилируй" },
+    { "when": "провер", "text": "Проверь сам: вызови сервис на стенде" }
+  ],
+  "maxTurns": 10,
+  "checks": [
+    { "type": "file_exists", "path": "Schemas/{{prefix}}EvalContactCountService/{{prefix}}EvalContactCountService.cs" },
+    { "type": "file_contains", "path": "Schemas/{{prefix}}EvalContactCountService/{{prefix}}EvalContactCountService.cs", "pattern": "EntitySchemaQuery" },
+    { "type": "lint_clean" },
+    { "type": "crm_update_ok" },
+    { "type": "crm_compile_ok" },
+    { "type": "tool_called", "name": "crm_request" },
+    { "type": "crm_request_ok", "pathPattern": "rest/{{prefix}}EvalContactCountService/GetCount" }
+  ]
+}

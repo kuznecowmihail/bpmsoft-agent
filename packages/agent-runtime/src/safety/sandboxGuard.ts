@@ -42,6 +42,9 @@ export const CRM_BROWSER_TOOL_PATTERN = /^(mcp__app__)?crm_browser_[a-z_]+$/;
 /** Package lint tool: reads Pkg and the knowledge scripts only. */
 export const PKG_LINT_TOOL_PATTERN = /^(mcp__app__)?pkg_lint$/;
 
+/** REST request tool: asks the user itself before requests that may change data. */
+export const CRM_REQUEST_TOOL_PATTERN = /^(mcp__app__)?crm_request$/;
+
 /** True when file path contains secrets (credentials, certificates, private keys). */
 export function isSecretFile(p: string): boolean {
 	return SECRET_FILE_PATTERN.test(p.trim());
@@ -254,6 +257,7 @@ export function isAutoApprovedToolCall(toolName: string, input: Record<string, u
 	if (CRM_STAND_TOOL_NAMES.has(toolName)) { return true; }
 	if (CRM_BROWSER_TOOL_PATTERN.test(toolName)) { return true; }
 	if (PKG_LINT_TOOL_PATTERN.test(toolName)) { return true; }
+	if (CRM_REQUEST_TOOL_PATTERN.test(toolName)) { return true; }
 	// Bash commands need special handling: check for destructive/risky operations BEFORE
 	// isReadOnlyToolCall, which doesn't know about -delete or git state changes.
 	if (toolName === "Bash") {

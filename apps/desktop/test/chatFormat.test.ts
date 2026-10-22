@@ -105,6 +105,7 @@ describe('chatFormat', () => {
       expect(describeToolCall('crm_compile', {})).toBe('Компилирует и перезапускает CRM')
       expect(describeToolCall('mcp__bpmsoft__crm_compile', {})).toBe('Компилирует и перезапускает CRM')
       expect(describeToolCall('crm_action', { action: 'update' })).toBe('Действие в CRM')
+      expect(describeToolCall('mcp__app__crm_request', { method: 'post', path: '/rest/S/M' })).toBe('REST-запрос к CRM POST /rest/S/M')
     })
   })
 

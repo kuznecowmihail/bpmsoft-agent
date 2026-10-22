@@ -216,6 +216,9 @@ export function normalizeCursorToolCall(name: string, args: unknown): { name: st
 	if (name === "pkg_lint" || (/mcp/i.test(name) && JSON.stringify(args ?? null).includes("pkg_lint"))) {
 		return { name: "pkg_lint", input: name === "pkg_lint" ? record(args) : wrappedToolArguments(args) };
 	}
+	if (name === "crm_request" || (/mcp/i.test(name) && JSON.stringify(args ?? null).includes("crm_request"))) {
+		return { name: "crm_request", input: name === "crm_request" ? record(args) : wrappedToolArguments(args) };
+	}
 	for (const toolName of ["crm_update_from_fs", "crm_compile"]) {
 		if (name === toolName || (/mcp/i.test(name) && JSON.stringify(args ?? null).includes(toolName))) {
 			return { name: toolName, input: {} };
@@ -605,7 +608,7 @@ async function* runCursorAgentQueryUnsafe(options: RunCursorAgentQueryOptions): 
 		const message = options.resume
 			? buildCursorFollowUpMessage(options.prompt)
 			: buildCursorFirstMessage(
-					buildBpmsoftSystemPrompt(knowledgeDir, { dbQuery: Boolean(options.dbTool), crmActions: Boolean(options.crmTools?.length), crmBrowser: Boolean(options.appTools?.some((t) => t.name.startsWith("crm_browser_"))) }),
+					buildBpmsoftSystemPrompt(knowledgeDir, { dbQuery: Boolean(options.dbTool), crmActions: Boolean(options.crmTools?.length), crmBrowser: Boolean(options.appTools?.some((t) => t.name.startsWith("crm_browser_"))), crmRequest: Boolean(options.appTools?.some((t) => t.name === "crm_request")) }),
 					buildCursorSafetyRules(options.readRoot ?? options.cwd, options.cwd, knowledgeDir),
 					options.prompt
 				);

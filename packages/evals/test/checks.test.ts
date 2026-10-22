@@ -248,6 +248,37 @@ describe("runChecks", () => {
 	});
 });
 
+describe("crm_request_ok", () => {
+	const pattern = "rest/TestSvc/GetCount";
+
+	it("passes when a matching request returned a code below 400", async () => {
+		const results = await runChecks(
+			[{ type: "crm_request_ok", pathPattern: pattern }],
+			baseContext({ crmRequests: [{ method: "POST", path: "/rest/TestSvc/GetCount", status: 200, durationMs: 5 }] }),
+		);
+		expect(results[0].passed).toBe(true);
+		expect(results[0].detail).toBe("HTTP 200: POST /rest/TestSvc/GetCount");
+	});
+
+	it("fails with the status when the only matching request returned 500", async () => {
+		const results = await runChecks(
+			[{ type: "crm_request_ok", pathPattern: pattern }],
+			baseContext({ crmRequests: [{ method: "POST", path: "/rest/TestSvc/GetCount", status: 500, durationMs: 5 }] }),
+		);
+		expect(results[0].passed).toBe(false);
+		expect(results[0].detail).toContain("HTTP 500");
+	});
+
+	it("fails with «не было» when there were no requests", async () => {
+		const results = await runChecks(
+			[{ type: "crm_request_ok", pathPattern: pattern }],
+			baseContext({ crmRequests: [] }),
+		);
+		expect(results[0].passed).toBe(false);
+		expect(results[0].detail).toContain("не было");
+	});
+});
+
 describe("file_changed", () => {
 	it("passes when a file differs from the baseline", async () => {
 		writePkgFile("Schemas/A/metadata.json", "one");

@@ -5,6 +5,7 @@ import { errorMessage } from "../db/crmDbTool";
 import { runPkgLintCli } from "../lint/pkgLintCli";
 import { CrmConnection, CrmLoginError, CrmResponse, CrmSession, FetchLike } from "./crmSession";
 import { CRM_COMPILE_TOOL, CRM_UPDATE_TOOL, createCrmTools, restartCrm } from "./crmTools";
+import { formatCrmResponse, isStandPath } from "./crmRequestTool";
 
 /** Result of the CLI run: exit code and text for stdout. */
 export interface CrmCliResult {
@@ -150,7 +151,7 @@ async function runRequest(args: string[], connection: CrmConnection, deps: CrmCl
 		return { code: 2, text: `Метод должен быть GET или POST: ${positional[0]}` };
 	}
 	const requestPath = positional[1];
-	if (!requestPath.startsWith("/") || requestPath.startsWith("//") || requestPath.includes("://")) {
+	if (!isStandPath(requestPath)) {
 		return { code: 2, text: "Путь должен начинаться с / и вести на стенд CRM" };
 	}
 
@@ -176,10 +177,7 @@ async function runRequest(args: string[], connection: CrmConnection, deps: CrmCl
 	} catch (e) {
 		return { code: 1, text: failureText(e) };
 	}
-	const text = response.text;
-	const shown = text.length > maxChars ? `${text.slice(0, maxChars)}\n… (обрезано, всего ${text.length} символов)` : text;
-	const head = `HTTP ${response.status}`;
-	return { code: response.status < 400 ? 0 : 1, text: shown ? `${head}\n${shown}` : head };
+	return { code: response.status < 400 ? 0 : 1, text: formatCrmResponse(response.status, response.text, maxChars) };
 }
 
 /**

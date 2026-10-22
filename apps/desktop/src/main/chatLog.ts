@@ -213,6 +213,16 @@ function renderMarkdown(kind: string, data: Record<string, any>): string {
     }
     case 'crm_browser':
       return `- 🌐 Браузер CRM: ${data.tool}${data.detail ? ' ' + short(String(data.detail), 120) : ''} → ${data.success ? `ok · ${data.durationMs} мс` : '⚠️ ' + short(String(data.error ?? ''), 300)}\n`
+    case 'crm_request': {
+      const outcome = data.denied
+        ? 'отклонён пользователем'
+        : data.stopped
+          ? 'остановлен'
+          : data.error
+            ? `⚠️ ${short(String(data.error), 300)}`
+            : `HTTP ${data.status} · ${data.durationMs} мс`
+      return `- 🔌 REST-запрос к CRM: ${data.method} ${short(String(data.path ?? ''), 200)} → ${outcome}\n`
+    }
     case 'error':
       return `\n**Ошибка:** ${data.message}\n`
     case 'turn_end':

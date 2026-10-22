@@ -12,6 +12,7 @@ import type {
 	AppTool,
 	CrmActionRecord,
 	CrmDbTool,
+	CrmRequestRecord,
 	CrmTool,
 	RunBpmsoftAgentQueryOptions,
 	RunCursorAgentQueryOptions,
@@ -181,6 +182,8 @@ export async function runCase(
 		query: QueryFn;
 		resultsDir: string;
 		crmTools?: (onAction: (r: CrmActionRecord) => void, ownSince: () => number) => CrmTool[] | undefined;
+		/** REST request tool of the agent; records go to the crm_request_ok check. */
+		requestTool?: (onRequest: (record: CrmRequestRecord) => void) => AppTool | undefined;
 		dbTool?: CrmDbTool;
 		/** Empties the eval package before and after the case. Default resetEvalPackage. */
 		reset?: (packageDir: string) => void | Promise<void>;
@@ -203,6 +206,7 @@ export async function runCase(
 	const reset = deps.reset ?? ((dir: string) => resetEvalPackage(dir, config.dependsOn ?? [PRODUCT_CORE]));
 	const fixturesDir = deps.fixturesDir ?? path.join(__dirname, "..", "fixtures");
 	const toolNames: string[] = [];
+	const crmRequests: CrmRequestRecord[] = [];
 	/** Prompts, agent texts and tool calls of the turns in order, for checks. */
 	const timeline: TimelineEvent[] = [];
 	/** CRM actions of the agent's turns only: they count as failed CRM actions. */
@@ -316,6 +320,7 @@ export async function runCase(
 			packageDir,
 			toolNames,
 			timeline,
+			crmRequests,
 			crmTools,
 			dbTool: deps.dbTool,
 			lint: () => lintChanged(pkgRoot, since),
@@ -340,7 +345,11 @@ export async function runCase(
 			);
 		}
 
-		const appTools: AppTool[] = [createPkgLintTool({ pkgRoot, since: () => since })];
+		const requestTool = deps.requestTool?.((record) => {
+			crmRequests.push(record);
+			log("crm_request", { record });
+		});
+		const appTools: AppTool[] = [...(requestTool ? [requestTool] : []), createPkgLintTool({ pkgRoot, since: () => since })];
 		let prompt = evalCase.task;
 		inTurns = true;
 		for (;;) {

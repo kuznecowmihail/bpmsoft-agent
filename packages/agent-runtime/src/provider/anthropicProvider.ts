@@ -231,7 +231,7 @@ export async function* runBpmsoftAgentQuery(
 		resume: options.resume,
 		abortController,
 		env: { ...process.env, ANTHROPIC_API_KEY: options.apiKey },
-		systemPrompt: { type: "custom", prompt: buildBpmsoftSystemPrompt(knowledgeDir, { dbQuery: Boolean(options.dbTool), crmActions: Boolean(options.crmTools?.length), crmBrowser: Boolean(options.appTools?.some((t) => t.name.startsWith("crm_browser_"))) }) },
+		systemPrompt: { type: "custom", prompt: buildBpmsoftSystemPrompt(knowledgeDir, { dbQuery: Boolean(options.dbTool), crmActions: Boolean(options.crmTools?.length), crmBrowser: Boolean(options.appTools?.some((t) => t.name.startsWith("crm_browser_"))), crmRequest: Boolean(options.appTools?.some((t) => t.name === "crm_request")) }) },
 		// Isolation from the developer's own Claude Code setup: without these the
 		// SDK loads ~/.claude settings (plugins, SessionStart hooks) and personal
 		// skills into the BPMSoft agent. Our behaviour comes only from the system

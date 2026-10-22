@@ -70,6 +70,7 @@
 - `crm_db_query` — запрос к БД CRM. Ты его не выполняешь: дай пользователю SQL готовым текстом и попроси прислать результат.
 - `crm_update_from_fs` — `node .claude/skills/bpm-knowledge/scripts/crm.js update`.
 - `crm_compile` — `node .claude/skills/bpm-knowledge/scripts/crm.js compile` (компиляция и перезапуск).
+- `crm_request` — `node .claude/skills/bpm-knowledge/scripts/crm.js request <GET|POST> <путь> [тело|@файл] [--max <N>]` (REST-запрос к стенду; тело и права — те же правила: меняющие данные запросы — только на тестовых записях и с согласия пользователя).
 - `crm_browser_open`, `crm_browser_text`, `crm_browser_console`, `crm_browser_network`, `crm_browser_screenshot`, `crm_browser_click` — инструменты браузера твоей сессии (встроенный браузер приложения Claude или Claude in Chrome) после входа `crm.js browser-login`: открыть адрес, текст страницы, консоль, сетевые запросы, снимок, клик. Адреса и приёмы — `.claude/skills/bpm-knowledge/browser-check.md`. Браузера в сессии нет — проверку отдай пользователю списком шагов.
 - Никогда не пиши, что проверил то, что не проверял: в ответе — только то, что увидел сам (ответ запроса, текст страницы, ошибка консоли).
 - `<choices>` — блок вариантов в знаниях. Вопросы с вариантами задавай встроенным инструментом вопросов (AskUserQuestion).

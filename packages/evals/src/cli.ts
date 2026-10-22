@@ -3,11 +3,12 @@ import * as path from "path";
 import {
 	changedSchemaNames,
 	createCrmDbTool,
+	createCrmRequestTool,
 	createCrmTools,
 	lintChanged,
 	listChangedFiles,
 } from "@bpmsoft-agent/agent-runtime";
-import type { CrmDbTool } from "@bpmsoft-agent/agent-runtime";
+import type { CrmDbTool, CrmRequestRecord } from "@bpmsoft-agent/agent-runtime";
 import { loadCase, loadConfig } from "./caseFile";
 import { ensureEvalPackage } from "./evalPackage";
 import { loadEnvFile } from "./envFile";
@@ -117,6 +118,16 @@ async function main(): Promise<void> {
 						chatStartedAt: ownSince,
 					})
 			: undefined;
+	const requestTool =
+		crm && password
+			? (onRequest: (record: CrmRequestRecord) => void) =>
+					createCrmRequestTool({
+						connection: { url: crm.url, user: crm.user, password },
+						onRequest,
+						// The runner approves every permission request, so it approves changing REST requests too.
+						confirm: async () => true,
+					})
+			: undefined;
 	if (!crmTools) {
 		console.log("Предупреждение: CRM-действия не подключены (нужны поле crm в local.json и BPMSOFT_EVAL_CRM_PASSWORD).");
 	}
@@ -164,6 +175,7 @@ async function main(): Promise<void> {
 				query: createQueryFn(config, provider, options.model),
 				resultsDir,
 				crmTools,
+				requestTool,
 				dbTool,
 			});
 			runs.push(result);

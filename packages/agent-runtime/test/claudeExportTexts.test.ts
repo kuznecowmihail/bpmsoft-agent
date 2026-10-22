@@ -34,6 +34,7 @@ const appNames = [
 	"crm_db_query",
 	"crm_update_from_fs",
 	"crm_compile",
+	"crm_request",
 	"pkg_lint",
 	"<каталог знаний>",
 	"[app]",

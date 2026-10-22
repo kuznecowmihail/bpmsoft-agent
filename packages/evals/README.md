@@ -88,6 +88,7 @@ npm run eval -w @bpmsoft-agent/evals -- --case 04
 | `13-section-folders.json` | Группы в существующем разделе (фикстура `simple-section`): объекты `<Объект>Folder`/`<Объект>InFolder`, режим групп в регистрации раздела, `UseStaticFolders` в схеме раздела |
 | `14-typed-cards.json` | Карточки по типам (фикстуры `simple-section` + `order-type`): `TypeColumnUId` в `SysModuleEntity`, строки `SysModuleEdit` на каждый тип, отдельная карточка для оптового типа |
 | `15-rest-auth-secret.json` | REST-сервис с Basic-аутентификацией: логин и пароль из системных настроек (`IQ5`, `IV2: 2`), пароль не попадает в файлы пакета (`file_not_contains`) |
+| `16-rest-self-check.json` | Свой REST-сервис: после компиляции агент сам вызывает его через `crm_request` и приводит ответ (`crm_request_ok`) |
 
 Все кейсы — нереализованные задачи: на чистом стенде их результатные проверки не проходят до старта агента.
 
@@ -145,6 +146,7 @@ npm run eval -w @bpmsoft-agent/evals -- --case 04
 | `lint_clean` | — | Lint пакета без ошибок |
 | `crm_update_ok` | — | Обновление из файловой системы в CRM прошло успешно |
 | `crm_compile_ok` | — | Компиляция в CRM прошла успешно |
+| `crm_request_ok` | `pathPattern` (необязательно) | Агент получил ответ с кодом меньше 400 от `crm_request` по пути, совпадающему с регулярным выражением (без учёта регистра). Инструмент подключается, когда заданы `crm` в local.json и пароль CRM. Не результатная проверка |
 | `db_rows` | `sql`, `min` | SQL возвращает не меньше `min` строк |
 | `tool_called` | `name` | Инструмент вызывался |
 | `tool_not_called` | `name` | Инструмент не вызывался |

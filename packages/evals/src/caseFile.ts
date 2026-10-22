@@ -39,6 +39,7 @@ export type EvalCheck =
 	| { type: "crm_update_ok" }
 	| { type: "crm_compile_ok" }
 	| { type: "db_rows"; sql: string; min: number }
+	| { type: "crm_request_ok"; pathPattern?: string }
 	| { type: "tool_called"; name: string }
 	| { type: "tool_not_called"; name: string }
 	| { type: "mentioned_before_write"; pattern: string }

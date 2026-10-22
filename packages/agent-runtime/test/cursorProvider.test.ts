@@ -226,6 +226,15 @@ describe("cursorProvider", () => {
 		});
 	});
 
+	describe("normalizeCursorToolCall (CRM request tool)", () => {
+		it("maps a direct crm_request custom tool call", () => {
+			expect(normalizeCursorToolCall("crm_request", { method: "GET", path: "/x" })).toEqual({
+				name: "crm_request",
+				input: { method: "GET", path: "/x" }
+			});
+		});
+	});
+
 	describe("normalizeCursorToolCall (pkg lint tool)", () => {
 		it("maps an MCP-wrapped pkg_lint call with nested args", () => {
 			const result = normalizeCursorToolCall("mcp", { providerIdentifier: "custom-user-tools", toolName: "pkg_lint", args: { schema: "TestA" } });
