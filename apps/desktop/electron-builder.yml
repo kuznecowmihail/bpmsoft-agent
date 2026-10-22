@@ -17,6 +17,30 @@ mac:
   # Ad-hoc signature until there is a Developer ID certificate; hardened runtime is only needed for notarization.
   identity: '-'
   hardenedRuntime: false
+dmg:
+  background: build/background.tiff
+  icon: build/icon.icns
+  iconSize: 100
+  contents:
+    - x: 140
+      y: 190
+      type: file
+    - x: 400
+      y: 190
+      type: link
+      path: /Applications
+    # Hidden service files: dmgbuild writes them first, these entries copy the same files over them
+    # only to place the icons outside the window (seen only with "show hidden files" on).
+    - x: 1200
+      y: 1200
+      type: file
+      path: build/background.tiff
+      name: .background.tiff
+    - x: 1300
+      y: 1200
+      type: file
+      path: build/icon.icns
+      name: .VolumeIcon.icns
 win:
   target: nsis
 nsis:
