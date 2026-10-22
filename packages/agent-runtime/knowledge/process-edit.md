@@ -486,6 +486,7 @@
 }
 ```
 - `DataSourceFilters` — `GS2` = JSON-строка `{"className":"BPMSoft.FilterGroup","serializedFilterEditData":"<JSON-строка 1>","dataSourceFilters":"<JSON-строка 2>"}`. Собирай node-скриптом через `JSON.stringify` дважды. `comparisonType` (enum `BPMSoft.ComparisonType` клиента): `3` равно, `4` не равно, `5` меньше, `7` больше (✅ все четыре подтверждены запуском процессов; `4` и `5` — 09.10.2026); `dataValueType`: `1` текст, `4` целое. Строка 1 (для Designer):
+- ✅ Объект фильтра при разборе (подтверждено на реальных схемах проекта: 134 фильтра с «существует по обратной связи»): платформа пишет `rootSchemaName` группы после её `items`, поэтому в тексте `serializedFilterEditData` первым встречается `rootSchemaName` вложенного фильтра (`subFilters`), а объект самой группы — последним. Объект фильтра бери через `JSON.parse(serializedFilterEditData).rootSchemaName`, а не первым совпадением регулярки; объект, который читает элемент, — `L9` параметра `ResultEntity`.
 ```json
 {
   "className": "BPMSoft.FilterGroup",
