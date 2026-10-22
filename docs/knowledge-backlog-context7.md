@@ -68,7 +68,7 @@
 - [x] Выходы на клиенте: `BPMSoft.RunProcessRequest` с `resultParameterNames`; `runProcess` — устаревший; `executeProcess` по `sysProcessId`. Подтверждено 22.10.2026 по HTTP (RunProcess с resultParameterNames).
 - [x] Несколько выходов из C#: `ProcessExecutor.Execute(name, params, resultNames)` → `ProcessDescriptor.ResultParameterValues`; отмена — `CancelExecutionAsync`.
 - [x] Сигнал из C#: `IProcessEngine.ThrowSignal`. Подтверждено 22.10.2026.
-- [x] Коллекции в сценарии: `ObjectList`, `ICompositeObjectList`, путь `"<Элемент>.ResultCompositeObjectList"`. По коду платформенных процессов, записью не проверено.
+- [x] Коллекции в сценарии: `ObjectList`, `ICompositeObjectList`, путь `"<Элемент>.ResultCompositeObjectList"`. Подтверждено 22.10.2026 в CRM.
 - [x] Старый запуск: `ProcessSchemaManager.GetInstanceByName(...).CreateProcess(uc)`, `SetPropertyValue`, `Execute`. Проверено 22.10.2026: не работает для интерпретируемых процессов (BK30).
 - [ ] Страница свойств своего действия (`FK11`, наследник `BaseUserTaskPropertiesPage`) — низкий приоритет. Отложено: только Designer.
 

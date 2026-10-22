@@ -338,7 +338,7 @@ define("<Имя>", ["BusinessRuleModule", "<Имя>Resources"], function(Busines
 - Удаление: `var del = Ext.create("BPMSoft.DeleteQuery", {rootSchemaName: "<Объект>"}); del.filters.addItem(del.createColumnFilterWithParameter(BPMSoft.ComparisonType.EQUAL, "<Колонка>", <значение>));`.
 - Выполнение: `query.execute(function(response) { … }, this)`. Пакет запросов: `var batch = Ext.create("BPMSoft.BatchQuery"); batch.add(<запрос>); batch.execute(function(response) { … }, this);`.
 - Ответ пакета: `{queryResults: [{id, rowsAffected, success, …}], success}`, у вставки `id` — Id новой записи. Ответ `DeleteQuery`: `{rowsAffected, success}`.
-- ✅ `InsertQuery`, `UpdateQuery`, `DeleteQuery` идут через сущность: слушатели объекта срабатывают, журнал изменений пишется (22.10.2026, `integration-api.md`). `addParameterColumn` и `addDatePartFunctionColumn` — ✅ (ниже, «Регистр строк…»); агрегат с условием через `BPMSoft.SubQueryExpression` — 🧪 не проверен.
+- ✅ `InsertQuery`, `UpdateQuery`, `DeleteQuery` идут через сущность: слушатели объекта срабатывают, журнал изменений пишется (22.10.2026, `integration-api.md`). `addParameterColumn` и `addDatePartFunctionColumn` — ✅ (ниже, «Регистр строк…»); агрегат с условием — ✅ ниже, «Агрегат с условием».
 
 ## ✅ Карточка: фильтр-правило, проверка по БД, значения и фильтр детали, сортировка списка, сообщения
 
@@ -507,3 +507,20 @@ define("<Объект>Section", ["DefaultProfileHelper"], function(DefaultProfil
   - теги: публикация без тегов доходит только до подписок без тегов; с тегами — до подписок, у которых есть хотя бы один такой тег (`publish("<Имя>", args, ["<тег>"])`, `subscribe("<Имя>", handler, this, ["<тег>"])`);
   - ⚠️ третий аргумент `subscribe` — объект `scope`. Если передать не объект (например, `window` или строку), платформа примет его за теги — подписка молча перестанет получать сообщения без тегов;
   - сообщения можно объявить и в коде: `this.sandbox.registerMessages({"<Имя>": {mode: BPMSoft.MessageMode.PTP, direction: BPMSoft.MessageDirectionType.BIDIRECTIONAL}})`.
+
+## ✅ Агрегат с условием в клиентском ESQ (проверено в CRM, 22.10.2026)
+```js
+var esq = Ext.create("BPMSoft.EntitySchemaQuery", {rootSchemaName: "<Объект>"});
+esq.addColumn("Name");
+var subFilters = Ext.create("BPMSoft.FilterGroup");
+subFilters.addItem(BPMSoft.createColumnFilterWithParameter(BPMSoft.ComparisonType.EQUAL, "<Колонка связанного объекта>", <значение>));
+var column = Ext.create("BPMSoft.AggregationQueryColumn", {
+	columnPath: "[<Связанный объект>:<Колонка-ссылка>].Id",
+	aggregationType: BPMSoft.AggregationType.COUNT,
+	subFilters: subFilters
+});
+esq.columns.add("<Псевдоним>", column);
+```
+- Пути в `subFilters` — от связанного объекта (`[<Связанный объект>:…]`), не от корня запроса. Результат совпал с SQL (`count(*) FILTER (WHERE …)`). Так же работает `BPMSoft.SubQueryColumn`.
+- ❌ Колонка из `esq.addAggregationSchemaColumn(...)` — это `FunctionQueryColumn`: условие, добавленное в её `expression.subFilters`, **игнорируется** — запрос считает без условия.
+- Подзапрос в фильтре: `Ext.create("BPMSoft.CompareFilter", {comparisonType: …, leftExpression: Ext.create("BPMSoft.SubQueryExpression", {columnPath: "[<Объект>:<Колонка>].Id", aggregationType: BPMSoft.AggregationType.COUNT}), rightExpression: Ext.create("BPMSoft.ParameterExpression", {parameterValue: <число>})})` (по коду платформы).
