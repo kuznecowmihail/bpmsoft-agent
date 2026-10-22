@@ -29,13 +29,13 @@
 - [x] Бизнес-правило `FILTRATION` в `rules` (`baseAttributePatch`, `autocomplete`, `autoClean`); в `businessRules` Designer пишет числа.
 - [x] Коды `BusinessRuleModule.enums` (по коду платформы): `RuleType` DISABLED -1, BINDPARAMETER 0, FILTRATION 1, AUTOCOMPLETE 2, POPULATE_ATTRIBUTE 3; `ValueType` CONSTANT 0, ATTRIBUTE 1, SYSSETTING 2, SYSVALUE 3, CARDSTATE 4, PARAMETER 5, FORMULA 6. Записью проверять не нужно.
 - [x] Условие `ValueType.SYSSETTING` читает только закэшированные настройки (`IsCacheable`). Код подтвердил: только cachedSettings.
-- [ ] Системные настройки на клиенте: `BPMSoft.SysSettings.querySysSettingsItem(code, cb, scope)`, `querySysSettings([codes], cb)` — асинхронны, значение только в колбэке; `querySysSettingsItemAsync`; запись — `postSysSettingsValues`. Подтверждён `querySysSettingsItem` (колбэк синхронный при кеше).
+- [x] Системные настройки на клиенте: `BPMSoft.SysSettings.querySysSettingsItem(code, cb, scope)`, `querySysSettings([codes], cb)` — асинхронны, значение только в колбэке; `querySysSettingsItemAsync`; запись — `postSysSettingsValues`. Подтверждён `querySysSettingsItem` (колбэк синхронный при кеше). Подтверждено 22.10.2026 в CRM.
 - [x] `asyncValidate(callback, scope)` с `callParent` и `validateResponse` — проверка по БД перед сохранением.
-- [ ] `save({isSilent: true, callback, scope})`, хук `onSaved(response, config)`.
+- [x] `save({isSilent: true, callback, scope})`, хук `onSaved(response, config)`. Подтверждено 22.10.2026 в CRM.
 - [x] Деталь в `details`: `defaultValues` (`masterColumn` / `value`), `filterMethod`, `captionName`.
 - [x] `lookupListConfig`: `columns`, `orders`, `filter` / `filters`. Сортировка — только выпадающий список, не окно выбора.
-- [ ] Sandbox: необъявленное сообщение и неверное направление — исключение; `BIDIRECTIONAL`; `unRegisterMessages`; теги в BROADCAST и PTP; PTP `publish` возвращает результат обработчика. Подтверждено: необъявленное сообщение — исключение.
-- [ ] Окна: `showConfirmationDialog` со стандартными кнопками `BPMSoft.MessageBoxButtons.YES.returnCode`, `showInformationDialog`; `ModalBox`, `ModalBoxSchemaModule`. Подтверждён `showConfirmationDialog` со стандартными кнопками.
+- [x] Sandbox: необъявленное сообщение и неверное направление — исключение; `BIDIRECTIONAL`; `unRegisterMessages`; теги в BROADCAST и PTP; PTP `publish` возвращает результат обработчика. Подтверждено: необъявленное сообщение — исключение. Подтверждено 22.10.2026 в CRM; ловушка — scope не объект считается тегами.
+- [x] Окна: `showConfirmationDialog` со стандартными кнопками `BPMSoft.MessageBoxButtons.YES.returnCode`, `showInformationDialog`; `ModalBox`, `ModalBoxSchemaModule`. Подтверждён `showConfirmationDialog` со стандартными кнопками. Подтверждено 22.10.2026 в CRM (showInformationDialog, ModalBox, ModalBoxSchemaModule).
 - [x] `ServiceHelper.callService`: тело — `data || {}`, при ошибке в колбэк приходит сырой ответ, конфиг-форма с `timeout`, `callServiceAsync`. Уточнить строку в `source-code-edit.md`. По коду записано в client-schemas-edit.md.
 - [x] Учитывает ли `BPMSoft.ComparisonType.EQUAL` в клиентском ESQ регистр строк на PostgreSQL (вопрос из эвала 09). Подтверждено 22.10.2026: EQUAL и CONTAIN регистр не учитывают; Select/SQL — учитывают.
 
@@ -68,9 +68,9 @@
 - [x] Выходы на клиенте: `BPMSoft.RunProcessRequest` с `resultParameterNames`; `runProcess` — устаревший; `executeProcess` по `sysProcessId`. Подтверждено 22.10.2026 по HTTP (RunProcess с resultParameterNames).
 - [x] Несколько выходов из C#: `ProcessExecutor.Execute(name, params, resultNames)` → `ProcessDescriptor.ResultParameterValues`; отмена — `CancelExecutionAsync`.
 - [x] Сигнал из C#: `IProcessEngine.ThrowSignal`. Подтверждено 22.10.2026.
-- [ ] Коллекции в сценарии: `ObjectList`, `ICompositeObjectList`, путь `"<Элемент>.ResultCompositeObjectList"`.
+- [x] Коллекции в сценарии: `ObjectList`, `ICompositeObjectList`, путь `"<Элемент>.ResultCompositeObjectList"`. По коду платформенных процессов, записью не проверено.
 - [x] Старый запуск: `ProcessSchemaManager.GetInstanceByName(...).CreateProcess(uc)`, `SetPropertyValue`, `Execute`. Проверено 22.10.2026: не работает для интерпретируемых процессов (BK30).
-- [ ] Страница свойств своего действия (`FK11`, наследник `BaseUserTaskPropertiesPage`) — низкий приоритет.
+- [ ] Страница свойств своего действия (`FK11`, наследник `BaseUserTaskPropertiesPage`) — низкий приоритет. Отложено: только Designer.
 
 ## 7. Интеграции → `integration-api.md`
 - [x] Анонимный сервис на .NET Core: `appsettings.json` → `ConfigurationServices.AnonymousRoutes`, `"<полное имя класса>": ["/ServiceModel/<Класс>.svc"]`, перезапуск. Файл вне `Pkg` — правит пользователь. Для .NET Framework — `ServiceModel/.../Web.config` (🧪).

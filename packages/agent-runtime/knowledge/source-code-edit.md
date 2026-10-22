@@ -349,7 +349,7 @@ public class <Сервис> : I<Сервис>
 }
 // вызов: ClassFactory.Get<I<Сервис>>().<Метод>();
 ```
-Несколько реализаций одного интерфейса различают по имени: `[DefaultBinding(typeof(I<Сервис>), Name = "<Имя>")]` и `ClassFactory.Get<I<Сервис>>("<Имя>")` (в коде платформы так делают; 🧪 не проверено).
+Несколько реализаций одного интерфейса различают по имени: `[DefaultBinding(typeof(I<Сервис>), Name = "<Имя>")]` и `ClassFactory.Get<I<Сервис>>("<Имя>")` (в коде платформы так делают). ✅ Проверено 22.10.2026: две реализации с `Name = "A"` и `Name = "B"` возвращаются по имени; `ClassFactory.Get<I<Сервис>>()` без имени, когда все привязки именованные, — `InstanceActivationException`.
 
 ## ✅ Подменить платформенный класс своим наследником (`ClassFactory.ReBind`)
 **Подтверждено 05.10.2026** на `TestOrderAmountHelper`: после компиляции `OnAppStart` выполнил `ReBind`, и `ClassFactory.Get<OrderAmountHelper>(...)` стал выдавать `BPMSoft.Configuration.TestOrderAmountHelper` (строки в `Common.log`: подмена при старте и создание наследника).

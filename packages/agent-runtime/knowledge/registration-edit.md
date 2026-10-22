@@ -73,7 +73,7 @@ UId целевых таблиц (`Descriptor.Schema.UId` в `descriptor.json`): 
   ```
   (так делают `ContactSectionV2`, `AccountSectionV2` и др.; в `BaseDataView` атрибут по умолчанию `false`). Статическая группа — тип `Static` (`9dc5f6e6-2a61-4de8-a059-de30f4e74f24`), записи — строки `<Объект>InFolder` (`FolderId`, `<Объект>Id`).
 - Группы вкладываются друг в друга через `ParentId` (статическая внутри динамической — проверено).
-- 🧪 Обязательно ли имя колонки-ссылки в `<Объект>InFolder` совпадает с именем объекта — проверялось только с совпадающим именем.
+- По коду (`GridUtilitiesV2`): раздел ищет колонку-ссылку с именем объекта (`getEntityColumnNameInFolderEntity` возвращает имя объекта), объекты групп — `<Объект>Folder` и `<Объект>InFolder` (`getFolderEntityName`, `getInFolderEntityName`). Другое имя колонки или объектов — переопредели эти методы в схеме раздела (так делают платформенные `SysSettingsSection`, `SysProcessLogSectionV2`). Проверено записью только с именами по умолчанию.
 - ✅ **Отключение групп у раздела** (`FolderMode` обратно на «Не использовать группы», объекты групп удалены): у пользователя, который открывал панель групп, раздел продолжает её открывать и падает в консоли с «Элемент с именем "<Объект>InFolder" не найден» и `Cannot read properties of null (reading 'administratedByRecords')` в `FolderManagerViewModel`. Причина — профиль раздела в `SysProfileData`, ключ `<Схема раздела>GridDataViewFilters` (`isFoldersContainerExpanded: true`, выбранная группа в `FolderFilters`); `BaseDataView.loadFiltersContainersVisibility` восстанавливает панель из профиля. Лечится удалением этих строк профиля (`DELETE FROM "SysProfileData" WHERE "Key" = '<Схема раздела>GridDataViewFilters'`, с подтверждения пользователя); перезапуск приложения не помогает.
 
 ## ✅ Карточки по типам (разные карточки и пункты «Добавить» по значению справочника)
@@ -82,7 +82,7 @@ UId целевых таблиц (`Descriptor.Schema.UId` в `descriptor.json`): 
 2. В наборе `SysModuleEdit_SysModuleEditManager_<Объект>` — по строке (`Row`) на каждое значение типа: `Id` — новый GUID; `TypeColumnValue` (`56c33b79-2d9a-4b49-adb4-79df03d178e9`) = `Id` записи справочника типа; `CardSchemaUId` — карточка этого типа (может быть общая); `ActionKindName` (`f14f9a76-5ad3-47f9-b175-b7648b7bd340`) — латинский код пункта; `Position` — порядок в меню; `SysModuleEntity`, `MiniPageSchemaUId`, `UseModuleDetails` — как в образце. В `Localization/data.<культура>.json` каждой строки — `PageCaption` и `ActionKindCaption` (`a19bf4bf-e22b-49b5-b6e0-918ff6290020`, текст пункта меню «Добавить»).
 3. «Обновить из файловой системы», у пользователя Ctrl+F5.
 - Результат: «Добавить» в разделе становится выпадающим списком из `ActionKindCaption`; выбранный пункт открывает свою карточку, колонка-тип в новой записи уже заполнена этим значением. Существующая запись открывается карточкой своего типа.
-- Значение типа без своей строки `SysModuleEdit` открывается основной карточкой (проверено: строка с `Position` 0); 🧪 правило выбора — по `Position` или по первой строке — не проверялось.
+- ✅ Значение типа без своей строки `SysModuleEdit` открывается карточкой из строки с **наименьшим** `Position` (22.10.2026: перестановка `Position` двух строк поменяла карточку у записи третьего типа).
 - Образцы в платформе — `Activity` (задача, звонок, email), `Project`.
 - Откат: удаление строки из набора не удаляет её в БД — удали SQL `SysModuleEditLcz` (`RecordId`) и `SysModuleEdit` (`Id`); `TypeColumnUId` вернётся обновлением набора.
 
