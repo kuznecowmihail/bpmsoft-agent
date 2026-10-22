@@ -21,14 +21,14 @@
 - [x] Фильтры: `BPMSoft.createColumnFilterWithParameter`, `createColumnInFilterWithParameters`, `createColumnIsNullFilter`, `BPMSoft.FilterGroup` + `LogicalOperatorType.OR`.
 - [x] `BPMSoft.createExistsFilter("[<Деталь>:<Связь>].Id")`, `createNotExistsFilter`, условия — `subFilters.addItem`.
 - [x] Обратный путь `[Объект:Колонка:КолонкаТекущего]`; агрегат `addAggregationSchemaColumn(path, BPMSoft.AggregationType.COUNT, alias)`; агрегат с условием — `BPMSoft.SubQueryExpression`. В Context7 опечатка `addAggregationSchemaColumnFunctionColumn` — такого метода нет. Подтверждён COUNT; агрегат с условием (`SubQueryExpression`) — открыт.
-- [ ] `addMacrosColumn`, `addDatePartFunctionColumn`, `addParameterColumn`, `rowCount`, `isDistinct`.
+- [x] `addMacrosColumn`, `addDatePartFunctionColumn`, `addParameterColumn`, `rowCount`, `isDistinct`. Подтверждено 22.10.2026 через DataService: макросы колонкой — только PRIMARY_COLUMN/PRIMARY_DISPLAY_COLUMN.
 - [x] `BPMSoft.InsertQuery` / `UpdateQuery` / `DeleteQuery` + `setParameterValue`, пакет — `BPMSoft.BatchQuery`. Подтверждены Insert, Delete, BatchQuery; UpdateQuery — открыт.
 Проверено 21.10.2026 пробой на тестовой карточке, результаты сверены с SQL → `client-schemas-edit.md`, «Клиентский ESQ и запросы данных».
 
 ## 3. Карточка Classic UI
 - [x] Бизнес-правило `FILTRATION` в `rules` (`baseAttributePatch`, `autocomplete`, `autoClean`); в `businessRules` Designer пишет числа.
 - [x] Коды `BusinessRuleModule.enums` (по коду платформы): `RuleType` DISABLED -1, BINDPARAMETER 0, FILTRATION 1, AUTOCOMPLETE 2, POPULATE_ATTRIBUTE 3; `ValueType` CONSTANT 0, ATTRIBUTE 1, SYSSETTING 2, SYSVALUE 3, CARDSTATE 4, PARAMETER 5, FORMULA 6. Записью проверять не нужно.
-- [ ] Условие `ValueType.SYSSETTING` читает только закэшированные настройки (`IsCacheable`).
+- [x] Условие `ValueType.SYSSETTING` читает только закэшированные настройки (`IsCacheable`). Код подтвердил: только cachedSettings.
 - [ ] Системные настройки на клиенте: `BPMSoft.SysSettings.querySysSettingsItem(code, cb, scope)`, `querySysSettings([codes], cb)` — асинхронны, значение только в колбэке; `querySysSettingsItemAsync`; запись — `postSysSettingsValues`. Подтверждён `querySysSettingsItem` (колбэк синхронный при кеше).
 - [x] `asyncValidate(callback, scope)` с `callParent` и `validateResponse` — проверка по БД перед сохранением.
 - [ ] `save({isSilent: true, callback, scope})`, хук `onSaved(response, config)`.
@@ -36,8 +36,8 @@
 - [x] `lookupListConfig`: `columns`, `orders`, `filter` / `filters`. Сортировка — только выпадающий список, не окно выбора.
 - [ ] Sandbox: необъявленное сообщение и неверное направление — исключение; `BIDIRECTIONAL`; `unRegisterMessages`; теги в BROADCAST и PTP; PTP `publish` возвращает результат обработчика. Подтверждено: необъявленное сообщение — исключение.
 - [ ] Окна: `showConfirmationDialog` со стандартными кнопками `BPMSoft.MessageBoxButtons.YES.returnCode`, `showInformationDialog`; `ModalBox`, `ModalBoxSchemaModule`. Подтверждён `showConfirmationDialog` со стандартными кнопками.
-- [ ] `ServiceHelper.callService`: тело — `data || {}`, при ошибке в колбэк приходит сырой ответ, конфиг-форма с `timeout`, `callServiceAsync`. Уточнить строку в `source-code-edit.md`.
-- [ ] Учитывает ли `BPMSoft.ComparisonType.EQUAL` в клиентском ESQ регистр строк на PostgreSQL (вопрос из эвала 09).
+- [x] `ServiceHelper.callService`: тело — `data || {}`, при ошибке в колбэк приходит сырой ответ, конфиг-форма с `timeout`, `callServiceAsync`. Уточнить строку в `source-code-edit.md`. По коду записано в client-schemas-edit.md.
+- [x] Учитывает ли `BPMSoft.ComparisonType.EQUAL` в клиентском ESQ регистр строк на PostgreSQL (вопрос из эвала 09). Подтверждено 22.10.2026: EQUAL и CONTAIN регистр не учитывают; Select/SQL — учитывают.
 
 ## 4. Серверный C#
 - [x] Транзакция: `using (DBExecutor ex = UserConnection.EnsureDBConnection()) { ex.StartTransaction(); … ex.CommitTransaction(); }` + `RollbackTransaction`; запросы внутри — `Execute(ex)`. Подтверждено: `Entity.Save()` откатывается вместе с транзакцией.
@@ -46,13 +46,13 @@
 - [x] `Delete` запросом (без событий объекта); `InsertSelect`, `UpdateSelect` — открыты.
 - [x] ESQ: `[Деталь:Связь].Колонка`, `CreateExistsFilter` / `CreateNotExistsFilter`.
 - [x] `esq.GetEntity(uc, id)` (`null`, если нет), `entity.Delete()` (с событиями), перегрузки `FetchFromDB`, `ExistInDB("Колонка", v)`.
-- [ ] `SysSettings.SetValue`, `TryGetValue`, `SetDefValue` — отличие персонального значения от общего проверить. Подтверждены `TryGetValue`, `GetValue` с умолчанием; CS0117 при коротком имени в `namespace BPMSoft.Configuration`.
-- [ ] Функциональности: `UserConnection.GetIsFeatureEnabled(code)`, `SetFeatureState`, `SafeSetFeatureState` (`BPMSoft.Configuration`). Подтверждён `GetIsFeatureEnabled`.
+- [x] `SysSettings.SetValue`, `TryGetValue`, `SetDefValue` — отличие персонального значения от общего проверить. Подтверждены `TryGetValue`, `GetValue` с умолчанием; CS0117 при коротком имени в `namespace BPMSoft.Configuration`. Подтверждено 22.10.2026: SetValue — персональное, SetDefValue — общее, TryGetValue с out; кеш — ClearSysSettingsCacheRequest.
+- [x] Функциональности: `UserConnection.GetIsFeatureEnabled(code)`, `SetFeatureState`, `SafeSetFeatureState` (`BPMSoft.Configuration`). Подтверждён `GetIsFeatureEnabled`. Подтверждено 22.10.2026: состояние текущему пользователю; чтение кешируется до перезапуска.
 - [x] Асинхронная операция из слушателя: `IEntityEventAsyncOperation`, `IEntityEventAsyncExecutor.ExecuteAsync<T>(new EntityEventAsyncOperationArgs(entity, e))` (`BPMSoft.Core.Entities.AsyncOperations`).
-- [ ] Слушатель: `IsGlobal`, несколько атрибутов на классе, `e.IsCanceled = true`, `OnDeleteFailed`. Подтверждён `e.IsCanceled` (Save=false, без ошибки).
+- [x] Слушатель: `IsGlobal`, несколько атрибутов на классе, `e.IsCanceled = true`, `OnDeleteFailed`. Подтверждён `e.IsCanceled` (Save=false, без ошибки). Подтверждено 22.10.2026: IsGlobal, несколько атрибутов, OnDeleteFailed.
 - [x] `[DefaultBinding(typeof(I))]` вместо `Bind` в `OnAppStart`.
-- [ ] `UserConnection` в разных местах, `AppConnection.SystemUserConnection`.
-- [ ] `userConnection.GetLocalizableString(schema, name)`.
+- [x] `UserConnection` в разных местах, `AppConnection.SystemUserConnection`. Подтверждено 22.10.2026: пользователь из настройки SystemUser, права на операции не проверяются.
+- [x] `userConnection.GetLocalizableString(schema, name)`. Подтверждено 22.10.2026.
 Тест: объекты `TestTxEntity`, `TestTxLog`, сервис и слушатель.
 
 ## 5. Права → `rights.md`, `rights-edit.md`
@@ -65,11 +65,11 @@
 ## 6. Процессы
 - [x] Асинхронное своё действие: `return false` + `CompleteExecuting`; `CancelExecuting` при отмене; `Owner` / `OwnerUId`. Тест: `TestAsyncUserTask` в `TestProcAsync`.
 - [x] Журнал процессов в БД: `SysProcessLog` / `VwSysProcessLog`, `SysProcessElementLog` (`Status`, `ErrorDescription`, `SchemaElementUId`); исключение в сценарии → статус «Ошибка». Тест: `TestProcErr`. Подтверждено: исключение действия не пробрасывается в `Execute`, статус `Error`, текст в `ErrorDescription`.
-- [ ] Выходы на клиенте: `BPMSoft.RunProcessRequest` с `resultParameterNames`; `runProcess` — устаревший; `executeProcess` по `sysProcessId`.
+- [x] Выходы на клиенте: `BPMSoft.RunProcessRequest` с `resultParameterNames`; `runProcess` — устаревший; `executeProcess` по `sysProcessId`. Подтверждено 22.10.2026 по HTTP (RunProcess с resultParameterNames).
 - [x] Несколько выходов из C#: `ProcessExecutor.Execute(name, params, resultNames)` → `ProcessDescriptor.ResultParameterValues`; отмена — `CancelExecutionAsync`.
-- [ ] Сигнал из C#: `IProcessEngine.ThrowSignal`.
+- [x] Сигнал из C#: `IProcessEngine.ThrowSignal`. Подтверждено 22.10.2026.
 - [ ] Коллекции в сценарии: `ObjectList`, `ICompositeObjectList`, путь `"<Элемент>.ResultCompositeObjectList"`.
-- [ ] Старый запуск: `ProcessSchemaManager.GetInstanceByName(...).CreateProcess(uc)`, `SetPropertyValue`, `Execute`.
+- [x] Старый запуск: `ProcessSchemaManager.GetInstanceByName(...).CreateProcess(uc)`, `SetPropertyValue`, `Execute`. Проверено 22.10.2026: не работает для интерпретируемых процессов (BK30).
 - [ ] Страница свойств своего действия (`FK11`, наследник `BaseUserTaskPropertiesPage`) — низкий приоритет.
 
 ## 7. Интеграции → `integration-api.md`
@@ -80,11 +80,11 @@
 - [x] Ошибки: `ConfigurationServiceResponse`, `WebFaultException<T>`. Подтверждено: необработанное исключение — 400 с HTML «Request Error».
 - [x] Вход снаружи: `POST /ServiceModel/AuthService.svc/Login`, cookie `BPMCSRF` (+ `BPMSESSIONID` на .NET Core — 🧪), заголовок `BPMCSRF` для POST, без него 403.
 - [x] OData 4 (`/odata/<Объект>`, на .NET Framework `/0/odata`), операции `CanUseODataService` и др.; `DataService` (`/DataService/json/SyncReply/...`). DataService: тело в camelCase, PascalCase молча игнорируется.
-- [ ] Вызов REST-схемы из C#: `ClassFactory.Get<IServiceSchemaClient>().Execute(...)`.
+- [x] Вызов REST-схемы из C#: `ClassFactory.Get<IServiceSchemaClient>().Execute(...)`. Подтверждено 22.10.2026.
 - [x] Внешний HTTP из C#: `ClassFactory.Get<IHttpClientFactory>()`.
-- [ ] Белый список исходящих вызовов: `whitelistUriConfig.json`, список `WebService`.
-- [ ] Аутентификация REST-схемы: Basic и Digest хранятся в metadata — секреты попадут в git.
-- [ ] Вебхуки (`WebhookSchemaManager`) — отдельный тип схемы, изучить metadata.
+- [x] Белый список исходящих вызовов: `whitelistUriConfig.json`, список `WebService`. Частично: пустой список не ограничивает; непустой не проверялся.
+- [x] Аутентификация REST-схемы: Basic и Digest хранятся в metadata — секреты попадут в git. Подтверждено 22.10.2026 для Basic: IQ5/IR4, пароль из системной настройки (IV2: 2).
+- [x] Вебхуки (`WebhookSchemaManager`) — отдельный тип схемы, изучить metadata. По коду: формат metadata не известен, файлами не писать.
 
 ## 8. Объекты и регистрация
 - [x] Базовые родители: `BaseCodeLookup`, `BaseImageLookup`, `BaseHierarchicalLookup` (`D7` — колонка иерархии), `BaseEntityWithPosition`, `BaseFolder`, `BaseItemInFolder`, `BaseTag`, `BaseEntityInTag`, `BaseFile` (UId — в `SectionDesignerEnums.js`, блок `BaseSchemeUIds`). Подтверждено: `BaseHierarchicalLookup` требует переопределения `Parent`.
