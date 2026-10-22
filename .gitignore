@@ -7,6 +7,7 @@ out/
 .env.*
 .claude/settings.local.json
 .crm.local.env
+.claude/stands.env
 release/
 packages/evals/local.json
 packages/evals/results/
