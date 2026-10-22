@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import * as path from "path";
 import * as os from "os";
-import { sdkToolResultsDirectory, foregroundToolInput } from "../src/provider/anthropicProvider";
+import { sdkToolResultsDirectory, foregroundToolInput, agentEnv, NONESSENTIAL_TRAFFIC_OFF } from "../src/provider/anthropicProvider";
 
 describe("sdkToolResultsDirectory", () => {
 	it("computes the SDK tool results directory path correctly", () => {
@@ -57,5 +57,26 @@ describe("foregroundToolInput", () => {
 
 	it("leaves other tools unchanged", () => {
 		expect(foregroundToolInput("Read", { file_path: "/a/b.txt" })).toBeUndefined();
+	});
+});
+
+describe("agentEnv", () => {
+	it("turns off non-essential traffic of Claude Code", () => {
+		const env = agentEnv("key", {});
+		expect(env.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC).toBe("1");
+		expect(env.DISABLE_TELEMETRY).toBe("1");
+		expect(env.DISABLE_ERROR_REPORTING).toBe("1");
+		expect(env.DISABLE_FEEDBACK_COMMAND).toBe("1");
+	});
+
+	it("passes the API key and keeps the rest of the environment", () => {
+		const env = agentEnv("key", { PATH: "/bin" });
+		expect(env.ANTHROPIC_API_KEY).toBe("key");
+		expect(env.PATH).toBe("/bin");
+	});
+
+	it("overrides switches that were turned back on in the environment", () => {
+		const env = agentEnv("key", { DISABLE_TELEMETRY: "0", CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "" });
+		expect(env).toMatchObject(NONESSENTIAL_TRAFFIC_OFF);
 	});
 });

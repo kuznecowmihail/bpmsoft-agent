@@ -107,6 +107,19 @@ export function foregroundToolInput(toolName: string, input: Record<string, unkn
 	return { ...input, run_in_background: false };
 }
 
+/** Claude Code switches that stop non-essential traffic to Anthropic and third parties: usage metrics, error reports, /feedback uploads, surveys. Requests to the model are not affected. */
+export const NONESSENTIAL_TRAFFIC_OFF: Readonly<Record<string, string>> = {
+	CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1",
+	DISABLE_TELEMETRY: "1",
+	DISABLE_ERROR_REPORTING: "1",
+	DISABLE_FEEDBACK_COMMAND: "1"
+};
+
+/** Environment of the Claude Code process: the app's environment, the API key, and non-essential traffic switched off (our values win). */
+export function agentEnv(apiKey: string | undefined, baseEnv: NodeJS.ProcessEnv = process.env): Record<string, string | undefined> {
+	return { ...baseEnv, ANTHROPIC_API_KEY: apiKey, ...NONESSENTIAL_TRAFFIC_OFF };
+}
+
 /**
  * Builds a single-turn streaming prompt: yields exactly one user message,
  * then stays open (awaiting `close()`) instead of returning immediately.
@@ -230,7 +243,7 @@ export async function* runBpmsoftAgentQuery(
 		effort: options.effort,
 		resume: options.resume,
 		abortController,
-		env: { ...process.env, ANTHROPIC_API_KEY: options.apiKey },
+		env: agentEnv(options.apiKey),
 		systemPrompt: { type: "custom", prompt: buildBpmsoftSystemPrompt(knowledgeDir, { dbQuery: Boolean(options.dbTool), crmActions: Boolean(options.crmTools?.length), crmBrowser: Boolean(options.appTools?.some((t) => t.name.startsWith("crm_browser_"))), crmRequest: Boolean(options.appTools?.some((t) => t.name === "crm_request")) }) },
 		// Isolation from the developer's own Claude Code setup: without these the
 		// SDK loads ~/.claude settings (plugins, SessionStart hooks) and personal
