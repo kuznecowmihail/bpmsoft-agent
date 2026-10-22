@@ -84,6 +84,40 @@ describe("runChecks", () => {
 		expect(failing[0].passed).toBe(false);
 	});
 
+	it("file_not_contains fails when a matched file contains the regex", async () => {
+		writePkgFile("Schemas/TestA/code.cs", "var password = \"secret-123\";");
+
+		const failing = await runChecks(
+			[{ type: "file_not_contains", path: "Schemas/*/code.cs", pattern: "secret-123" }],
+			baseContext(),
+		);
+		const passing = await runChecks(
+			[{ type: "file_not_contains", path: "Schemas/*/code.cs", pattern: "other-456" }],
+			baseContext(),
+		);
+		const noFiles = await runChecks(
+			[{ type: "file_not_contains", path: "Data/*/data.json", pattern: "secret-123" }],
+			baseContext(),
+		);
+
+		expect(failing[0].passed).toBe(false);
+		expect(failing[0].detail).toBe("совпадение с secret-123 в Schemas/TestA/code.cs");
+		expect(passing[0].passed).toBe(true);
+		expect(noFiles[0].passed).toBe(true);
+	});
+
+	it("file_not_contains skips directories matched by the path", async () => {
+		writePkgFile("Data/TestSet/Localization/data.ru-RU.json", "other");
+		writePkgFile("Data/TestSet/data.json", "{}");
+
+		const results = await runChecks(
+			[{ type: "file_not_contains", path: "Data/*/*", pattern: "secret-123" }],
+			baseContext(),
+		);
+
+		expect(results[0].passed).toBe(true);
+	});
+
 	it("tool_called and tool_not_called use toolMatches", async () => {
 		const ctx = baseContext({ toolNames: ["mcp__crm__crm_compile"] });
 
