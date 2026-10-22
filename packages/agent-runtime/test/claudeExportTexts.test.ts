@@ -142,7 +142,12 @@ describe("claude-export texts", () => {
 		for (const { rel, text } of allTexts()) {
 			for (const match of text.matchAll(pattern)) {
 				const target = match[1].replace(/\.+$/, "");
-				if (target === "" || target.endsWith("/") || target === "scripts/pkg-lint.js") {
+				if (
+					target === "" ||
+					target.endsWith("/") ||
+					target === "scripts/pkg-lint.js" ||
+					target === "scripts/crm.js"
+				) {
 					continue;
 				}
 				checked++;

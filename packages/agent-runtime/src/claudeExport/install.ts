@@ -15,6 +15,9 @@ const SEPARATE_CORE_REL = ".claude/bpmsoft-agent.md";
 /** Manifest location, relative to the stand root. */
 const MANIFEST_REL = ".claude/skills/.bpmsoft-agent.json";
 
+/** Claude Code settings with the CRM variables for the crm.js CLI, relative to the stand root. */
+const SETTINGS_REL = ".claude/settings.local.json";
+
 /** How the app treats a foreign CLAUDE.md: keep it and import the core, or replace it. */
 export type ClaudeMdChoice = "separate" | "replace";
 
@@ -24,9 +27,16 @@ export type ClaudeSkillsStatus =
 	| { state: "installed"; installedAt: string; appVersion: string }
 	| { state: "outdated"; installedAt: string; appVersion: string };
 
+/** CRM connection written into .claude/settings.local.json for the Claude Code CLI. */
+export interface CrmEnvConnection {
+	url: string;
+	user: string;
+	password: string;
+}
+
 /** Result of an installation attempt; nothing is written unless the kind is "installed". */
 export type InstallOutcome =
-	| { kind: "installed"; written: number; removed: number; target: string }
+	| { kind: "installed"; written: number; removed: number; target: string; crmEnv: "written" | "skipped" | "invalid-settings" }
 	| { kind: "needs-claude-md-choice" }
 	| { kind: "needs-overwrite-confirm"; modified: string[] };
 
@@ -171,11 +181,41 @@ export function claudeSkillsStatus(appRoot: string, sources: ExportSources): Cla
 	return old.hash === sources.hash ? { state: "installed", ...info } : { state: "outdated", ...info };
 }
 
+/**
+ * Sets the CRM variables in env of .claude/settings.local.json, keeping other keys and env entries.
+ * A file that is not a JSON object (or whose env is not an object) is left untouched and reported as invalid.
+ */
+function writeCrmEnv(appRoot: string, crm: CrmEnvConnection): "written" | "invalid-settings" {
+	const dest = toDisk(appRoot, SETTINGS_REL);
+	assertInsideStand(appRoot, dest);
+	let settings: Record<string, unknown> = {};
+	if (fs.existsSync(dest)) {
+		let parsed: unknown;
+		try {
+			parsed = JSON.parse(fs.readFileSync(dest, "utf8").replace(/^\uFEFF/, ""));
+		} catch {
+			return "invalid-settings";
+		}
+		if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+			return "invalid-settings";
+		}
+		settings = parsed as Record<string, unknown>;
+	}
+	if (settings.env !== undefined && (typeof settings.env !== "object" || settings.env === null || Array.isArray(settings.env))) {
+		return "invalid-settings";
+	}
+	const env = (settings.env ?? {}) as Record<string, unknown>;
+	settings.env = { ...env, BPMSOFT_CRM_URL: crm.url, BPMSOFT_CRM_USER: crm.user, BPMSOFT_CRM_PASSWORD: crm.password };
+	fs.mkdirSync(path.dirname(dest), { recursive: true });
+	fs.writeFileSync(dest, JSON.stringify(settings, null, 2) + "\n");
+	return "written";
+}
+
 /** Installs the skills, knowledge, lint bundle and CLAUDE.md core into the stand, and updates the manifest. */
 export function installClaudeSkills(
 	appRoot: string,
 	sources: ExportSources,
-	options: { appVersion: string; claudeMd?: ClaudeMdChoice; overwriteModified?: boolean; now?: () => Date },
+	options: { appVersion: string; claudeMd?: ClaudeMdChoice; overwriteModified?: boolean; now?: () => Date; crm?: CrmEnvConnection },
 ): InstallOutcome {
 	const old = readManifest(appRoot);
 	const claudeMdPath = path.join(appRoot, "CLAUDE.md");
@@ -240,5 +280,7 @@ export function installClaudeSkills(
 	fs.mkdirSync(path.dirname(manifestPath), { recursive: true });
 	fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + "\n");
 
-	return { kind: "installed", written: all.length, removed, target: path.join(appRoot, ".claude") };
+	const crmEnv = options.crm ? writeCrmEnv(appRoot, options.crm) : "skipped";
+
+	return { kind: "installed", written: all.length, removed, target: path.join(appRoot, ".claude"), crmEnv };
 }

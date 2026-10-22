@@ -13,6 +13,7 @@ describe("claudeExport", () => {
 	let knowledgeDir: string;
 	let exportDir: string;
 	let lintBundle: string;
+	let crmBundle: string;
 	let appRoot: string;
 
 	/** Writes a file with the given content, creating parent folders. */
@@ -31,13 +32,14 @@ describe("claudeExport", () => {
 	const exists = (...parts: string[]): boolean => fs.existsSync(path.join(appRoot, ...parts));
 
 	/** Collects the export sources from the current fixture folders. */
-	const sources = () => collectExportSources({ knowledgeDir, exportDir, lintBundle });
+	const sources = () => collectExportSources({ knowledgeDir, exportDir, lintBundle, crmBundle });
 
 	beforeEach(() => {
 		tmp = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "claude-export-")));
 		knowledgeDir = path.join(tmp, "knowledge");
 		exportDir = path.join(tmp, "claude-export");
 		lintBundle = path.join(tmp, "pkg-lint.js");
+		crmBundle = path.join(tmp, "crm.js");
 		appRoot = path.join(tmp, "stand");
 		fs.mkdirSync(appRoot, { recursive: true });
 
@@ -45,6 +47,7 @@ describe("claudeExport", () => {
 		put(path.join(knowledgeDir, "scripts", "check-entity.js"), "module.exports = {};\n");
 		put(path.join(knowledgeDir, ".DS_Store"), "junk");
 		put(lintBundle, "/* bundle */\n");
+		put(crmBundle, "/* crm cli */\n");
 		put(path.join(exportDir, "CLAUDE.md"), `${MARKER}\n# Ядро\n`);
 		put(path.join(exportDir, "skills", "bpm-develop", "SKILL.md"), "---\nname: bpm-develop\n---\n");
 	});
@@ -254,6 +257,46 @@ describe("claudeExport", () => {
 
 		expect(() => installClaudeSkills(appRoot, sources(), opts)).toThrow("за пределы папки проекта");
 		expect(fs.readdirSync(outside)).toEqual([]);
+	});
+
+	it("export includes the CRM CLI next to pkg-lint", () => {
+		installClaudeSkills(appRoot, sources(), opts);
+		expect(read(".claude", "skills", "bpm-knowledge", "scripts", "crm.js")).toBe("/* crm cli */\n");
+	});
+
+	it("install with crm writes env and keeps other settings", () => {
+		put(
+			path.join(appRoot, ".claude", "settings.local.json"),
+			JSON.stringify({ permissions: { allow: ["Bash(ls)"] }, env: { OTHER: "1" } }),
+		);
+		const crm = { url: "http://crm.test/", user: "tester", password: "pw" };
+		const outcome = installClaudeSkills(appRoot, sources(), { ...opts, crm });
+
+		expect(outcome).toMatchObject({ kind: "installed", crmEnv: "written" });
+		const settings = JSON.parse(read(".claude", "settings.local.json"));
+		expect(settings.permissions).toEqual({ allow: ["Bash(ls)"] });
+		expect(settings.env).toEqual({
+			OTHER: "1",
+			BPMSOFT_CRM_URL: "http://crm.test/",
+			BPMSOFT_CRM_USER: "tester",
+			BPMSOFT_CRM_PASSWORD: "pw",
+		});
+		expect(read(".claude", "settings.local.json").endsWith("}\n")).toBe(true);
+	});
+
+	it("invalid settings JSON stays untouched and is reported", () => {
+		put(path.join(appRoot, ".claude", "settings.local.json"), "{ not json");
+		const crm = { url: "http://crm.test/", user: "tester", password: "pw" };
+		const outcome = installClaudeSkills(appRoot, sources(), { ...opts, crm });
+
+		expect(outcome).toMatchObject({ kind: "installed", crmEnv: "invalid-settings" });
+		expect(read(".claude", "settings.local.json")).toBe("{ not json");
+	});
+
+	it("without crm the settings file is not created", () => {
+		const outcome = installClaudeSkills(appRoot, sources(), opts);
+		expect(outcome).toMatchObject({ kind: "installed", crmEnv: "skipped" });
+		expect(exists(".claude", "settings.local.json")).toBe(false);
 	});
 
 	it("hash changes when the core changes", () => {
