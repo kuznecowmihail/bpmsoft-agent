@@ -43,7 +43,7 @@
 - ✅ Регистрация — не в `Pkg`: файл `[app]/appsettings.json`, раздел `ConfigurationServices` → `AnonymousRoutes`, запись `"BPMSoft.Configuration.<Класс>": ["/ServiceModel/<Класс>.svc"]` (ключ — полное имя класса с пространством имён), затем перезапуск приложения. Файл правит пользователь или администратор стенда: агент даёт готовую строку и инструкцию. При обновлении платформы файл может быть перезаписан — запись нужно сохранить.
 - ✅ Вызов без входа — `<CRM>/ServiceModel/<Класс>.svc/<Метод>`. Адрес `/rest/<Класс>/<Метод>` без входа по-прежнему перенаправляет на вход (302).
 - ✅ В анонимном вызове `UserConnection` сервиса — `null` (без исключения). Для работы с данными — `AppConnection.SystemUserConnection`: системный пользователь, права не ограничены, поэтому проверку вызывающего (подпись, токен) делай сам.
-- 🧪 Перед работой с `Entity` и процессами в анонимном сервисе платформа вызывает `SessionHelper.SpecifyWebOperationIdentity(HttpContextAccessor.GetInstance(), userConnection.CurrentUser)` (`BPMSoft.Web.Common`) — не проверено.
+- ✅ Перед работой с `Entity` и процессами в анонимном сервисе платформа и проекты вызывают `SessionHelper.SpecifyWebOperationIdentity(HttpContextAccessor.GetInstance(), SystemUserConnection.CurrentUser)` (`BPMSoft.Web.Common`; подтверждено на реальных схемах, 23.10.2026: так в большинстве из ~40 вызовов на трёх стендах; в сервисах-наследниках `BaseService` — `(CurrentHttpContext, UserConnection.CurrentUser)`). В анонимном вызове `UserConnection` — `null`, поэтому пользователь — `SystemUserConnection.CurrentUser`. 🧪 Что именно ломается без этого вызова — не проверено.
 - 🧪 На .NET Framework регистрация — в `Web.config` папки `ServiceModel` (по документации Creatio).
 
 ## Исходящие HTTP-вызовы из C#
