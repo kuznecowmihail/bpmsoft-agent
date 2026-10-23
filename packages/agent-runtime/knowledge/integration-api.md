@@ -19,6 +19,7 @@
 
 ## DataService
 - ✅ `POST /DataService/json/SyncReply/SelectQuery`, `InsertQuery`, `UpdateQuery`, `DeleteQuery`, `BatchQuery` (22.10.2026; на .NET 8 работают и с префиксом `/0/`). Тела: вставка — `{"rootSchemaName": "<Объект>", "operationType": 1, "columnValues": {"items": {"<Колонка>": {"expressionType": 2, "parameter": {"dataValueType": <тип>, "value": <значение>}}}}}` → `{"id": "<Id>", "success": true}`; изменение — `"operationType": 2`, `columnValues` и `filters` (как у `SelectQuery`); удаление — `"operationType": 3` и `filters`; пакет — `{"items": [{"__type": "BPMSoft.Nui.ServiceModel.DataContract.InsertQuery", …тело запроса…}, …]}` → `{"queryResults": [ … ], "hasErrors": false}` (для других запросов — `UpdateQuery`, `DeleteQuery`, `SelectQuery` в `__type`).
+- ✅ Дата и время в `InsertQuery`/`UpdateQuery` (подтверждено записью в CRM, 23.10.2026): `dataValueType` `7` (дата и время), значение — JSON-строка внутри строки: `"value": "\"2026-10-23T10:00:00\""`. Без внутренних кавычек сервис отвечает `ArgumentNullException: Value cannot be null. (Parameter 'value')` (`Parameter.GetDateTimeValue` разбирает значение как JSON).
 - ✅ Запросы `DataService` идут через сущность: срабатывают слушатели объекта (`OnInserted`, `OnUpdated`, `OnDeleted`), пишется журнал изменений, действуют права по записям. Клиентский ESQ (`InsertQuery`, `UpdateQuery`, `DeleteQuery` в JS) шлёт те же запросы.
 - ✅ Ключи тела — **camelCase**. Ключи в PascalCase (`RootSchemaName`, `Columns`) сервер молча игнорирует и возвращает только `Id`.
   ```json
