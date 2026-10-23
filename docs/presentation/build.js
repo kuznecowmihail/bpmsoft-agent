@@ -99,7 +99,7 @@ txt(s, bullets([
 pres.addSection({ title: 'Как пользоваться' });
 s = content('Как пользоваться', 'С чего начать');
 [
-  ['Откройте проект', 'Папка приложения BPMSoft — где лежат BPMSoft.Configuration и conf'],
+  ['Откройте проект', 'Папка стенда BPMSoft — приложение проверит компьютер и режим разработки в ФС'],
   ['Подключите модель', '«Настройки»: провайдер Claude или Cursor, ключ API, модель'],
   ['Включите доступы', 'По желанию: БД CRM, действия в CRM, встроенный браузер'],
   ['Опишите задачу', 'Обычным языком: что, где, для кого. Назовите пакет — или агент спросит'],
@@ -113,6 +113,37 @@ s = content('Как пользоваться', 'С чего начать');
 txt(s, 'Остановить ответ — «Стоп» или Esc; прошлые чаты — в списке слева', { x: 0.6, y: 6.35, w: 7.0, h: 0.4, color: MUTED, italic: true });
 shot(s, 'settings_provider.png', 8.2, 1.45, 3.93, 4.6);
 txt(s, 'Настройки: провайдер, ключ и модель', { x: 8.2, y: 6.15, w: 3.93, h: 0.35, fontSize: 12, color: MUTED, align: 'center' });
+
+// 3a. Requirements
+s = content('Как пользоваться', 'Что нужно на компьютере');
+txt(s, [{ text: 'Уже в установщике: ', options: { bold: true, color: INK } }, { text: 'Claude Code и Cursor SDK, ripgrep, клиент PostgreSQL, встроенный браузер CRM, pkg_lint' }], { x: 0.6, y: 1.4, w: 12.1, h: 0.45, valign: 'middle', fontSize: 15 });
+const rh = (t) => ({ text: t, options: { bold: true, color: INK, fill: { color: MUTEDBG }, fontFace: 'Arial', fontSize: 14 } });
+const rc = (t, o) => ({ text: t, options: Object.assign({ fontSize: 13, color: TEXT, fontFace: 'Calibri', fill: { color: WHITE } }, o) });
+const rn = (t) => rc(t, { bold: true, color: INK });
+const STOP = { color: 'DC2626', bold: true }, WARNC = { color: WARN, bold: true };
+s.addTable([
+  [rh('Что'), rh('Зачем'), rh('Если нет')],
+  [rn('macOS 13+ или Windows 10 1809+ x64'), rc('Минимум для Claude Code и Cursor'), rc('Проект не откроется', STOP)],
+  [rn('Стенд на этом компьютере, разработка в файловой системе'), rc('fileDesignMode и UseStaticFileContent=false: иначе «Обновить из файловой системы» не подхватит правки'), rc('Проект не откроется — приложение покажет, что поменять', STOP)],
+  [rn('Node.js 18+ в PATH'), rc('Иерархия клиентских схем (hierarchy.js) и разовые скрипты'), rc('Предупреждение: клиентские схемы агент делает хуже', WARNC)],
+  [rn('Git for Windows (только Windows)'), rc('Git Bash — через него идут команды агента'), rc('Cursor: проект не откроется. Claude: предупреждение, каждая команда — с подтверждением', WARNC)],
+  [rn('git (по желанию)'), rc('git status и откат правок в Pkg'), rc('Предупреждение: агент пропустит эти шаги', WARNC)]
+], { x: 0.6, y: 1.95, w: 12.1, colW: [3.4, 4.5, 4.2], rowH: [0.45, 0.6, 0.8, 0.6, 0.8, 0.55], border: { type: 'solid', pt: 0.75, color: BORDER }, valign: 'middle' });
+box(s, 0.6, 5.95, 12.1, 0.85, ACCENT_L, ACCENT_B);
+txt(s, 'Нужен ключ API Claude или Cursor. По желанию: доступ к PostgreSQL стенда (лучше пользователь только на чтение) и пользователь CRM с ролью «Системный администратор». macOS: сборка без нотаризации — при первом запуске правый клик → «Открыть»', { x: 0.85, y: 5.95, w: 11.6, h: 0.85, valign: 'middle' });
+
+// 3b. Environment check
+s = content('Как пользоваться', 'Приложение проверяет окружение само');
+shot(s, 'header_env.png', 0.6, 1.4, 5.6, 0.54);
+txt(s, 'Бейдж «Окружение» в шапке — пока чего-то не хватает; клик покажет, что именно', { x: 6.5, y: 1.4, w: 6.2, h: 0.54, valign: 'middle', fontSize: 15 });
+shot(s, 'env_problem.png', 0.6, 2.25, 4.86, 3.6);
+shot(s, 'fdm_card.png', 5.71, 2.25, 4.03, 3.6);
+txt(s, bullets([
+  'При запуске: ОС, Node.js, git, Git Bash',
+  'Не откроет проект: старая ОС, нет разработки в ФС, Cursor на Windows без Git Bash',
+  'Остальное — предупреждение с причиной и ссылкой «Скачать»'
+], 10), { x: 10.0, y: 2.25, w: 2.7, h: 3.6 });
+txt(s, 'Результат проверки — в environment.json в папке логов. После установки программы — «Проверить снова»', { x: 0.6, y: 6.1, w: 12.1, h: 0.45, color: MUTED, italic: true });
 
 // 4. Workflow
 s = content('Как пользоваться', 'Как агент ведёт задачу');
@@ -254,7 +285,7 @@ s.addImage({ path: path.join(SCR, 'header_right.png'), x: 9.26, y: 1.6, w: 3.29,
   txt(s, d, { x: 2.9, y, w: 9.8, h: 0.42, valign: 'middle', fontSize: 15 });
 });
 box(s, 0.6, 6.0, 12.1, 0.8, WHITE, BORDER);
-txt(s, 'Бейдж провайдера показывает модель. Точка у «Настроек» серая — не задан ключ API. Глобус — браузер CRM, «Логи» — лог текущей сессии', { x: 0.85, y: 6.0, w: 11.6, h: 0.8, valign: 'middle' });
+txt(s, 'Оранжевый бейдж «Окружение» — на компьютере чего-то не хватает, клик покажет что. Точка у «Настроек» — не задан ключ API. Глобус — браузер CRM, «Логи» — лог сессии', { x: 0.85, y: 6.0, w: 11.6, h: 0.8, valign: 'middle' });
 
 // 10. CRM
 s = content('Стенд CRM и БД', 'Работа со стендом CRM');
