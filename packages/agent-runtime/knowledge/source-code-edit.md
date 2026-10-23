@@ -261,7 +261,7 @@ namespace BPMSoft.Configuration
 
 ## ✅ Вызвать исходный код из процесса
 **Подтверждено 05.10.2026** на процессе `TestProcSrcCall`: задание-сценарий создало `TestSrcHelper` и вызвало его метод, затем сохранило запись `TestSrcEntity` — в `Common.log` строки помощника и слушателя событий подряд.
-- Код процессов компилируется в пространство имён `BPMSoft.Core.Process`; `BPMSoft.Configuration` в стандартные `using` процесса не входит. Добавь его в `B3` процесса (формат — `process-edit.md`, «Методы процесса (`BK32`), `using` (`B3`)»):
+- Код процессов компилируется в пространство имён `BPMSoft.Core.Process`; `BPMSoft.Configuration` в стандартные `using` процесса не входит. Добавь его в `B3` процесса (формат — `process-flow-edit.md`, «Методы процесса (`BK32`), `using` (`B3`)»):
 ```json
 "B3": [{"UId": "<новый GUID>", "A2": "BPMSoft.Configuration", "A3": "<UId процесса>", "A4": "<UId процесса>", "A5": "<A5 процесса>", "GF1": "null"}]
 ```

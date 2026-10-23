@@ -148,39 +148,39 @@ Age: {
 | Собрать полную иерархию клиентской схемы и все секции родителя (скрипт) | ClientUnit | ✅ проверено чтением на 3 схемах, 0 ошибок; по нему написаны и подтверждены в CRM все клиентские схемы шагов 1–13 (28–29.09.2026) ✅, см. `client-schemas-edit.md` |
 | Добавить индекс (`D6`): уникальный, составной, сортировка «По убыванию» (`G2`) | Entity | ✅ подтверждено (`TestColumns`), см. `entity-edit.md` |
 | Изменить колонку (подпись, тип `S2`, обязательность `E2` строками журнала) и удалить колонку | Entity | ✅ подтверждено (`TestColumns`), см. `entity-edit.md` |
-| Новая карточка (Page) с нуля: вёрстка (`insert`), строки, атрибуты с `dependencies`, методы с `callParent`, `rules`, валидация, кнопка | ClientUnit | ✅ подтверждено (`TestColumnsPage`), см. `client-schemas-edit.md` |
-| Замещение карточки: `merge`/`remove` элементов родителя, порядок вкладок через `order`, частичное переопределение атрибута, `getActions`, совмещённый режим | ClientUnit | ✅ подтверждено (`ProductPageV2`), см. `client-schemas-edit.md` |
-| Новая деталь-реестр, подключение к карточке (`details` + `diff`, заголовок `<Ключ>DetailCaptionOnPage`), регистрация `SysDetail`, правка боевого замещения (CRLF) | ClientUnit / Data | ✅ подтверждено (`TestColumnsDetail` на `ContactPageV2`), см. `client-schemas-edit.md`, `registration-edit.md` |
-| Замещение детали: `initDefaultCaption` с `callParent`, кнопка на панели, `remove` колонки реестра | ClientUnit | ✅ подтверждено (`ContactAddressDetailV2`), см. `client-schemas-edit.md` |
-| Новый раздел (Section) с `getSectionActions`; кнопка карточки в совмещённом режиме (`publishPropertyValueToSection` + `CombinedModeActionButtonsCardLeftContainer` / `onCardAction`) | ClientUnit | ✅ подтверждено (`TestColumnsSection`), см. `client-schemas-edit.md` |
-| Замещение раздела: кнопка в панели реестра, `merge` кнопки родителя, `getSectionActions`, кнопка раздела → метод замещения карточки (`onCardAction` + `tag`) | ClientUnit | ✅ подтверждено (`ProductSectionV2`), см. `client-schemas-edit.md` |
+| Новая карточка (Page) с нуля: вёрстка (`insert`), строки, атрибуты с `dependencies`, методы с `callParent`, `rules`, валидация, кнопка | ClientUnit | ✅ подтверждено (`TestColumnsPage`), см. `client-pages-edit.md` |
+| Замещение карточки: `merge`/`remove` элементов родителя, порядок вкладок через `order`, частичное переопределение атрибута, `getActions`, совмещённый режим | ClientUnit | ✅ подтверждено (`ProductPageV2`), см. `client-pages-edit.md` |
+| Новая деталь-реестр, подключение к карточке (`details` + `diff`, заголовок `<Ключ>DetailCaptionOnPage`), регистрация `SysDetail`, правка боевого замещения (CRLF) | ClientUnit / Data | ✅ подтверждено (`TestColumnsDetail` на `ContactPageV2`), см. `client-pages-edit.md`, `registration-edit.md` |
+| Замещение детали: `initDefaultCaption` с `callParent`, кнопка на панели, `remove` колонки реестра | ClientUnit | ✅ подтверждено (`ContactAddressDetailV2`), см. `client-pages-edit.md` |
+| Новый раздел (Section) с `getSectionActions`; кнопка карточки в совмещённом режиме (`publishPropertyValueToSection` + `CombinedModeActionButtonsCardLeftContainer` / `onCardAction`) | ClientUnit | ✅ подтверждено (`TestColumnsSection`), см. `client-pages-edit.md` |
+| Замещение раздела: кнопка в панели реестра, `merge` кнопки родителя, `getSectionActions`, кнопка раздела → метод замещения карточки (`onCardAction` + `tag`) | ClientUnit | ✅ подтверждено (`ProductSectionV2`), см. `client-pages-edit.md` |
 | Признак замещения `B7` в metadata замещающей схемы (клиентской и объекта) | ClientUnit / Entity | ✅ подтверждено: без `= MetaData.Schema.B7 true` клиент собирает замещение без базовых слоёв; см. `client-schemas.md` |
-| Наследник своей карточки (`B7 false`) и одноимённые элементы в разных контейнерах (`merge`/`remove` берут первый по обходу вёрстки) | ClientUnit | ✅ `client-schemas.md`, `client-schemas-edit.md` |
-| Замещение мини-карточки (`merge`/`insert` в `MiniPage`, `onEntityInitialized`) | ClientUnit | ✅ подтверждено (`LeadMiniPage`), см. `client-schemas-edit.md` |
-| Новая мини-карточка + регистрация в `SysModuleEdit` (`MiniPageSchemaUId`, `MiniPageModes`, `IsForceUpdate`) | ClientUnit / Data | ✅ подтверждено (`TestColumnsMiniPage`), см. `client-schemas-edit.md` |
-| Новый модуль (`BaseModule`, формат B), встраивание через контейнер + `sandbox.loadModule`, сообщения PTP в обе стороны | ClientUnit | ✅ подтверждено (`TestModule` в `TestColumnsPage`), см. `client-schemas-edit.md` |
+| Наследник своей карточки (`B7 false`) и одноимённые элементы в разных контейнерах (`merge`/`remove` берут первый по обходу вёрстки) | ClientUnit | ✅ `client-schemas.md`, `client-pages-edit.md` |
+| Замещение мини-карточки (`merge`/`insert` в `MiniPage`, `onEntityInitialized`) | ClientUnit | ✅ подтверждено (`LeadMiniPage`), см. `client-pages-edit.md` |
+| Новая мини-карточка + регистрация в `SysModuleEdit` (`MiniPageSchemaUId`, `MiniPageModes`, `IsForceUpdate`) | ClientUnit / Data | ✅ подтверждено (`TestColumnsMiniPage`), см. `client-pages-edit.md` |
+| Новый модуль (`BaseModule`, формат B), встраивание через контейнер + `sandbox.loadModule`, сообщения PTP в обе стороны | ClientUnit | ✅ подтверждено (`TestModule` в `TestColumnsPage`), см. `client-logic-edit.md` |
 | Новый миксин (`configuration.mixins.*`, `Ext.create`), подключение через зависимость `define` + блок `mixins`, строки миксина | ClientUnit | ✅ подтверждено (`TestMixin` в `TestColumnsPage`), см. `client-schemas-edit.md` |
 | Патч существующего класса (`Ext override`, отдельная схема `Module`), подключение через зависимость `define` | ClientUnit | ✅ подтверждено (`TestModuleOverride`), см. `client-schemas-edit.md` |
 | Стили схемы (`.less` + `css!<Схема>`), отдельная схема стилей, картинки (`HD8` + `Images.<GUID>.Image`, `imageConfig`) | ClientUnit | ✅ подтверждено (`TestColumnsPage`, `TestStylesCSS`), см. `client-schemas-edit.md` |
 | Процесс с нуля (Старт → Задание-сценарий → Завершение) | Process | ✅ `process-edit.md` |
-| Настройки процесса, параметры процесса, элементы «Читать данные» (в т.ч. агрегация), «Формула», «Добавить данные», «Изменить данные», «Удалить данные» | Process | ✅ `process-edit.md` |
-| Шлюзы (исключающий, параллельный, «ИЛИ»), условные потоки и потоки по умолчанию | Process | ✅ `process-edit.md` |
-| Методы процесса (`BK32`), `using` (`B3`), `Set`/`Get` между заданиями | Process | ✅ `process-edit.md` |
-| Стартовый сигнал по объекту (добавлена / изменена колонка + фильтр) | Process | ✅ `process-edit.md` |
-| Стартовый таймер (cron), промежуточный таймер, ожидание сигнала по записи | Process | ✅ `process-edit.md` |
+| Настройки процесса, параметры процесса, элементы «Читать данные» (в т.ч. агрегация), «Формула», «Добавить данные», «Изменить данные», «Удалить данные» | Process | ✅ `process-edit.md` (настройки, параметры), `process-data-edit.md` (элементы) |
+| Шлюзы (исключающий, параллельный, «ИЛИ»), условные потоки и потоки по умолчанию | Process | ✅ `process-flow-edit.md` |
+| Методы процесса (`BK32`), `using` (`B3`), `Set`/`Get` между заданиями | Process | ✅ `process-flow-edit.md` |
+| Стартовый сигнал по объекту (добавлена / изменена колонка + фильтр) | Process | ✅ `process-flow-edit.md` |
+| Стартовый таймер (cron), промежуточный таймер, ожидание сигнала по записи | Process | ✅ `process-flow-edit.md` |
 | Запуск процесса с клиента (`ProcessModuleUtilities`) и из C# (`ProcessExecutor`) | Process | ✅ `process-edit.md` |
-| Подпроцесс с входными и выходными параметрами | Process | ✅ `process-edit.md` |
-| «Связать объект с процессом»; дорожки (в Designer стенда не поддерживаются — одна дорожка) | Process | ✅ `process-edit.md` |
+| Подпроцесс с входными и выходными параметрами | Process | ✅ `process-flow-edit.md` |
+| «Связать объект с процессом»; дорожки (в Designer стенда не поддерживаются — одна дорожка) | Process | ✅ `process-tasks-edit.md`, дорожки — `process-edit.md` |
 | Своё действие процесса (`ProcessUserTaskSchemaManager`, `.cs`) с нуля, элемент «Выполнить действие процесса» в процессе, изменение действия и обновление процессов, где оно стоит, удаление и переименование параметра действия | ProcessUserTask / Process | ✅ `user-task-edit.md` |
-| Преднастроенная страница: своя страница (наследник `BasePageSimpleProcessTemplate`, поля в `HD11`) и элемент процесса клонированием | Process / ClientUnit | ✅ `process-edit.md` |
-| Элемент «Отправить email» (произвольное письмо) | Process | ✅ `process-edit.md` (структура и Designer; доставка не проверена — на стенде нет почтового ящика) |
-| Сквозной процесс по событию объекта: сигнал с фильтром по пути, «Читать данные» и «Изменить данные» с фильтром по параметру, формулы с датами (задача 3 — возраст контакта при создании лида) | Process | ✅ `process-edit.md` |
-| Генерирующий сигнал и старт по произвольному сигналу (формат Designer, запуск проверен) | Process | ✅ `process-edit.md` |
-| Элемент «Автогенерируемая страница» (поле, кнопки, чтение введённого значения и нажатой кнопки) | Process | ✅ `process-edit.md` |
-| Подпроцесс по коллекции записей (multi-instance) и «Читать данные» в режиме коллекции | Process | ✅ `process-edit.md` |
+| Преднастроенная страница: своя страница (наследник `BasePageSimpleProcessTemplate`, поля в `HD11`) и элемент процесса клонированием | Process / ClientUnit | ✅ `process-tasks-edit.md` |
+| Элемент «Отправить email» (произвольное письмо) | Process | ✅ `process-tasks-edit.md` (структура и Designer; доставка не проверена — на стенде нет почтового ящика) |
+| Сквозной процесс по событию объекта: сигнал с фильтром по пути, «Читать данные» и «Изменить данные» с фильтром по параметру, формулы с датами (задача 3 — возраст контакта при создании лида) | Process | ✅ `process-tasks-edit.md` |
+| Генерирующий сигнал и старт по произвольному сигналу (формат Designer, запуск проверен) | Process | ✅ `process-flow-edit.md` |
+| Элемент «Автогенерируемая страница» (поле, кнопки, чтение введённого значения и нажатой кнопки) | Process | ✅ `process-tasks-edit.md` |
+| Подпроцесс по коллекции записей (multi-instance) и «Читать данные» в режиме коллекции | Process | ✅ `process-flow-edit.md`, «Читать данные» в режиме коллекции — `process-data-edit.md` |
 | Макросы в значениях параметров (текущие дата, время, пользователь, системная настройка, запись справочника) | Process | ✅ `process-edit.md` |
-| Элементы «Выполнить задачу», «Открыть страницу редактирования» (с предзаполнением полей), «Вопрос пользователю» | Process | ✅ `process-edit.md` (с ветвлением по ответу и чтением выбранного ответа) |
-| Прочие элементы процессов: «Отправить email», преднастроенная страница, «Вопрос пользователю», «Открыть страницу редактирования», «Связать объект с процессом», «Выполнить действие процесса», сигналы, таймеры, подпроцессы | Process | ✅ 09.10.2026 (process-edit.md); «Выполнить задачу» и автогенерируемая страница на проекте без образцов — 🧪 |
+| Элементы «Выполнить задачу», «Открыть страницу редактирования» (с предзаполнением полей), «Вопрос пользователю» | Process | ✅ `process-tasks-edit.md` (с ветвлением по ответу и чтением выбранного ответа) |
+| Прочие элементы процессов: «Отправить email», преднастроенная страница, «Вопрос пользователю», «Открыть страницу редактирования», «Связать объект с процессом», «Выполнить действие процесса», сигналы, таймеры, подпроцессы | Process | ✅ 09.10.2026 (process-tasks-edit.md); «Выполнить задачу» и автогенерируемая страница на проекте без образцов — 🧪 |
 | Веб-сервис (`ServiceSchemaManager`): сервис, метод, параметры; элемент «Вызвать веб-сервис» | Service / Process | ✅ подтверждено записью в CRM (21.10.2026, `TestWebService` + `TestProcWebService`: сервис, элемент, выполнение); см. `web-service.md`, `web-service-edit.md` |
 | Аутентификация REST-сервиса (`IQ5` Basic, `IR4`), значения из системных настроек (`IV2: 2`), вызов из C# (`IServiceSchemaClient`) | Service / SourceCode | ✅ подтверждено (22.10.2026), `web-service.md`, `web-service-edit.md` |
 | SqlScript (новый скрипт, выполняется при «Обновить из файловой системы») | SqlScript | ✅ `sql-script-edit.md` |
@@ -189,10 +189,10 @@ Age: {
 | Data: наборы регистрации, справочника, детали, иконки, системной настройки | Data | ✅ 08.10.2026 (registration-edit.md, data-edit.md, templates/data/); прочие таблицы — 🧪 |
 | Регистрация раздела (`SysModuleEntity`, `SysModule`, `SysModuleEdit`, `SysModuleInWorkplace`) и детали (`SysDetail`) | Data | ✅ подтверждено (раздел `TestColumns`); мини-карточка (`MiniPageSchemaUId` + `MiniPageModes` в строке `SysModuleEdit` нужного типа) — ✅ (`LeadMiniPage` для типа «Партнёры»), см. `registration-edit.md` |
 | Справочник в разделе «Справочники» (набор `Lookup_<Объект>`, таблица `Lookup`) | Data | ✅ `registration-edit.md` |
-| Колонки реестра нового раздела по умолчанию (переопределение `getDefaultSectionGridProfile`) | ClientUnit | ✅ подтверждено 06.10.2026 (`TestTicketSection`), см. `client-schemas-edit.md` |
-| Редактируемая деталь (`ConfigurationGrid`, запреты по строке) | ClientUnit | ✅ подтверждено 06.10.2026 (`TestTicketCommentDetail`), см. `client-schemas-edit.md` |
-| Деталь только для просмотра (без добавления, изменения, копирования, удаления) | ClientUnit | ✅ подтверждено 07.10.2026 (`TestTicketPriorityLogDetail`), см. `client-schemas-edit.md` |
-| Подсказка у поля карточки (`tip` с `bindTo` на строку ресурсов) | ClientUnit | ✅ подтверждено записью в CRM (15.10.2026), рецепт — `client-schemas-edit.md` |
+| Колонки реестра нового раздела по умолчанию (переопределение `getDefaultSectionGridProfile`) | ClientUnit | ✅ подтверждено 06.10.2026 (`TestTicketSection`), см. `client-logic-edit.md` |
+| Редактируемая деталь (`ConfigurationGrid`, запреты по строке) | ClientUnit | ✅ подтверждено 06.10.2026 (`TestTicketCommentDetail`), см. `client-logic-edit.md` |
+| Деталь только для просмотра (без добавления, изменения, копирования, удаления) | ClientUnit | ✅ подтверждено 07.10.2026 (`TestTicketPriorityLogDetail`), см. `client-logic-edit.md` |
+| Подсказка у поля карточки (`tip` с `bindTo` на строку ресурсов) | ClientUnit | ✅ подтверждено записью в CRM (15.10.2026), рецепт — `client-pages-edit.md` |
 | Журнал изменений объекта (`D24` + `E16` у колонок, таблица `Sys<Объект>Log`) | Entity | ✅ подтверждено (21.10.2026), `entity-edit.md` |
 | Администрирование по операциям (`D15`), по записям (`D17`), по колонкам (`D16`); права по операциям и системные операции данными, права по умолчанию и на колонки SQL-скриптом | Entity / Data / SqlScript | ✅ подтверждено (21.10.2026), `rights-edit.md` |
 | Порядок SQL-скриптов через `DependsOn` (`{UId, Name}`) | SqlScript | ✅ подтверждено (21.10.2026), `sql-script.md` |
@@ -233,6 +233,6 @@ Age: {
 ### Ещё не описанные типы
 - `DcmSchemaManager` (10 схем) — кейсы со стадиями (DCM).
 - Папки пакета `Files` и `Assemblies`; `descriptor.json` самого пакета (зависимости).
-- Преднастроенная страница и своё действие процесса уже описаны: `process-edit.md`, `user-task.md` + `user-task-edit.md`.
+- Преднастроенная страница и своё действие процесса уже описаны: `process-tasks-edit.md`, `user-task.md` + `user-task-edit.md`.
 
 При добавлении нового типа схемы в будущем — создавай пару файлов `<topic>.md` (подтверждённые факты) + `<topic>-edit.md` (рецепты создания/редактирования) по этому же образцу, и ссылайся на этот файл (`metadata-editing.md`) для общей механики вместо повторения её содержимого. Особое внимание: убедись, используется ли новый тип diff-журнал (Формат A) или плоский JSON (Формат B), и явно отметь это в файле `<topic>.md`.
