@@ -29,7 +29,7 @@
      "leftExpression": {"expressionType": 0, "columnPath": "<Колонка>"},
      "rightExpression": {"expressionType": 2, "parameter": {"dataValueType": 1, "value": "<значение>"}}}}}}
   ```
-- ✅ Коды: `filterType` 6 — группа, 1 — сравнение; `comparisonType` 3 — равно; `expressionType` 0 — колонка, 2 — параметр; `dataValueType` 1 — текст. Ответ: `{"rowConfig": …, "rows": [ … ], "rowsAffected": N, "success": true}`.
+- ✅ Коды: `filterType` 6 — группа, 1 — сравнение; `comparisonType` 3 — равно; `expressionType` 0 — колонка, 2 — параметр; `dataValueType` 1 — текст (остальные коды — `crm-db.md`, «Типы данных: GUID и коды»). Ответ: `{"rowConfig": …, "rows": [ … ], "rowsAffected": N, "success": true}`.
 - Для внешних интеграций проще OData; DataService использует сам клиент CRM.
 
 ## Свой REST-сервис: адреса и ошибки
@@ -39,6 +39,7 @@
 - ✅ Свой код HTTP: `throw new WebFaultException<string>("<текст>", HttpStatusCode.<Код>)` (`using System.Net; using System.ServiceModel.Web;`) — клиент получает этот код и строку JSON в теле.
 - ✅ Необработанное исключение в методе — HTTP 400 с HTML-страницей «Request Error», не 500 и не JSON. Для понятного ответа лови исключения и возвращай `WebFaultException` или объект-ответ с полями `success` и описанием ошибки.
 - ✅ Новый сервис после компиляции отвечает 404 до перезапуска приложения (`platform-api.md`).
+- ✅ Ответ REST-метода объектом (07.10.2026, `TestTicketStatsService`): классы с `[DataContract]`, свойства с `[DataMember(Name = "<имя в JSON>")]` (`using System.Runtime.Serialization;`); при `BodyStyle = WebMessageBodyStyle.Wrapped` клиент получает `{"<Метод>Result": {<поля по Name>}}`, `List<T>` — массивом объектов.
 
 ## Анонимный сервис (.NET 8)
 - ✅ Регистрация — не в `Pkg`: файл `[app]/appsettings.json`, раздел `ConfigurationServices` → `AnonymousRoutes`, запись `"BPMSoft.Configuration.<Класс>": ["/ServiceModel/<Класс>.svc"]` (ключ — полное имя класса с пространством имён), затем перезапуск приложения. Файл правит пользователь или администратор стенда: агент даёт готовую строку и инструкцию. При обновлении платформы файл может быть перезаписан — запись нужно сохранить.
