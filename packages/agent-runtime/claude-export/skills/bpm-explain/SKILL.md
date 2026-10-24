@@ -11,7 +11,7 @@ description: Use when the user asks how something works now in the BPMSoft proje
 
 1. **Знания.** Определи тему по списку и найди ответ в знаниях. Grep по `.claude/skills/bpm-knowledge/` с ключевыми словами вопроса (имя метода, события, свойства, название элемента) или прочитай файл темы:
    - объекты, колонки, события объекта — `entity.md`, `entity-schema.md`;
-   - бизнес-процессы — `processes.md`;
+   - бизнес-процессы — `processes.md`, `process-user-pages.md`, `process-run-edit.md`;
    - клиентские схемы (раздел, карточка, деталь, модуль) — `client-schemas.md`, `client-schema-types.md`, `client-schemas-hierarchy.md`;
    - C# и исходный код — `source-code.md`, `platform-api.md`, `server-data-api.md`, `server-events-edit.md`, `server-background-edit.md`, `files.md`;
    - свои действия процесса — `user-task.md`;

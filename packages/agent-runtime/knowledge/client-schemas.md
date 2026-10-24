@@ -91,7 +91,8 @@ details: {
 ## Встраивание во iframe и CSP
 - ✅ Ответы CRM содержат `X-Frame-Options: SAMEORIGIN` (24.10.2026): страницы CRM нельзя открыть во `iframe` чужого сайта.
 - ✅ На стенде без настройки заголовка `Content-Security-Policy` нет (24.10.2026): внешние скрипты и `iframe` в клиентских схемах CSP не блокирует.
-- 🧪 CSP задаётся в `[app]/appsettings.json`, раздел `CustomHeaders`, ключ `Content-Security-Policy`; к `script-src` платформа добавляет nonce. Не проверялось — файл правит администратор стенда.
+- ✅ CSP включается в `[app]/appsettings.json`, раздел `CustomHeaders`, ключ `Content-Security-Policy`, после перезапуска (24.10.2026, правит администратор стенда). Платформа сама добавляет nonce в `script-src` (`'nonce-…'`), ставит атрибут `nonce` своим скриптам и кладёт значение в `window.__NONCE__`; интерфейс раздела работает без ошибок в консоли.
+- ✅ Под CSP (24.10.2026, политика `script-src 'self' 'unsafe-eval'`): внешний скрипт с другого домена и inline-скрипт блокируются (в консоли — `violates the following Content Security Policy directive`); inline-скрипт с `script.nonce = window.__NONCE__` выполняется. Свой внешний скрипт подключай только с разрешённого в политике домена.
 
 ## Регистрация в интерфейсе
 Чтобы новый раздел, карточка, мини-карточка или деталь стали доступны в интерфейсе, их нужно зарегистрировать данными (`SysModule*`, `SysDetail`) — см. `registration.md` и `registration-edit.md`.

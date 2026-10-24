@@ -89,7 +89,7 @@ grep -o 'name="F:BPMSoft.Common.OrderDirectionStrict\.[^"]*"' [app]/BPMSoft.Comm
 ## Дата и время
 - ✅ Текущее время пользователя (подтверждено записью в CRM, 24.10.2026, пользователь с поясом UTC+5): `UserConnection.CurrentUser.GetCurrentDateTime()` — время в поясе пользователя, `Kind = Unspecified`; `CurrentUser.GetTimeZoneOffset()` — `05:00:00`; `CurrentUser.TimeZone.Id` на стенде .NET 8 — идентификатор IANA (`Asia/Yekaterinburg`), хотя в профиле хранится `Ekaterinburg Standard Time`.
 - ✅ В БД дата и время хранятся в UTC. `Entity.SetColumnValue` переводит в UTC и `DateTime.UtcNow` (`Kind = Utc`), и `GetCurrentDateTime()` (`Kind = Unspecified` — считается временем пользователя): обе записи легли одинаковым UTC (24.10.2026). Не пиши `DateTime.Now` — это время сервера. ESQ читает дату уже в поясе пользователя.
-- 🧪 `Insert`/`Update` из `BPMSoft.Core.DB` пишут значение как есть, без перевода в UTC — не проверено.
+- ✅ `Update` (и другие запросы `BPMSoft.Core.DB`) пишет дату как есть, без перевода (24.10.2026, пользователь UTC+5): `GetCurrentDateTime()` легло в БД на 5 часов позже настоящего UTC, `DateTime.UtcNow` — верно. В запросах передавай дату только в UTC.
 - Дата и время в `InsertQuery`/`UpdateQuery` `DataService` — JSON-строка внутри строки: `integration-api.md`, «DataService».
 - Смещение пояса для итогов (`timeZoneOffset`, в минутах) — раздел «Итоги (дашборды) в серверном коде» ниже.
 

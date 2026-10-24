@@ -46,4 +46,7 @@
 | `UpdateOrCreateUserResult`: «Элемент коллекции с именем <Колонка>Id не найден» | колонка-справочник `VwSysAdminUnit` передана с суффиксом `Id` | имя колонки без `Id` | `rights.md`, «Пользователи из кода» |
 | `CS0122: 'DistributedLock' is inaccessible due to its protection level` или `InstanceActivationException … "BPMSoft.Core.IDistributedLock"` | распределённая блокировка платформы недоступна коду конфигурации | своя блокировка (флаг в таблице) | `server-background-edit.md` |
 | `DELETE /odata/Contact(<Id>)` → HTTP 500 `violates foreign key constraint … "ActivityParticipant"` | остались участники удалённых активностей | удали строки `ActivityParticipant` | `integration-api.md` |
+| после компиляции пропали новые папки схем в `Pkg` | компиляция без обновления выгрузила пакеты из БД в файловую систему | создать файлы заново, обновление → компиляция | `metadata-editing.md` |
+| `InvalidOperationException: Failed to get the context for the background operation…` | фоновая задача из анонимного сервиса без `SpecifyWebOperationIdentity` | вызвать `SessionHelper.SpecifyWebOperationIdentity` | `integration-api.md` |
+| `ItemAlreadyExistException: Элемент c идентификатором "00000000-…" уже существует` в ESQ | `CreateConcatFunction` с выражениями колонки и параметра | склеивать строки в C# | `server-data-api.md` |
 | ошибка фоновой задачи не видна пользователю | исключение в `IBackgroundTask.Run` пишется только в `ActorSystem.log` | смотри `ActorSystem.log` | `server-background-edit.md` |

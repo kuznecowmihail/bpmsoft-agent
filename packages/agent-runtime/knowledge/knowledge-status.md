@@ -35,7 +35,7 @@
 | Методы процесса (`BK32`), `using` (`B3`), `Set`/`Get` между заданиями | Process | ✅ `process-flow-edit.md` |
 | Стартовый сигнал по объекту (добавлена / изменена колонка + фильтр) | Process | ✅ `process-flow-edit.md` |
 | Стартовый таймер (cron), промежуточный таймер, ожидание сигнала по записи | Process | ✅ `process-flow-edit.md` |
-| Запуск процесса с клиента (`ProcessModuleUtilities`) и из C# (`ProcessExecutor`) | Process | ✅ `process-edit.md` |
+| Запуск процесса с клиента (`ProcessModuleUtilities`) и из C# (`ProcessExecutor`) | Process | ✅ `process-run-edit.md` |
 | Подпроцесс с входными и выходными параметрами | Process | ✅ `process-flow-edit.md` |
 | «Связать объект с процессом»; дорожки (в Designer стенда не поддерживаются — одна дорожка) | Process | ✅ `process-tasks-edit.md`, дорожки — `process-edit.md` |
 | Своё действие процесса (`ProcessUserTaskSchemaManager`, `.cs`) с нуля, элемент «Выполнить действие процесса» в процессе, изменение действия и обновление процессов, где оно стоит, удаление и переименование параметра действия | ProcessUserTask / Process | ✅ `user-task-edit.md` |
@@ -79,3 +79,7 @@
 | OData: `$count`, `$metadata`, `$batch` (JSON) | OData | ✅ подтверждено (24.10.2026), `integration-api.md` |
 | Своя запись в журнале аудита (`SysOperationAudit`) | SourceCode | ✅ подтверждено (24.10.2026), `server-data-api.md` |
 | Удаление пользователя (`AdministrationService.DeleteUser`) | REST | ✅ подтверждено (24.10.2026), `rights.md` |
+| Исключение в задании-сценарии и `ProcessExecutor.Execute` (`ProcessStatus`) | Process | ✅ подтверждено (24.10.2026), `processes.md`, `process-run-edit.md` |
+| Функциональная роль и роли пользователя через `AdministrationService` | REST | ✅ подтверждено (24.10.2026), `rights.md` |
+| CSP через `appsettings.json`; анонимный сервис без `SpecifyWebOperationIdentity` | appsettings | ✅ подтверждено (24.10.2026), `client-schemas.md`, `integration-api.md` |
+| Компиляция без обновления теряет новые файлы | любой | ✅ подтверждено (24.10.2026), `metadata-editing.md` |
