@@ -43,6 +43,13 @@
 - ✅ Сохранение записи справочника (наследника `BaseLookup`) через `Entity.Save` под пользователем без операции `CanManageLookups` — `SecurityException` «Текущий пользователь не имеет прав на запуск администрируемой операции с кодом "CanManageLookups"». Справочники из кода от имени пользователя заполняй через `SystemUserConnection` или выдай роли операцию.
 - Запросы `Insert`, `Update`, `Delete` из `BPMSoft.Core.DB` работают напрямую с таблицей: слушатели объекта, журнал изменений и права по записям не срабатывают (проверено 22.10.2026 для `Update`; для `Insert` — `rights.md`). Нужна бизнес-логика объекта — работай через `Entity` или `DataService`.
 
+## ✅ Пользователи из кода (подтверждено записью в CRM, 24.10.2026)
+- Создать пользователя — сервис платформы `POST <CRM>/rest/AdministrationService/UpdateOrCreateUser` (так сохраняет карточка пользователя), тело `{"jsonObject": "<JSON-строка>", "roleId": "<Id роли>"}`. В `jsonObject` — колонки объекта `VwSysAdminUnit` по имени колонки, справочные без суффикса `Id`: `Id` (новый GUID), `Name` (логин), `Contact`, `UserPassword`, `ConnectionType` (`0` — сотрудник, `1` — портал), `Active`, `TimeZone` (Id записи справочника `TimeZone`, не код), `SysCulture`. `roleId` — роль, в которую включить пользователя (`a29a3ba5-4b0d-de11-9a51-005056c00008` — «Все сотрудники»). Нужна операция `CanManageAdministration`.
+- Ответ всегда HTTP 200: успех — `{"UpdateOrCreateUserResult": ""}`, иначе текст ошибки (например «Элемент коллекции с именем ContactId не найден» — колонка с суффиксом `Id`; «Unrecognized Guid format.» — код пояса вместо Id в `TimeZone`).
+- После создания: строка `SysAdminUnit` (`SysAdminUnitTypeValue` = 4, `TimeZoneId` — код пояса), `SysUserInRole` с ролью, `SysAdminUnitInRole` актуализирована сразу; вход под пользователем работает.
+- ✅ Удалить: `POST <CRM>/rest/AdministrationService/DeleteUser`, тело `{"userId": "<Id>"}` → `{"DeleteUserResult": "{\"Success\":true,…}"}`. Удаляются `SysAdminUnit` и `SysUserInRole`, но строки `SysAdminUnitInRole` пользователя остаются, и `POST /rest/AdministrationService/ActualizeAdminUnitInRole` (`{}` → `true`) их не убирает — удали SQL-запросом. Контакт пользователя не удаляется.
+- 🧪 `AddUserRoles`, `AddUsersInRole`, `RemoveUsersInRoles` того же сервиса — по вызовам карточек, не проверялись.
+
 ## Системные операции
 - ✅ `SysAdminOperation` (наследник `BaseCodeLookup`): `Code` (колонка `2aec9cef-232e-413a-9a5a-9ddde2e8a2af`), локализуемые `Name`/`Description`, `UseSystemOperationRestrictions`, `SysFolder`. UId объекта — `c8fd2fd0-1f44-48c7-84e4-045250b9a638`.
 - ✅ `SysAdminOperationGrantee`: `SysAdminOperation`, `SysAdminUnit` (пользователь или роль), `CanExecute` (булево), `Position`. UId объекта — `3987bdc6-38bb-4b41-bcf7-90bb3995117a`.

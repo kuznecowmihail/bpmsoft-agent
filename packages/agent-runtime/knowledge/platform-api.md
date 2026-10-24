@@ -82,9 +82,14 @@ grep -o 'name="F:BPMSoft.Common.OrderDirectionStrict\.[^"]*"' [app]/BPMSoft.Comm
 - ⚠️ Кеш функциональностей: `GetIsFeatureEnabled` после `SetFeatureState`/`SafeSetFeatureState` возвращает старое значение (в той же и в новых сессиях) — очистка кеша в платформенном коде не попадает в группу, из которой читается состояние. Новое состояние видно после перезапуска приложения. Не включай функциональность кодом с расчётом сразу на неё опереться.
 - Клиентский кеш системных настроек (`IsCacheable`) — `data-edit.md`, «`IsPersonal` и `IsCacheable`».
 - Клиентская схема после обновления может прийти из кеша браузера — `browser-check.md`, «Кэш после обновления».
+- ✅ Свой кеш (подтверждено записью в CRM, 24.10.2026; тип — `ICacheStore`, `using BPMSoft.Core.Store;`): `UserConnection.ApplicationCache["<ключ>"] = <значение>` — общий для всех; `UserConnection.WorkspaceCache` — отдельное пространство ключей; `UserConnection.SessionCache` — только текущая сессия (в новой сессии `null`). Чтение — тот же индексатор, нет значения — `null`; удаление — `.Remove("<ключ>")`. Проверены `string`, `int`, `Guid`.
+- ✅ На стенде с Redis (строка `redis` в `[app]/ConnectionStrings.config`) кеш приложения и рабочего пространства переживает перезапуск приложения — свои ключи сбрасывай сам.
+- ⚠️ Объект своего класса без `[Serializable]` в кеше (24.10.2026): запрос висит около 2 минут (повторы записи), в `[app]/Logs/<дата>/Redis.log` — `SerializationException: Type '<класс>' … is not marked as serializable`, значение не сохраняется. Клади простые типы или строку JSON.
 
 ## Дата и время
-- Текущее время: `userConnection.CurrentUser.GetCurrentDateTime()` — по XML-документации текущее время, переведённое в часовой пояс пользователя. 🧪 Подходит ли оно для записи в колонки даты и времени или нужен `DateTime.UtcNow` — см. `server-events-edit.md`, не проверено при поясе профиля, отличном от UTC. Смещение пояса пользователя — `UserConnection.CurrentUser.GetTimeZoneOffset()` (`TimeSpan`, с учётом летнего времени); 🧪 проверено только при поясе UTC.
+- ✅ Текущее время пользователя (подтверждено записью в CRM, 24.10.2026, пользователь с поясом UTC+5): `UserConnection.CurrentUser.GetCurrentDateTime()` — время в поясе пользователя, `Kind = Unspecified`; `CurrentUser.GetTimeZoneOffset()` — `05:00:00`; `CurrentUser.TimeZone.Id` на стенде .NET 8 — идентификатор IANA (`Asia/Yekaterinburg`), хотя в профиле хранится `Ekaterinburg Standard Time`.
+- ✅ В БД дата и время хранятся в UTC. `Entity.SetColumnValue` переводит в UTC и `DateTime.UtcNow` (`Kind = Utc`), и `GetCurrentDateTime()` (`Kind = Unspecified` — считается временем пользователя): обе записи легли одинаковым UTC (24.10.2026). Не пиши `DateTime.Now` — это время сервера. ESQ читает дату уже в поясе пользователя.
+- 🧪 `Insert`/`Update` из `BPMSoft.Core.DB` пишут значение как есть, без перевода в UTC — не проверено.
 - Дата и время в `InsertQuery`/`UpdateQuery` `DataService` — JSON-строка внутри строки: `integration-api.md`, «DataService».
 - Смещение пояса для итогов (`timeZoneOffset`, в минутах) — раздел «Итоги (дашборды) в серверном коде» ниже.
 

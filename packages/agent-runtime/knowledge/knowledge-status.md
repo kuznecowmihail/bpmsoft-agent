@@ -71,3 +71,11 @@
 | Задание по расписанию на C# (`IJobExecutor`, `AppScheduler`): постановка, обновление, внеочередной и разовый запуск, снятие кодом и SQL | SourceCode | ✅ подтверждено (24.10.2026), `server-background-edit.md` |
 | Фоновая задача (`Task.StartNewWithUserConnection`) | SourceCode | ✅ подтверждено (24.10.2026), `server-background-edit.md` |
 | Файлы записи: запись, чтение и удаление из C#, загрузка и чтение через OData | SourceCode / OData | ✅ подтверждено (24.10.2026), `files.md` |
+| Свой кеш (`ApplicationCache`, `WorkspaceCache`, `SessionCache`), Redis | SourceCode | ✅ подтверждено (24.10.2026), `platform-api.md` |
+| Дата и время: UTC в БД, `GetCurrentDateTime` и `UtcNow` через `Entity` | SourceCode | ✅ подтверждено (24.10.2026), `platform-api.md` |
+| ESQ: постраничность, функции, агрегат по детали с условием, `IsDistinct`; `CustomQuery`; проверка псевдонимов | SourceCode | ✅ подтверждено (24.10.2026), `server-data-api.md` |
+| Пользователь через `AdministrationService.UpdateOrCreateUser` | REST | ✅ подтверждено (24.10.2026), `rights.md` |
+| Порядок замещений между пакетами | любой | ✅ на реальных схемах стенда (24.10.2026), `metadata-editing.md` |
+| OData: `$count`, `$metadata`, `$batch` (JSON) | OData | ✅ подтверждено (24.10.2026), `integration-api.md` |
+| Своя запись в журнале аудита (`SysOperationAudit`) | SourceCode | ✅ подтверждено (24.10.2026), `server-data-api.md` |
+| Удаление пользователя (`AdministrationService.DeleteUser`) | REST | ✅ подтверждено (24.10.2026), `rights.md` |

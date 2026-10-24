@@ -41,4 +41,9 @@
 | `EmailException: Почтовый ящик не существует.` в элементе «Отправить email» | пустой `Sender` | заполни почтовый ящик | `process-tasks-edit.md` |
 | значение системной настройки не меняется после правки SQL | серверный кеш настроек | `ClearSysSettingsCacheRequest` или обновление из файловой системы | `platform-api.md`, «Кеши и перезапуск» |
 | `JobFail … InstanceActivationException: Ошибка создания экземпляра класса "BPMSoft.Core.IJobExecutor"` в `Scheduler.log` раз в период | класс задания удалён, а задание осталось | `AppScheduler.RemoveJob` или SQL по группе задания | `server-background-edit.md` |
+| запрос висит около 2 минут, в `Redis.log` — `SerializationException: Type '<класс>' … is not marked as serializable` | в кеш положен объект своего класса без `[Serializable]` | простые типы или строка JSON | `platform-api.md`, «Кеши и перезапуск» |
+| `SecurityException: Недопустимый символ в строке: <псевдоним>` | недопустимый символ в псевдониме колонки `Select` | псевдоним из букв и цифр | `server-data-api.md` |
+| `UpdateOrCreateUserResult`: «Элемент коллекции с именем <Колонка>Id не найден» | колонка-справочник `VwSysAdminUnit` передана с суффиксом `Id` | имя колонки без `Id` | `rights.md`, «Пользователи из кода» |
+| `CS0122: 'DistributedLock' is inaccessible due to its protection level` или `InstanceActivationException … "BPMSoft.Core.IDistributedLock"` | распределённая блокировка платформы недоступна коду конфигурации | своя блокировка (флаг в таблице) | `server-background-edit.md` |
+| `DELETE /odata/Contact(<Id>)` → HTTP 500 `violates foreign key constraint … "ActivityParticipant"` | остались участники удалённых активностей | удали строки `ActivityParticipant` | `integration-api.md` |
 | ошибка фоновой задачи не видна пользователю | исключение в `IBackgroundTask.Run` пишется только в `ActorSystem.log` | смотри `ActorSystem.log` | `server-background-edit.md` |

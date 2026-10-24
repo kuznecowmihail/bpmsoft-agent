@@ -25,6 +25,11 @@
 - **`IsForceUpdate`**: значение колонки в уже установленной строке обновляется, только если у колонки в `descriptor.json` набора `IsForceUpdate: true`. В наборах лида у `MiniPageSchemaUId`/`MiniPageModes` — `true`; в наборе, скопированном с другого раздела, у `MiniPageSchemaUId` может быть `false` (перед включением мини-карточки поменять на `true`).
 - ✅ Одна и та же строка (по `Id`) в данных нескольких пакетов (подтверждено записью в CRM, 23.10.2026, наборы с одним `Id` в пакете и в зависящем от него пакете): побеждает набор, который установился последним, и только если у его колонок `IsForceUpdate: true` — без него существующая строка не меняется. Порядок зависимостей не защищает: набор «нижнего» пакета, установленный позже (свежий `ModifiedOnUtc`), снова перезаписывает строку. Если оба набора изменены в одном «Обновить из файловой системы», последним ставится пакет, который зависит от другого. Строк залоченных пакетов в Pkg нет.
 
+## ✅ Печатные формы: где зарегистрированы (прочитано на стенде, 24.10.2026)
+- `SysModuleReport` — печатная форма раздела: `Caption`, `SysModuleId` (раздел), `TypeId` (справочник `SysModuleReportType`: `8bc259ef-4276-4906-b7a6-23dc59be7fe2` — MS Word, `8def0f6d-b075-41dd-bcad-ca660c29f2e2` — FastReport, `32f72c9c-72c7-44e0-8c84-34c9ed17ca50` — DevExpress), `ShowInSection`, `ShowInCard`, `ConvertInPDF`, `File` и `FileName` (шаблон), `SysReportSchemaUId`, `TypeColumnValue`, `MacrosSettings`.
+- Таблицы данных Word-шаблона — `SysModuleReportTable` (`SysModuleReportId`, `ObjectId`, `ReferenceColumn`, `Filter`, `ObjectColumnPath`…); FastReport — `FastReportTemplate` (`Data`) и `FastReportDataSource` (`TemplateId`, `Name`, `TypeId`, `Data`).
+- 🧪 Создание печатной формы файлами пакета не проверялось: шаблон Word готовят в дизайнере печатных форм с плагином MS Word — это делает пользователь.
+
 ## Не проверено пока
 - ✅ Регистрация справочника в разделе «Справочники» (06.10.2026, `TestDeliveryType`): одна строка таблицы `Lookup` (`SysEntitySchemaUId` — объект, `SysPageSchemaUId` — `"null"` для редактирования в реестре или UId своей страницы), название — в `Localization`. Рецепт — `registration-edit.md`. Таблицы `LookupInFolder`/`LookupFolder` (папки справочников) не проверены.
 - Точное значение констант `SectionModuleSchemaUId`/`CardModuleUId`, `MiniPageModes`, `UseModuleDetails`, `ActionKindName`.
