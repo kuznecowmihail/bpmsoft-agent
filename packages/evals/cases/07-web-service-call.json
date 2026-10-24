@@ -1,6 +1,6 @@
 {
   "title": "REST-сервис и его вызов из процесса",
-  "provider": "claude",
+  "provider": "cursor",
   "task": "Сделай REST веб-сервис {{prefix}}EvalEchoService («Эхо-сервис (эвал)») с адресом https://httpbin.org и методом {{prefix}}EvalEcho: POST /post, в теле обязательное поле name (текст), в заголовке X-Eval (текст), из ответа читаем json.name. И процесс {{prefix}}EvalWebServiceProcess («Вызов эхо-сервиса (эвал)»): на входе текст Name, процесс вызывает этот метод с name = Name и X-Eval = «eval», а в выходные параметры кладёт имя из ответа и HTTP-код.",
   "answers": [
     { "when": "в как\\S* пакет", "text": "{{package}}" },

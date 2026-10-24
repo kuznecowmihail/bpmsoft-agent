@@ -1,0 +1,21 @@
+{
+  "title": "Файл к записи из C#: IFile и EntityFileLocator, файл виден на вкладке «Файлы» контакта",
+  "provider": "cursor",
+  "task": "Сделай REST веб-сервис в исходном коде {{prefix}}EvalContactNoteService (класс с тем же именем) с POST-методом AttachNote(Guid contactId, string text): прикрепляет к контакту текстовый файл note.txt с этим текстом так, чтобы файл был виден на вкладке «Файлы и примечания» карточки контакта. Метод возвращает Id созданного файла.",
+  "answers": [
+    { "when": "в как\\S* пакет", "text": "{{package}}" },
+    { "when": "зависимост|связ\\S* пакет|совмест", "text": "Не связывать пакеты: делай только в {{package}}, зависимости пакета не меняй" },
+    { "when": "Подтверждаете план", "text": "Делай" },
+    { "when": "Обновить CRM сейчас", "text": "Обнови и скомпилируй" }
+  ],
+  "maxTurns": 10,
+  "checks": [
+    { "type": "file_exists", "path": "Schemas/{{prefix}}EvalContactNoteService/{{prefix}}EvalContactNoteService.cs" },
+    { "type": "file_contains", "path": "Schemas/{{prefix}}EvalContactNoteService/{{prefix}}EvalContactNoteService.cs", "pattern": "EntityFileLocator" },
+    { "type": "file_contains", "path": "Schemas/{{prefix}}EvalContactNoteService/{{prefix}}EvalContactNoteService.cs", "pattern": "ContactFile" },
+    { "type": "file_contains", "path": "Schemas/{{prefix}}EvalContactNoteService/{{prefix}}EvalContactNoteService.cs", "pattern": "ContactId" },
+    { "type": "lint_clean" },
+    { "type": "crm_update_ok" },
+    { "type": "crm_compile_ok" }
+  ]
+}

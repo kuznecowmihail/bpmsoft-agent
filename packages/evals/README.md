@@ -79,16 +79,21 @@ npm run eval -w @bpmsoft-agent/evals -- --case 04
 | `04-compile-error.json` | Поиск и исправление ошибки компиляции (cursor, фикстура `source-code-helper`) |
 | `05-db-sql-script.json` | Подсчёт активностей по статусам через SQL-скрипт |
 | `06-no-silent-delete.json` | Найденные дубли в справочнике не удаляются без вопроса пользователю (cursor) |
-| `07-web-service-call.json` | REST веб-сервис и элемент «Вызвать веб-сервис» в процессе |
+| `07-web-service-call.json` | REST веб-сервис и элемент «Вызвать веб-сервис» в процессе (cursor) |
 | `08-client-esq-count.json` | Счётчик незавершённых активностей контакта на карточке через клиентский ESQ |
-| `09-client-async-validate.json` | Проверка уникальности e-mail контакта по базе перед сохранением (`asyncValidate`) |
+| `09-client-async-validate.json` | Проверка уникальности e-mail контакта по базе перед сохранением (`asyncValidate`) (cursor) |
 | `10-server-transaction.json` | REST-метод: контакт и задача по нему атомарно в одной транзакции `DBExecutor` |
 | `11-anonymous-service.json` | Анонимный REST-сервис: код через `SystemUserConnection`, маршрут в `appsettings.json` агент поручает пользователю |
 | `12-record-rights.json` | Объект с доступом по записям; право чтения по умолчанию — SQL-скриптом пакета, а не данными |
-| `13-section-folders.json` | Группы в существующем разделе (фикстура `simple-section`): объекты `<Объект>Folder`/`<Объект>InFolder`, режим групп в регистрации раздела, `UseStaticFolders` в схеме раздела |
+| `13-section-folders.json` | Группы в существующем разделе (фикстура `simple-section`): объекты `<Объект>Folder`/`<Объект>InFolder`, режим групп в регистрации раздела, `UseStaticFolders` в схеме раздела (cursor) |
 | `14-typed-cards.json` | Карточки по типам (фикстуры `simple-section` + `order-type`): `TypeColumnUId` в `SysModuleEntity`, строки `SysModuleEdit` на каждый тип, отдельная карточка для оптового типа |
-| `15-rest-auth-secret.json` | REST-сервис с Basic-аутентификацией: логин и пароль из системных настроек (`IQ5`, `IV2: 2`), пароль не попадает в файлы пакета (`file_not_contains`) |
+| `15-rest-auth-secret.json` | REST-сервис с Basic-аутентификацией: логин и пароль из системных настроек (`IQ5`, `IV2: 2`), пароль не попадает в файлы пакета (`file_not_contains`) (cursor) |
 | `16-rest-self-check.json` | Свой REST-сервис: после компиляции агент сам вызывает его через `crm_request` и приводит ответ (`crm_request_ok`) |
+| `17-scheduled-job.json` | Периодическое задание на C#: `IJobExecutor`, постановка в `OnAppStart` через `ScheduleMinutelyJob` без дублей, задание есть в `qrtz_job_details` (cursor) |
+| `18-file-attachment.json` | Файл к контакту из C#: `IFile`, `EntityFileLocator`, объект `ContactFile` и ссылка `ContactId` (cursor) |
+| `19-esq-paging.json` | Постраничная выборка ESQ: `SkipRowCount` и `RowCount` как номер последней строки; агент сам вызывает сервис через `crm_request` |
+
+Провайдеры распределены поровну: 9 кейсов на cursor, 10 на claude. Флаг `--provider` перекрывает поле кейса для всего прогона.
 
 Все кейсы — нереализованные задачи: на чистом стенде их результатные проверки не проходят до старта агента.
 

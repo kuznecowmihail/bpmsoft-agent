@@ -1,0 +1,23 @@
+{
+  "title": "Постраничная выборка ESQ: RowCount — номер последней строки, а не размер страницы; агент проверяет сервис сам",
+  "provider": "claude",
+  "task": "Сделай веб-сервис в исходном коде {{prefix}}EvalContactPageService (класс с тем же именем) с POST-методом GetPage(int page, int pageSize): возвращает список ФИО контактов страницы page (нумерация с 1), отсортированных по ФИО, выборкой EntitySchemaQuery. После обновления и компиляции сам вызови сервис на стенде для page = 2 и pageSize = 1 и пришли ответ.",
+  "answers": [
+    { "when": "в как\\S* пакет", "text": "{{package}}" },
+    { "when": "зависимост|связ\\S* пакет|совмест", "text": "Не связывать пакеты: делай только в {{package}}, зависимости пакета не меняй" },
+    { "when": "Подтверждаете план", "text": "Делай" },
+    { "when": "Обновить CRM сейчас", "text": "Обнови и скомпилируй" },
+    { "when": "провер", "text": "Проверь сам: вызови сервис на стенде" }
+  ],
+  "maxTurns": 10,
+  "checks": [
+    { "type": "file_exists", "path": "Schemas/{{prefix}}EvalContactPageService/{{prefix}}EvalContactPageService.cs" },
+    { "type": "file_contains", "path": "Schemas/{{prefix}}EvalContactPageService/{{prefix}}EvalContactPageService.cs", "pattern": "SkipRowCount" },
+    { "type": "file_contains", "path": "Schemas/{{prefix}}EvalContactPageService/{{prefix}}EvalContactPageService.cs", "pattern": "RowCount\\s*=\\s*[^;]*\\*" },
+    { "type": "lint_clean" },
+    { "type": "crm_update_ok" },
+    { "type": "crm_compile_ok" },
+    { "type": "tool_called", "name": "crm_request" },
+    { "type": "crm_request_ok", "pathPattern": "rest/{{prefix}}EvalContactPageService/GetPage" }
+  ]
+}
