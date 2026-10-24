@@ -1,5 +1,5 @@
-/** Parameter of an app tool: a flat JSON value. */
-export interface AppToolParam { type: "string" | "number" | "boolean"; description: string; optional?: boolean }
+/** Parameter of an app tool: a flat JSON value or a list of strings. */
+export interface AppToolParam { type: "string" | "number" | "boolean" | "string[]"; description: string; optional?: boolean }
 export interface AppToolImage { data: string; mimeType: string }   // base64
 export interface AppToolResult { text: string; isError: boolean; image?: AppToolImage }
 /** A tool implemented by the host app (e.g. the built-in CRM browser), offered to both providers. */
@@ -10,7 +10,9 @@ export function appToolJsonSchema(tool: AppTool): Record<string, unknown> {
 	const properties: Record<string, unknown> = {};
 	const required: string[] = [];
 	for (const [name, param] of Object.entries(tool.params)) {
-		properties[name] = { type: param.type, description: param.description };
+		properties[name] = param.type === "string[]"
+			? { type: "array", items: { type: "string" }, description: param.description }
+			: { type: param.type, description: param.description };
 		if (!param.optional) {
 			required.push(name);
 		}
