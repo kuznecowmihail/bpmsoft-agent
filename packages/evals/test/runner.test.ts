@@ -5,7 +5,7 @@ import * as path from "path";
 import type { AgentEvent, CrmActionRecord, CrmTool } from "@bpmsoft-agent/agent-runtime";
 import type { EvalCase, EvalConfig } from "../src/caseFile";
 import { EVAL_PACKAGE_MARKER } from "../src/evalPackage";
-import { asksUser, buildQueryArgs, createQueryFn, pkgRootOf, runCase } from "../src/runner";
+import { asksUser, buildQueryArgs, createQueryFn, cursorModelParamsFor, pkgRootOf, runCase } from "../src/runner";
 import type { QueryArgs, QueryFn } from "../src/runner";
 
 let tmpDir: string;
@@ -335,6 +335,37 @@ describe("createQueryFn", () => {
 				process.env.CURSOR_API_KEY = saved;
 			}
 		}
+	});
+});
+
+describe("cursorModelParamsFor", () => {
+	const P = [{ id: "reasoning_effort", value: "medium" }];
+	const withParams = (cursorModelParams?: Array<{ id: string; value: string }>): EvalConfig => ({
+		appRoot: "/app",
+		package: "P",
+		prefix: "Test",
+		models: { cursor: "grok-4.7" },
+		cursorModelParams,
+	});
+
+	it("is undefined when the field is absent", () => {
+		expect(cursorModelParamsFor(withParams(undefined))).toBeUndefined();
+	});
+
+	it("returns the params when no --model is given", () => {
+		expect(cursorModelParamsFor(withParams(P))).toEqual(P);
+	});
+
+	it("returns the params when --model equals models.cursor", () => {
+		expect(cursorModelParamsFor(withParams(P), "grok-4.7")).toEqual(P);
+	});
+
+	it("is undefined when --model is another model", () => {
+		expect(cursorModelParamsFor(withParams(P), "composer-2.5")).toBeUndefined();
+	});
+
+	it("is undefined for an empty array", () => {
+		expect(cursorModelParamsFor(withParams([]))).toBeUndefined();
 	});
 });
 
