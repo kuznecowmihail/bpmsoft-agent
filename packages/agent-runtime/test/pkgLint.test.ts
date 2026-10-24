@@ -19,6 +19,10 @@ describe("pkgLint", () => {
 		return file;
 	};
 
+	/** Wraps resource items in the BPMSoft resource file layout with a String group. */
+	const resourceXml = (culture: string, items: string): string =>
+		`<?xml version="1.0" encoding="utf-8"?>\r\n<Resources Culture="${culture}">\r\n\t<Group Type="String">\r\n\t\t<Items>\r\n${items}\t\t</Items>\r\n\t</Group>\r\n</Resources>\r\n`;
+
 	const entityDescriptor = {
 		Descriptor: {
 			UId: "11111111-1111-1111-1111-111111111111",
@@ -84,7 +88,7 @@ describe("pkgLint", () => {
 
 	it("reports a missing en-US resource file", () => {
 		const schemaA = writeTestA(JSON.stringify({ MetaData: {} }));
-		write("Resources/TestA.Entity/resource.ru-RU.xml", '<Resources><Item Name="Caption">a</Item></Resources>');
+		write("Resources/TestA.Entity/resource.ru-RU.xml", resourceXml("ru-RU", '\t\t\t<Item Name="Caption" Value="a" />\r\n'));
 		const report = lintSchemas([schemaA], { knowledgeDir });
 		expect(report.ok).toBe(false);
 		expect(report.issues.some((i) => i.message.includes("нет resource.en-US.xml"))).toBe(true);
@@ -93,7 +97,7 @@ describe("pkgLint", () => {
 	it("does not repeat the script resource warning when the missing en-US file is already reported", () => {
 		write("Schemas/TestE/descriptor.json", JSON.stringify(entityDescriptor, null, 2));
 		write("Schemas/TestE/metadata.json", JSON.stringify(entityMetadata, null, 2));
-		write("Resources/TestE.Entity/resource.ru-RU.xml", '<Resources><Item Name="Caption">a</Item></Resources>');
+		write("Resources/TestE.Entity/resource.ru-RU.xml", resourceXml("ru-RU", '\t\t\t<Item Name="Caption" Value="a" />\r\n'));
 		const schemaE = path.join(pkg, "Schemas", "TestE");
 		const report = lintSchemas([schemaE], { knowledgeDir });
 		expect(report.issues.some((i) => i.level === "error" && i.message.includes("нет resource.en-US.xml"))).toBe(true);
@@ -104,14 +108,66 @@ describe("pkgLint", () => {
 		const schemaA = writeTestA(JSON.stringify({ MetaData: {} }));
 		write(
 			"Resources/TestA.Entity/resource.ru-RU.xml",
-			'<Resources><Item Name="Caption">a</Item><Item Name="Description">b</Item></Resources>',
+			resourceXml(
+				"ru-RU",
+				'\t\t\t<Item Name="Caption" Value="a" />\r\n\t\t\t<Item Name="Description" Value="b" />\r\n',
+			),
 		);
-		write("Resources/TestA.Entity/resource.en-US.xml", '<Resources><Item Name="Caption">a</Item></Resources>');
+		write("Resources/TestA.Entity/resource.en-US.xml", resourceXml("en-US", '\t\t\t<Item Name="Caption" Value="a" />\r\n'));
 		const report = lintSchemas([schemaA], { knowledgeDir });
 		expect(report.ok).toBe(true);
 		expect(report.issues.some((i) => i.level === "warning" && i.message.includes("только в ru-RU — Description"))).toBe(
 			true,
 		);
+	});
+
+	it("reports resource items outside a Group", () => {
+		const schemaA = writeTestA(JSON.stringify({ MetaData: {} }));
+		write("Resources/TestA.Entity/resource.ru-RU.xml", resourceXml("ru-RU", '\t\t\t<Item Name="Caption" Value="a" />\r\n'));
+		write(
+			"Resources/TestA.Entity/resource.en-US.xml",
+			'﻿<?xml version="1.0" encoding="utf-8"?>\r\n<Resources Culture="en-US">\r\n\t<Items>\r\n\t\t<Item Name="Caption" Value="a" />\r\n\t</Items>\r\n</Resources>\r\n',
+		);
+		const report = lintSchemas([schemaA], { knowledgeDir });
+		expect(report.ok).toBe(false);
+		const groupIssues = report.issues.filter((i) => i.message.includes("вне <Group"));
+		expect(groupIssues).toHaveLength(1);
+		expect(groupIssues[0].level).toBe("error");
+		expect(groupIssues[0].message).toContain("resource.en-US.xml");
+		expect(groupIssues[0].message).toContain("CRM не сохранит ресурсы");
+	});
+
+	it("accepts resource items inside a Group with BOM and CRLF", () => {
+		const schemaA = writeTestA(JSON.stringify({ MetaData: {} }));
+		const items = '\t\t\t<Item Name="Caption" Value="a" />\r\n';
+		write("Resources/TestA.Entity/resource.ru-RU.xml", "﻿" + resourceXml("ru-RU", items));
+		write("Resources/TestA.Entity/resource.en-US.xml", "﻿" + resourceXml("en-US", items));
+		const report = lintSchemas([schemaA], { knowledgeDir });
+		expect(report.ok).toBe(true);
+		expect(report.issues).toEqual([]);
+	});
+
+	it("accepts every resource example in the repository", () => {
+		const roots = [
+			path.join(knowledgeDir, "templates", "process"),
+			...fs
+				.readdirSync(path.join(__dirname, "..", "..", "evals", "fixtures"))
+				.map((name) => path.join(__dirname, "..", "..", "evals", "fixtures", name, "Resources")),
+		];
+		const folders = roots
+			.filter((root) => fs.existsSync(root))
+			.flatMap((root) => fs.readdirSync(root).map((name) => path.join(root, name)))
+			.filter((dir) => fs.existsSync(path.join(dir, "resource.ru-RU.xml")));
+		expect(folders.length).toBeGreaterThanOrEqual(5);
+		const schemaA = writeTestA(JSON.stringify({ MetaData: {} }));
+		for (const folder of folders) {
+			for (const culture of ["ru-RU", "en-US"]) {
+				const source = path.join(folder, `resource.${culture}.xml`);
+				write(`Resources/TestA.Entity/resource.${culture}.xml`, fs.readFileSync(source, "utf8"));
+			}
+			const report = lintSchemas([schemaA], { knowledgeDir });
+			expect(report.issues.filter((i) => i.level === "error"), folder).toEqual([]);
+		}
 	});
 
 	it("runs check-entity.js for entity schemas", () => {
