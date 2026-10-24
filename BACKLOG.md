@@ -173,7 +173,7 @@
 
 ### Пополнение знаний: пробелы по платформе
 
-**Статус:** этап 0 выполнен 24.10.2026: большие файлы разделены (`client-schema-types.md`, `client-schemas-hierarchy.md`, `entity-schema.md`, `entity-columns-edit.md`, `entity-events-edit.md`, `crm-db.md`, `knowledge-status.md`, `server-events-edit.md`), блоки A–G сделаны (`server-data-api.md`, `errors.md`, разделы «Кеши и перезапуск», «Дата и время» в `platform-api.md`, «Права в серверном коде» в `rights.md`, таблица типов данных в `crm-db.md`), тест `knowledgeFiles.test.ts`. Дальше — этап 1.
+**Статус:** этап 0 выполнен 24.10.2026: большие файлы разделены (`client-schema-types.md`, `client-schemas-hierarchy.md`, `entity-schema.md`, `entity-columns-edit.md`, `entity-events-edit.md`, `crm-db.md`, `knowledge-status.md`, `server-events-edit.md`), блоки A–G сделаны (`server-data-api.md`, `errors.md`, разделы «Кеши и перезапуск», «Дата и время» в `platform-api.md`, «Права в серверном коде» в `rights.md`, таблица типов данных в `crm-db.md`), тест `knowledgeFiles.test.ts`. Этап 1 (P1) выполнен 24.10.2026: `server-background-edit.md` (задания и фоновые задачи), `files.md` (файлы и вложения). Дальше — этап 2.
 
 **Зачем.** Ядро разработки покрыто знаниями, а серверная инфраструктура — нет: задания по расписанию, фоновые задачи, кеш, файлы, отчёты. Часть фактов уже есть, но разбросана по файлам или спрятана в длинных списках. Источник гипотез — декомпилированные сборки платформы в локальной копии разработчика (в репозиторий не попадают); факт идёт в знания только после проверки на стенде.
 

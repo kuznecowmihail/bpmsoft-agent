@@ -13,7 +13,7 @@ description: Use when the user asks how something works now in the BPMSoft proje
    - объекты, колонки, события объекта — `entity.md`, `entity-schema.md`;
    - бизнес-процессы — `processes.md`;
    - клиентские схемы (раздел, карточка, деталь, модуль) — `client-schemas.md`, `client-schema-types.md`, `client-schemas-hierarchy.md`;
-   - C# и исходный код — `source-code.md`, `platform-api.md`, `server-data-api.md`, `server-events-edit.md`;
+   - C# и исходный код — `source-code.md`, `platform-api.md`, `server-data-api.md`, `server-events-edit.md`, `server-background-edit.md`, `files.md`;
    - свои действия процесса — `user-task.md`;
    - данные, настройки, SQL-скрипты — `data.md`, `sql-script.md`;
    - регистрация раздела и карточки в интерфейсе — `registration.md`;

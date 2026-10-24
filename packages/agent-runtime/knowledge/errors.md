@@ -40,3 +40,5 @@
 | `ArgumentNullException: Value cannot be null. (Parameter 'value')` в `InsertQuery`/`UpdateQuery` | дата передана без внутренних кавычек | `"value": "\"<дата>\""` | `integration-api.md` |
 | `EmailException: Почтовый ящик не существует.` в элементе «Отправить email» | пустой `Sender` | заполни почтовый ящик | `process-tasks-edit.md` |
 | значение системной настройки не меняется после правки SQL | серверный кеш настроек | `ClearSysSettingsCacheRequest` или обновление из файловой системы | `platform-api.md`, «Кеши и перезапуск» |
+| `JobFail … InstanceActivationException: Ошибка создания экземпляра класса "BPMSoft.Core.IJobExecutor"` в `Scheduler.log` раз в период | класс задания удалён, а задание осталось | `AppScheduler.RemoveJob` или SQL по группе задания | `server-background-edit.md` |
+| ошибка фоновой задачи не видна пользователю | исключение в `IBackgroundTask.Run` пишется только в `ActorSystem.log` | смотри `ActorSystem.log` | `server-background-edit.md` |

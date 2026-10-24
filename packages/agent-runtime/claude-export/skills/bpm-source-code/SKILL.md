@@ -15,8 +15,9 @@ description: Use when the task needs C# source code in a BPMSoft package, for ex
 4. `.claude/skills/bpm-knowledge/source-code.md` — факты: `.cs`, `metadata.json` (плоский JSON), локализуемые строки `B2`.
 5. `.claude/skills/bpm-knowledge/source-code-edit.md` — рецепты (✅): класс-помощник, локализуемые строки, REST-сервис и вызов с клиента, вызов из процесса, слушатель событий приложения и `ClassFactory`, подмена платформенного класса через `ReBind`, чтение системной настройки, удаление, частые ошибки компиляции, сообщение в браузер пользователю (`ServerChannel`) и уведомление в «колокольчике» (`Reminding`); `DefaultBinding`.
 6. `.claude/skills/bpm-knowledge/server-events-edit.md` — рецепты (✅): где писать серверную логику объекта, слушатель событий объекта — порядок событий, запреты, отмена `e.IsCanceled`, асинхронная операция из слушателя, порядок «скрипт события — слушатель».
-7. `.claude/skills/bpm-knowledge/metadata-editing.md` — общая механика записи схем, читай перед записью.
-8. `.claude/skills/bpm-knowledge/integration-api.md` — адреса, атрибуты маршрутов и коды ошибок своего REST-сервиса, анонимный сервис, исходящий HTTP.
+7. `.claude/skills/bpm-knowledge/server-background-edit.md` — задания по расписанию (`IJobExecutor`, `AppScheduler`) и фоновые задачи; `.claude/skills/bpm-knowledge/files.md` — файлы и вложения из C# и OData.
+8. `.claude/skills/bpm-knowledge/metadata-editing.md` — общая механика записи схем, читай перед записью.
+9. `.claude/skills/bpm-knowledge/integration-api.md` — адреса, атрибуты маршрутов и коды ошибок своего REST-сервиса, анонимный сервис, исходящий HTTP.
 
 ## Обязательные правила
 

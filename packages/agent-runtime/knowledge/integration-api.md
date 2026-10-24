@@ -16,6 +16,7 @@
 - ✅ Чтение: `GET /odata/<Объект>?$select=<Колонка1>,<Колонка2>&$filter=<Колонка> eq '<значение>'&$top=N`; связанный объект — `$expand=<Справочная колонка>($select=<Колонка>)`. Ответ — `{"@odata.context": …, "value": [ … ]}`.
 - ✅ Создать: `POST /odata/<Объект>` с JSON колонок (справочная — `<Колонка>Id`) → 201 и созданная запись с `Id`. Изменить: `PATCH /odata/<Объект>(<Id>)` → 204. Удалить: `DELETE /odata/<Объект>(<Id>)` → 204.
 - ✅ Запись через OData идёт через сущность: события объекта и слушатели срабатывают.
+- ✅ Файлы записи (содержимое через `/Data`) — `files.md`, «Файл через OData».
 
 ## DataService
 - ✅ `POST /DataService/json/SyncReply/SelectQuery`, `InsertQuery`, `UpdateQuery`, `DeleteQuery`, `BatchQuery` (22.10.2026; на .NET 8 работают и с префиксом `/0/`). Тела: вставка — `{"rootSchemaName": "<Объект>", "operationType": 1, "columnValues": {"items": {"<Колонка>": {"expressionType": 2, "parameter": {"dataValueType": <тип>, "value": <значение>}}}}}` → `{"id": "<Id>", "success": true}`; изменение — `"operationType": 2`, `columnValues` и `filters` (как у `SelectQuery`); удаление — `"operationType": 3` и `filters`; пакет — `{"items": [{"__type": "BPMSoft.Nui.ServiceModel.DataContract.InsertQuery", …тело запроса…}, …]}` → `{"queryResults": [ … ], "hasErrors": false}` (для других запросов — `UpdateQuery`, `DeleteQuery`, `SelectQuery` в `__type`).

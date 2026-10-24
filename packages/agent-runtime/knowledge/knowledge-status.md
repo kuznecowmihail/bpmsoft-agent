@@ -68,3 +68,6 @@
 | Группы в разделе: `<Объект>Folder` (`BaseFolder`) и `<Объект>InFolder` (`BaseItemInFolder`), `FolderMode`, `UseStaticFolders` в разделе | Entity / Data / ClientUnit | ✅ подтверждено (21.10.2026), `registration-edit.md` |
 | Новое рабочее место (`SysWorkplace` + `SysModuleInWorkplace` + `SysAdminUnitInWorkplace` данными) | Data | ✅ подтверждено (21.10.2026), `registration-edit.md` |
 | Карточки по типам (`TypeColumnUId` в `SysModuleEntity`, строки `SysModuleEdit` с `TypeColumnValue`, `ActionKindName`/`ActionKindCaption`) | Data | ✅ подтверждено (21.10.2026), `registration-edit.md` |
+| Задание по расписанию на C# (`IJobExecutor`, `AppScheduler`): постановка, обновление, внеочередной и разовый запуск, снятие кодом и SQL | SourceCode | ✅ подтверждено (24.10.2026), `server-background-edit.md` |
+| Фоновая задача (`Task.StartNewWithUserConnection`) | SourceCode | ✅ подтверждено (24.10.2026), `server-background-edit.md` |
+| Файлы записи: запись, чтение и удаление из C#, загрузка и чтение через OData | SourceCode / OData | ✅ подтверждено (24.10.2026), `files.md` |
