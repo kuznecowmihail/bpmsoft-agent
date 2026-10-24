@@ -32,7 +32,7 @@ export interface CrmCliDeps {
 const USAGE = [
 	"Использование: crm.js <команда> [аргументы]",
 	"  update [--no-lint] — pkg-lint по изменённым файлам (если не выключен), затем «Обновить из файловой системы» в CRM",
-	"  compile — компиляция конфигурации в CRM и перезапуск приложения",
+	"  compile [--no-lint] — сначала update (Build удаляет с диска схемы, ещё не загруженные в БД), затем компиляция конфигурации в CRM и перезапуск приложения",
 	"  restart — перезапуск приложения и ожидание его запуска",
 	"  request <GET|POST> <путь> [тело|@файл] [--max <N>] — запрос к сервису CRM, путь от корня стенда, например /ServiceModel/...",
 	"  browser-login [--port <N>] — передать пароль CRM странице в браузере, чтобы войти в CRM без пароля в чате",
@@ -103,13 +103,18 @@ async function runUpdate(args: string[], connection: CrmConnection, deps: CrmCli
 	return { code: result.isError ? 1 : 0, text: [...notes, result.text].join("\n") };
 }
 
-/** compile: CRM compilation, then restart when it succeeds. */
+/** compile: update first (Build re-exports packages to the file system and deletes schemas not loaded to the DB yet), then CRM compilation and restart. */
 async function runCompile(args: string[], connection: CrmConnection, deps: CrmCliDeps): Promise<CrmCliResult> {
-	if (args.length > 0) {
-		return usage(`compile: лишние аргументы: ${args.join(" ")}`);
+	const extra = args.filter((arg) => arg !== "--no-lint");
+	if (extra.length > 0) {
+		return usage(`compile: лишние аргументы: ${extra.join(" ")}`);
+	}
+	const update = await runUpdate(args, connection, deps);
+	if (update.code !== 0) {
+		return { code: update.code, text: `Компиляция не запускалась: перед ней нужно обновление из файловой системы, а оно не прошло.\n${update.text}` };
 	}
 	const result = await runTool(CRM_COMPILE_TOOL, connection, deps);
-	return { code: result.isError ? 1 : 0, text: result.text };
+	return { code: result.isError ? 1 : 0, text: `${update.text}\n${result.text}` };
 }
 
 /** restart: restart of the application and waiting for it to answer. */
