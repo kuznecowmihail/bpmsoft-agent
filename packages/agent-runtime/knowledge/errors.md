@@ -50,3 +50,7 @@
 | `InvalidOperationException: Failed to get the context for the background operation…` | фоновая задача из анонимного сервиса без `SpecifyWebOperationIdentity` | вызвать `SessionHelper.SpecifyWebOperationIdentity` | `integration-api.md` |
 | `ItemAlreadyExistException: Элемент c идентификатором "00000000-…" уже существует` в ESQ | `CreateConcatFunction` с выражениями колонки и параметра | склеивать строки в C# | `server-data-api.md` |
 | ошибка фоновой задачи не видна пользователю | исключение в `IBackgroundTask.Run` пишется только в `ActorSystem.log` | смотри `ActorSystem.log` | `server-background-edit.md` |
+| `403` «Missing cookie. You need to log in.» на `<CRM>/webhook/…` | у вебхука нет аутентификации, а анонимные вебхуки выключены (`UseWebhookAnonymousAuth`) | тип Cookie и пользователь в `IZ3`, вызов с его cookie | `webhook.md` |
+| `403` «Идентификатор пользователя в cookie не совпадает с ожидаемым по интеграции» | cookie другого пользователя или пустой `IZ3` вебхука | `IZ3.IV1` = Id пользователя, который вызывает | `webhook.md` |
+| мастер импорта: «Файл пустой. Убедитесь, что файл содержит заголовки колонок…» | строки в ячейках `inlineStr`, а не в общей таблице строк | сохранить файл в Excel или писать `sharedStrings` | `file-import.md` |
+| веб-форма: `resultCode:-1` «URL, с которого выполнен запрос, не разрешен в системе» | `Referer` не начинается с адреса из `ExternalURL` формы | добавить адрес сайта в `ExternalURL` | `integration-api.md` |

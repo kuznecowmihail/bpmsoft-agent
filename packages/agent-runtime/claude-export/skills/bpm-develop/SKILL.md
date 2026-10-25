@@ -58,6 +58,7 @@ description: Use when the user asks to implement, add, change or delete somethin
 | SQL-скрипт | `bpm-sql-script` | `sql-script.md`, `sql-script-edit.md` |
 | регистрация в интерфейсе | `bpm-registration` | `registration.md`, `registration-edit.md` |
 | веб-сервис и его вызов из процесса | `bpm-web-service` | `web-service.md`, `web-service-edit.md` |
+| вебхук (входящий HTTP без кода) | `bpm-web-service` | `webhook.md`, `webhook-edit.md` |
 
-Всегда до записи: `metadata-editing.md`. Для незнакомого кода поля — `metadata-codes.md`. Шаблоны — `templates/README.md`, если в проекте нет своего образца. Ошибка компиляции, загрузки или выполнения — сначала `errors.md`.
+Всегда до записи: `metadata-editing.md`. Для незнакомого кода поля — `metadata-codes.md`. Шаблоны — `templates/README.md`, если в проекте нет своего образца. Ошибка компиляции, загрузки или выполнения — сначала `errors.md`. Импорт из Excel — `file-import.md`, поиск дублей — `duplicates.md`.
 Пути знаний — `.claude/skills/bpm-knowledge/<файл>`.
