@@ -93,8 +93,9 @@ npm run eval -w @bpmsoft-agent/evals -- --case 04
 | `17-scheduled-job.json` | Периодическое задание на C#: `IJobExecutor`, постановка в `OnAppStart` через `ScheduleMinutelyJob` без дублей, задание есть в `qrtz_job_details` (cursor) |
 | `18-file-attachment.json` | Файл к контакту из C#: `IFile`, `EntityFileLocator`, объект `ContactFile` и ссылка `ContactId` (cursor) |
 | `19-esq-paging.json` | Постраничная выборка ESQ: `SkipRowCount` и `RowCount` как номер последней строки; агент сам вызывает сервис через `crm_request` |
+| `20-webhook-lead.json` | Вебхук без кода: схема `WebhookSchemaManager` файлами (аутентификация Cookie, `IR9`, действие «Добавить данные»), агент сам вызывает `/webhook/<UId>/lead` через `crm_request`, лид есть в БД (cursor) |
 
-Провайдеры распределены поровну: 9 кейсов на cursor, 10 на claude. Флаг `--provider` перекрывает поле кейса для всего прогона.
+Провайдеры распределены поровну: 10 кейсов на cursor, 10 на claude. Флаг `--provider` перекрывает поле кейса для всего прогона.
 
 Все кейсы — нереализованные задачи: на чистом стенде их результатные проверки не проходят до старта агента.
 

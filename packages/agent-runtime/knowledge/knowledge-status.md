@@ -87,5 +87,6 @@
 | Импорт из Excel: сохранение через `Entity` (события объекта), тег импорта, ключевые колонки, `FileImportParameters`, требования к файлу | FileImport | ✅ подтверждено (25.10.2026), `file-import.md` |
 | Поиск дублей при сохранении (`SearchDuplicatesService`), правила `DuplicatesRule` | REST / данные | ✅ подтверждено (25.10.2026), `duplicates.md` |
 | Веб-форма: анонимная отправка, проверка `Referer` | REST | ✅ подтверждено (25.10.2026), `integration-api.md` |
+| Текущий пользователь запроса (`UserInfoService.svc/GetCurrentUserInfo`, только POST) | REST | ✅ подтверждено (25.10.2026), `integration-api.md` |
 | `Web` контрагента, заданный в карточке до сохранения, сохраняется на базовой платформе | Account | ✅ подтверждено (25.10.2026), `process-tasks-edit.md` |
 | Раздел «Переводы» (`SysTranslation`), применение переводов | данные | 🧪 не проверено, `metadata-editing.md` |
