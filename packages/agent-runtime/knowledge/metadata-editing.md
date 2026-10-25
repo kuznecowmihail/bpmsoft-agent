@@ -114,8 +114,12 @@
 - Описание внешнего REST-сервиса для элемента процесса «Вызвать веб-сервис»: URI, методы, параметры запроса и ответа.
 - **Формат B (плоский JSON)**, три файла (`descriptor.json`, `metadata.json`, `properties.json`) и ресурсы `Resources/<Имя>.Service/`; `.cs` нет.
 
+### ✅ DcmSchemaManager (кейс)
+**Создано**: файлы `dcm.md` (факты) + `dcm-edit.md` (рецепты).
+- Стадии записи объекта раздела и шаги на них; настройка раздела и связь кейса с ней — наборы `SysDcmSettings` и `SysDcmSchemaInSettings`.
+- **Формат B (плоский JSON)**, три файла (`descriptor.json`, `metadata.json`, `properties.json`) и ресурсы `Resources/<Имя>.Dcm/`; `.cs` нет.
+
 ### Ещё не описанные типы
-- `DcmSchemaManager` (10 схем) — кейсы со стадиями (DCM).
 - Папки пакета `Files` и `Assemblies`; `descriptor.json` самого пакета (зависимости).
 - Преднастроенная страница и своё действие процесса уже описаны: `process-tasks-edit.md`, `user-task.md` + `user-task-edit.md`.
 

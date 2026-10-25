@@ -1,6 +1,6 @@
 ---
 name: bpm-process
-description: Use when the task touches a business process, for example «создай процесс», «добавь шаг в процесс», «запускай процесс по сигналу», «отправь email из процесса», «сделай вопрос пользователю в процессе».
+description: Use when the task touches a business process, for example «создай процесс», «добавь шаг в процесс», «запускай процесс по сигналу», «отправь email из процесса», «сделай вопрос пользователю в процессе», «настрой кейс со стадиями для раздела».
 ---
 
 # Бизнес-процесс BPMSoft
@@ -15,6 +15,7 @@ description: Use when the task touches a business process, for example «соз�
 3. `.claude/skills/bpm-knowledge/processes.md` — факты: элементы `BK4`, связи и условия `CI*`, параметры `FJ1`/`BP2`, маппинги `BK15` (`GT2`–`GT5`), дорожки, пользовательские задачи; журнал процессов в БД для диагностики (`SysProcessLog`, `SysProcessElementLog`).
 4. `.claude/skills/bpm-knowledge/metadata-codes.md` — словарь кодов, когда встречаешь незнакомое поле.
 5. Шаблоны — `.claude/skills/bpm-knowledge/templates/README.md` и `templates/process/*.json`: бери шаблон элемента, только если в проекте нет своего образца с тем же `J6`.
+6. Кейс (стадии записи раздела, DCM) — `.claude/skills/bpm-knowledge/dcm.md` (факты, коды, связь с разделом) и `dcm-edit.md` (рецепты); шаблон шага «Выполнить задачу» — `templates/dcm/case-activity-task.json`.
 
 Для пользовательских действий процесса с C# — подскилл `bpm-user-task`.
 

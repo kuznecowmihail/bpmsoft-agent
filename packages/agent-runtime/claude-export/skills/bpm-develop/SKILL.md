@@ -59,6 +59,7 @@ description: Use when the user asks to implement, add, change or delete somethin
 | регистрация в интерфейсе | `bpm-registration` | `registration.md`, `registration-edit.md` |
 | веб-сервис и его вызов из процесса | `bpm-web-service` | `web-service.md`, `web-service-edit.md` |
 | вебхук (входящий HTTP без кода) | `bpm-web-service` | `webhook.md`, `webhook-edit.md` |
+| кейс (стадии записи раздела, DCM) | `bpm-process` | `dcm.md`, `dcm-edit.md` |
 
 Всегда до записи: `metadata-editing.md`. Для незнакомого кода поля — `metadata-codes.md`. Шаблоны — `templates/README.md`, если в проекте нет своего образца. Ошибка компиляции, загрузки или выполнения — сначала `errors.md`. Импорт из Excel — `file-import.md`, поиск дублей — `duplicates.md`.
 Пути знаний — `.claude/skills/bpm-knowledge/<файл>`.
