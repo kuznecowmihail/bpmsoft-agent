@@ -94,8 +94,9 @@ npm run eval -w @bpmsoft-agent/evals -- --case 04
 | `18-file-attachment.json` | Файл к контакту из C#: `IFile`, `EntityFileLocator`, объект `ContactFile` и ссылка `ContactId` (cursor) |
 | `19-esq-paging.json` | Постраничная выборка ESQ: `SkipRowCount` и `RowCount` как номер последней строки; агент сам вызывает сервис через `crm_request` |
 | `20-webhook-lead.json` | Вебхук без кода: схема `WebhookSchemaManager` файлами (аутентификация Cookie, `IR9`, действие «Добавить данные»), агент сам вызывает `/webhook/<UId>/lead` через `crm_request`, лид есть в БД (cursor) |
+| `21-dcm-order-case.json` | Кейс (DCM) файлами (фикстуры `simple-section` + `order-status`): стадии по колонке «Статус», альтернативная стадия (`ParentStageUId`), обязательная задача и автопереход (`RequiredType`, `TransitionType`), наборы `SysDcmSettings` и `SysDcmSchemaInSettings`; агент сам создаёт заказ и переводит его на стадию через `crm_request`, шаг кейса есть в журнале процесса (`SysProcessElementLog`), даже если агент удалил тестовые записи |
 
-Провайдеры распределены поровну: 10 кейсов на cursor, 10 на claude. Флаг `--provider` перекрывает поле кейса для всего прогона.
+Провайдеры: 10 кейсов на cursor, 11 на claude. Флаг `--provider` перекрывает поле кейса для всего прогона.
 
 Все кейсы — нереализованные задачи: на чистом стенде их результатные проверки не проходят до старта агента.
 
@@ -110,6 +111,8 @@ npm run eval -w @bpmsoft-agent/evals -- --case 04
 Фикстура `simple-section` добавляет раздел «Заказы (эвал)» без групп: объект `{{prefix}}EvalOrder` (наследник `BaseLookup`), схемы раздела `{{prefix}}EvalOrderSection` и карточки `{{prefix}}EvalOrderPage` с ресурсами на `ru-RU` и `en-US`, наборы данных `SysModuleEntity`, `SysModule` (`FolderMode` «Не использовать группы») и `SysModuleEdit` с постоянными `Id`. Раздел не добавлен в рабочее место. Кейс с этой фикстурой удаляет записи регистрации и таблицы объекта в `teardownSql` (образец — `13-section-folders.json`).
 
 Фикстура `order-type` подключается после `simple-section`: справочник `{{prefix}}EvalOrderType` с записями «Розница» и «Опт» (постоянные `Id`), колонка `Type` у `{{prefix}}EvalOrder` и поле «Тип» на карточке (файлы объекта и карточки `simple-section` она перезаписывает).
+
+Фикстура `order-status` подключается после `simple-section` (без `order-type`): справочник `{{prefix}}EvalOrderStatus` с записями «Новый», «В работе», «Выполнен», «Отменён» (постоянные `Id`) и колонка `Status` у `{{prefix}}EvalOrder` (UId колонки постоянный). Карточку не меняет.
 
 ## Известные ограничения
 
