@@ -98,17 +98,27 @@ function checkJson(schemaDirs: string[], extraFiles: string[], issues: LintIssue
 	}
 }
 
-/** Returns the set of Item Name values in a resource file. */
-function resourceKeys(file: string): Set<string> {
+/** Returns resource file text without BOM and XML comments. */
+function readResourceText(file: string): string {
+	return fs.readFileSync(file, "utf8").replace(/^\uFEFF/, "").replace(/<!--[\s\S]*?-->/g, "");
+}
+
+/** Returns true when an <Items> or <Item> element lies outside every <Group> element of the resource text. */
+function hasItemsOutsideGroup(text: string): boolean {
+	const outside = text.replace(/<Group\b[^>]*\/>/g, "").replace(/<Group\b[^>]*>[\s\S]*?<\/Group\s*>/g, "");
+	return /<Items?\b/.test(outside);
+}
+
+/** Returns the set of Item Name values in a resource text. */
+function resourceKeys(text: string): Set<string> {
 	const keys = new Set<string>();
-	const text = fs.readFileSync(file, "utf8");
 	for (const match of text.matchAll(/<Item\s+Name="([^"]+)"/g)) {
 		keys.add(match[1]);
 	}
 	return keys;
 }
 
-/** Check B: each schema must have both ru-RU and en-US resource files, with matching keys. */
+/** Check B: each schema must have both ru-RU and en-US resource files, with items inside <Group> and matching keys. */
 function checkResources(schemaDirs: string[], issues: LintIssue[]): void {
 	for (const schemaDir of schemaDirs) {
 		const schema = path.basename(schemaDir);
@@ -129,6 +139,24 @@ function checkResources(schemaDirs: string[], issues: LintIssue[]): void {
 			const en = path.join(folderPath, "resource.en-US.xml");
 			const hasRu = fs.existsSync(ru);
 			const hasEn = fs.existsSync(en);
+			const texts = new Map<string, string>();
+			for (const [culture, file, exists] of [
+				["ru-RU", ru, hasRu],
+				["en-US", en, hasEn],
+			] as const) {
+				if (!exists) {
+					continue;
+				}
+				const text = readResourceText(file);
+				texts.set(culture, text);
+				if (hasItemsOutsideGroup(text)) {
+					issues.push({
+						schema,
+						level: "error",
+						message: `Resources/${entry.name}/resource.${culture}.xml: <Items> вне <Group Type="String"> — CRM не сохранит ресурсы`,
+					});
+				}
+			}
 			if (hasRu !== hasEn) {
 				const missing = hasRu ? "en-US" : "ru-RU";
 				issues.push({
@@ -141,8 +169,8 @@ function checkResources(schemaDirs: string[], issues: LintIssue[]): void {
 			if (!hasRu) {
 				continue;
 			}
-			const ruKeys = resourceKeys(ru);
-			const enKeys = resourceKeys(en);
+			const ruKeys = resourceKeys(texts.get("ru-RU") ?? "");
+			const enKeys = resourceKeys(texts.get("en-US") ?? "");
 			const onlyRu = [...ruKeys].filter((k) => !enKeys.has(k));
 			const onlyEn = [...enKeys].filter((k) => !ruKeys.has(k));
 			if (onlyRu.length > 0 || onlyEn.length > 0) {

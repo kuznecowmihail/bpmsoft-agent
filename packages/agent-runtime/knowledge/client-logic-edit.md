@@ -137,7 +137,7 @@ define("<Объект>Section", ["DefaultProfileHelper"], function(DefaultProfil
 - Запрет удаления — `checkCanDelete(items, callback, scope)`: проверить строки, при отказе `this.showInformationDialog(<текст>)` и `return`, иначе `this.callParent(arguments)`.
 - Колонки детали по умолчанию — переопределение `generateEntityProfile`: `DefaultProfileHelper.getEntityProfile(this.getProfileKey(), entitySchema.name, BPMSoft.GridType.LISTED, columns)` (у раздела то же делает `getDefaultSectionGridProfile`, см. выше). Колонки, нужные коду при любой настройке пользователя, добавляйте в запрос в `addGridDataColumns(esq)` (`esq.addColumn("<Колонка>")`).
 - Если у записи нет своей карточки, пункты меню «Копировать» и «Изменить» убираются: `getCopyRecordMenuItem: BPMSoft.emptyFn`, `getEditRecordMenuItem: BPMSoft.emptyFn`.
-- Запреты на клиенте — только удобство; настоящую защиту дублируйте слушателем на сервере (см. `source-code-edit.md`, «Слушатель событий объекта»).
+- Запреты на клиенте — только удобство; настоящую защиту дублируйте слушателем на сервере (см. `server-events-edit.md`, «Слушатель событий объекта»).
 
 ## ✅ Деталь только для просмотра
 **Подтверждено 07.10.2026** на `TestTicketPriorityLogDetail` (наследник `BaseGridDetailV2`, объект `TestTicketPriorityLog`): на детали нет добавления, изменения, копирования и удаления, двойной щелчок запись не открывает.

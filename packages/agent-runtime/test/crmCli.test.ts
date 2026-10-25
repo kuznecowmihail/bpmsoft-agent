@@ -134,6 +134,40 @@ describe("crm.js CLI", () => {
 		expect(output).not.toContain("s3cret-pass");
 	});
 
+	it("compile runs the update before Build", async () => {
+		const { fetchImpl, requests } = fakeFetch((request) => {
+			if (request.url.endsWith("/LoadPackagesToDB")) {
+				return new Response(JSON.stringify({ success: true, changes: [], errors: [] }), { status: 200 });
+			}
+			return new Response(JSON.stringify({ success: false, message: "сбой сборки", errors: [] }), { status: 200 });
+		});
+		const result = await runCrmCli(["compile", "--no-lint"], env, { ...baseDeps, fetchImpl });
+
+		const calls = requests.map((request) => request.url).filter((url) => !url.endsWith("/AuthService.svc/Login"));
+		expect(calls).toEqual([
+			"http://crm.test/ServiceModel/AppInstallerService.svc/LoadPackagesToDB",
+			"http://crm.test/ServiceModel/WorkspaceExplorerService.svc/Build",
+		]);
+		expect(result.code).toBe(1);
+		expect(result.text).toContain("Обновление из файловой системы выполнено.");
+		expect(result.text).toContain("Компиляция завершилась с ошибками");
+	});
+
+	it("compile does not start Build when the update fails", async () => {
+		const { fetchImpl, requests } = fakeFetch(() => new Response("внутренняя ошибка", { status: 500 }));
+		const result = await runCrmCli(["compile", "--no-lint"], env, { ...baseDeps, fetchImpl });
+
+		expect(result.code).toBe(1);
+		expect(result.text.startsWith("Компиляция не запускалась")).toBe(true);
+		expect(requests.some((request) => request.url.endsWith("/Build"))).toBe(false);
+	});
+
+	it("compile rejects unknown arguments", async () => {
+		const result = await runCrmCli(["compile", "--fast"], env, baseDeps);
+		expect(result.code).toBe(2);
+		expect(result.text).toContain("compile: лишние аргументы: --fast");
+	});
+
 	it("unknown command returns code 2 with usage", async () => {
 		const result = await runCrmCli(["bogus"], env, baseDeps);
 		expect(result.code).toBe(2);

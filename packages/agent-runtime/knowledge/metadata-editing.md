@@ -51,6 +51,12 @@
 - **ВАЖНО (правило качества агента)**: при СОЗДАНИИ или РЕДАКТИРОВАНИИ любой подписи/локализуемой строки — агент ОБЯЗАТЕЛЬНО должен создавать/обновлять ОБА культурных файла минимум `resource.ru-RU.xml` И `resource.en-US.xml` (не только одну культуру), даже если технически Designer второе не требует. Это стандарт качества при работе с локализацией, независимо от типа схемы (Entity/Process/ClientUnit).
 - Точный вид ключа зависит от типа схемы: `Columns.<Имя>.Caption` (объекты), `LocalizableStrings.<Ключ>.Value` (клиентские схемы), `BaseElements.<Имя>.Caption` (процессы верхнего уровня) / `EventsProcessSchema.BaseElements.<Имя>.Caption` (процесс событий внутри объекта) — см. конкретные `-edit.md` файлы.
 
+## 🧪 Раздел «Переводы» (SysTranslation)
+- Раздел «Переводы» хранит строки в `SysTranslation`: `Key` — `Configuration:<Схема>:<Ключ ресурса>` или `Data:<Таблица>.<Колонка>:<Id записи>`; значения по языкам — колонки `Language<N>` (на стенде `Language0` — en-US, `Language1` — ru-RU), признаки `IsChanged<N>` и `IsVerified<N>`. Строки создаёт действие «Актуализировать переводы».
+- «Применить переводы» (`TranslationService/ApplyTranslation`) применяет все изменённые строки стенда разом и пишет значение в `SysLocalizableValue` (`IsChanged = true`) пакета, где лежит ресурс, если пакет доступен для записи, иначе — в пакет по умолчанию для изменений пользователя (обычно `Custom`).
+- Если после правки `resource.<culture>.xml` и обновления подпись в интерфейсе не меняется — проверь, нет ли перевода того же ключа в другом пакете: `SysLocalizableValue` по `Key`, `Pkg/Custom/Resources/<Схема>.<Тип>/`.
+- Не проверено записью: применение затрагивает все изменённые переводы стенда, на общем стенде его не запускали.
+
 ## Обновление и компиляция инструментами CRM (crm_update_from_fs, crm_compile)
 - Если пользователь включил действия в CRM, агент сам выполняет «Обновить из файловой системы» и компиляцию изменённого с перезапуском; без этого — просит пользователя.
 - ✅ Ошибка загрузки называет только схему, не поле (13.10.2026): ищи причину в этой схеме скриптами `check-process.js` / `check-entity.js` и по выдержке журнала `PackagesSynchronization.log`.
@@ -58,6 +64,7 @@
 - ✅ Ошибка компиляции может быть в другой схеме, чем та, что правил агент (13.10.2026): компилируется вся конфигурация с загруженными изменениями. Иди по файлу и строке из ответа (`<Схема>.cs(<строка>,<колонка>): <код> <текст>`); если схема чужая — скажи пользователю, что ошибка не из твоей правки.
 - ✅ После изменения зависимостей пакета компиляция изменённого не перегенерирует уже загруженные схемы, у которых от этого меняется родитель или цепочка замещений (подтверждено в CRM, 23.10.2026: с новой зависимостью компиляция упала с прежней ошибкой в той же схеме). Обнови `ModifiedOnUtc` в `descriptor.json` каждой такой схемы, снова «Обновить из файловой системы» и компиляция. 🧪 Полная компиляция («Компилировать всё»), по наблюдению, тоже пересобирает их — не проверено.
 - Компиляция нужна после изменения C# (исходный код, слушатели, сервисы), процессов и объектов; клиентские схемы, данные и SQL-скрипты — только обновление и Ctrl+F5 у пользователя.
+- ⚠️ ✅ Компиляция без предварительного «Обновить из файловой системы» теряет новые файлы (24.10.2026): `WorkspaceExplorerService.Build` сначала выгружает пакеты из БД в файловую систему (`LoadPackagesToFileSystem` в `PackagesSynchronization.log`), и новые схемы, которых ещё нет в БД, исчезают из `Pkg`. Порядок всегда: обновление → компиляция. 🧪 Перезаписывает ли выгрузка изменённые, но не загруженные файлы — не проверялось.
 
 ## ✅ Как проверить «Обновить из файловой системы» и откатить боевую схему
 - Лог обновления — `[app]/Logs/<ГГГГ-ММ-ДД>/PackagesSynchronization.log`: этапы загрузки пакетов; для изменённых ресурсов — `Deleted/Changed/Added - <N> <culture> resource values for schema '<Имя>'`; для удалённых схем — `Schema '<Имя>' not found in <ManagerName>`.
@@ -65,142 +72,19 @@
 - Если `Pkg` стенда — git-репозиторий, правку боевой схемы откатывай так: `git diff -- <файлы схемы>` (убедись, что отличаются только твои правки), `git checkout -- <файлы>`, затем свежий `ModifiedOnUtc` в `descriptor.json`. Проверено 05.10.2026 на `ContactPageV2`.
 - Резервные копии не храни в `/tmp`: macOS очищает его, копии от 30.09 пропали к 05.10. Архив перед удалением — в постоянную папку. Агенту в приложении запись вне `Pkg` запрещена: откат — через git `Pkg`; если `Pkg` не под git — копию делает пользователь.
 
-## Данные из БД CRM (инструмент crm_db_query)
-- Если пользователь включил в приложении доступ к БД, у агента есть инструмент crm_db_query: один запрос `SELECT` или `WITH`, транзакция только для чтения, до 200 строк, колонки с паролями, хешами, токенами и ключами недоступны (запрос с ними отклоняется), составные значения (строка целиком, json) скрываются — перечисляй нужные колонки явно. Без инструмента — попроси пользователя выполнить запрос и прислать результат.
-- Для чего: Id записей, которых нет в `Pkg` (рабочие места `SysWorkplace`, записи базовых справочников, разделы залоченных пакетов в `SysModule` / `SysModuleEntity`), текущие значения системных настроек (`SysSettings` + `SysSettingsValue`), проверка после «Обновить из файловой системы» (записи данных пакета появились, SQL-скрипт выполнился).
-- Имена таблиц и колонок в PostgreSQL — в двойных кавычках, как в схеме объекта: `"SysModule"."Code"`; справочная колонка в таблице — с суффиксом `Id` (`"SysWorkplaceId"`).
-- Менять данные запросом нельзя — только файлами `Pkg` (данные пакета, SQL-скрипты пакета). Id записей проекта из БД в знания не пиши.
-- Объект или раздел из задачи сначала ищи в пакетах проекта, потом в БД: рядом бывает одноимённый базовый раздел (в `SysModule` у него другой `Code`). Сверяй `Code` с регистрацией в пакете; базовый предлагай, только если в проекте подходящего нет.
-- Названия базовых записей платформы в основной таблице могут быть на английском (`High`, `Call`, `To do`) — это культура, в которой запись создана; перевод — в `Sys<Объект>Lcz`. Ищи на обоих языках и показывай пользователю найденный Id вместе с названием.
-- Рабочее место и его разделы: `SysModuleInWorkplace` (`SysWorkplaceId`, `SysModuleId`, `Position`) + `SysWorkplace` (`Name`) + `SysModule` (`Code`, `Caption`).
-- Значение системной настройки: `SysSettings` (`Code`) + `SysSettingsValue` (`SysSettingsId`; значение — в `TextValue` / `IntegerValue` / `FloatValue` / `BooleanValue` и других колонках по типу).
-- Выключен ли процесс: строка в `SysProcessDisabled`, где `SysSchemaId` = `SysSchema.Id` процесса (поиск по `SysSchema.Name`).
-- ✅ Выполнился ли SQL-скрипт пакета: `SysPackageSqlScript` (`Name`, `NeedInstall`, `InstallType`, `ModifiedOn`, `LastError`). У выполненного скрипта `NeedInstall = false` (подтверждено запросом к БД, 23.10.2026: так у всех 7 выполненных скриптов тестовых пакетов; `true` — только у нескольких старых скриптов платформы, которые не устанавливались).
-- ✅ Metadata схем в БД (подтверждено запросами к БД на двух стендах, 23.10.2026): отдельных таблиц колонок схем нет (`SysEntitySchemaColumn`, `SysSchemaColumn`, `SysDataValueType` — «отношение не существует»). Полная metadata схемы — в `"VwSysSchemaInfo"."MetaData"` (bytea, текст diff-журнала): читать `convert_from("MetaData", 'UTF8')`, фильтр по `"Name"` и `"ManagerName"` (`EntitySchemaManager`); `left()` к bytea неприменим. Нужно, когда в файлах нет ни папки схемы в `Pkg`, ни класса в `Autogenerated`.
-- ✅ Колонки в PostgreSQL (подтверждено запросом к БД, 20.10.2026): колонки типа «Логическое», строковые (`character varying`, `text`) и целые создаются `NOT NULL` с умолчаниями `false`, `''` и `0` — даже если в схеме нет обязательности (`E2`) и значения по умолчанию; `NULL` допускают только справочные (`uuid`) колонки. В SQL-скриптах и запросах пустую строку проверяй как `= ''`, а не `IS NULL`; при `INSERT` не передавай `NULL` в такие колонки.
-- ✅ Локализуемые строки схем в БД — таблица `"SysLocalizableValue"` (подтверждено запросом к БД, 23.10.2026): `"SysSchemaId"` (Id схемы в `"SysSchema"`, не UId), `"SysCultureId"` (`"SysCulture"."Name"` = `ru-RU`), `"Key"` (например `Parameters.<Имя>.Caption`), `"Value"`, `"ResourceManager"`, `"SysPackageId"`. Колонок `ResourcesKey` / `ResourceKey` нет.
-- ✅ Проверено в CRM (12.10.2026): рабочие места и привязки разделов, Id записей базовых справочников, значения системных настроек, выключение процесса, проверка созданных записей после «Обновить из файловой системы».
-
-## Как узнать identity и колонки ЗАБЛОКИРОВАННЫХ (Autogenerated) схем, у которых нет своей папки в Pkg
-- ✅ GUID типов данных (`DataTypeValueUId` в `descriptor.json` наборов данных) — в `[app]/Resources/ui/BPMSoft/core/enums/sysenums.js`; (подтверждено в CRM 08.10.2026: наборы с этими типами загрузились). UId колонок системных таблиц (`Lookup`, `SysModule`, `SysDetail`, `SysImage`, `SysSettings`…) — в `Autogenerated/Src/<Таблица>Schema.*.cs`.
-- ✅ Таблицы `DataValueType` в БД нет (запрос к ней — «relation does not exist»): название типа по GUID ищи только в `[app]/Resources/ui/BPMSoft/core/enums/sysenums.js` (подтверждено по коду платформы, 22.10.2026). Частые GUID (тип параметров процессов и колонок): `8b3f29bb-ea14-4ce5-a5c5-293a929b6ba2` Text, `325a73b8-0f47-44a0-8412-7606f78003ac` ShortText, `ddb3a1ee-07e8-4d62-b7a9-d0e618b00fbd` MediumText, `5ca35f10-a101-4c67-a96a-383da6afacfc` LongText (в C# — `string`), `c0f04627-4620-4bc0-84e5-9419dc8516b1` MaxSizeText, `394e160f-c8e0-46fa-9c0d-75d97e9e9169` MetaDataText, `4b51a8b5-1ee9-4437-9d58-f35e083cbcdf` ObjectList, `651ec16f-d140-46db-b9e2-825c985a8ac2` CompositeObjectList, `b53eaa2a-4bb7-4a6b-9f4f-58ccab293e31` EntityColumnMappingCollection. 🧪 Подписи в Designer по длине («Строка (50 / 250 / 500 символов)» для Short / Medium / Long) — по наблюдениям, не сверены.
-Базовые объекты BPMSoft (Contact, Lead, BaseLookup и т.д.) генерируются автоматически, не имеют собственной папки в `Pkg` и раньше считались недоступными для чтения из файловой системы дампа проекта. Однако существует два надёжных источника для узнавания их `RealUId` (стабильного идентификатора) и определений колонок (вместе с `UId` и типом).
-
-**Источник 1: `[app]/conf/content/<Имя>.js`** — JavaScript-объект с определением колонок схемы. Пример реального файла `Contact.js`:
-```js
-BirthDate: {
-    uId: "3f08db69-6d2f-4b1c-87a4-acddc6c3b9d6",
-    name: "BirthDate",
-    caption: resources.localizableStrings.BirthDateCaption,
-    dataValueType: BPMSoft.DataValueType.DATE,
-    usageType: 0,
-    isInherited: false,
-    isValueCloneable: true
-},
-Age: {
-    uId: "bcdc7a32-4332-4caf-858d-0078b56856fe",
-    name: "Age",
-    caption: resources.localizableStrings.AgeCaption,
-    dataValueType: BPMSoft.DataValueType.INTEGER,
-    usageType: 0,
-    isInherited: false,
-    isValueCloneable: true
-}
-```
-Даёт: `UId` колонки, имя, тип (`dataValueType`), и для lookup-колонок — `referenceSchemaName` (ТОЛЬКО имя целевой схемы, БЕЗ её `UId`).
-
-**Источник 2: `[app]/BPMSoft.Configuration/Autogenerated/Src/<Имя>Schema.<Пакет>.cs`** — C#-класс схемы. Содержит:
-- `RealUId` — **стабильный UId САМОЙ схемы-объекта**, используется везде в проекте как значение `S4`/`ReferenceSchemaUId`/`FC2`/`EntitySchemaUId` при ссылке на эту схему из других мест.
-- `ParentSchemaUId` — UId родительской схемы.
-- ✅ **У замещённого объекта два `RealUId`** (06.10.2026, `ActivityPriority`): `ActivityPrioritySchema.Base.cs` — `b934f48c-5dea-49b9-bde3-697cb4be5d8b`, `ActivityPrioritySchema.<Пакет>.cs` — свой UId (UId схемы-замещения). Для ссылок (`S4`, `ReferenceSchemaUId`) бери `RealUId` базового слоя — так ссылаются и существующие колонки (`Activity.Priority`); lookup-колонка `TestTicket.TestPriority` с базовым UId работает.
-- В методах `Create<Колонка>Column()` — `UId` колонки и (для lookup) `ReferenceSchemaUId` (реальный UId цели).
-- ⚠️ 🧪 Классов схем `<Имя>Schema.<Пакет>.cs` в `Autogenerated/Src` может не быть (по логам другого стенда: нет ни одного `AccountSchema.*`/`ContactSchema.*`, при этом классы объектов `<Имя>.<Пакет>.cs`, например `Account.Base.cs`, есть). Тогда колонки бери из Источника 1 (`[app]/conf/content/<Имя>.js`), `UId` схемы — из `"SysSchema"` в БД (`"Name"`, `"ManagerName" = 'EntitySchemaManager'`, базовая схема — `"ExtendParent" = false`), остальное — из `"VwSysSchemaInfo"."MetaData"` (раздел «Данные из БД CRM»).
-
-**Перекрёстные подтверждения (реальные файлы проекта, дополнительное доказательство):**
-
-1. **Lead.QualifiedContact ↔ Contact.RealUId**:
-   - `LeadSchema.Lead.cs`: колонка `QualifiedContact` имеет `UId = "ad490d58-054a-4d85-9246-dd8466eb3983"`, `ReferenceSchemaUId = new Guid("16be3651-8fe2-4159-8dd0-a803d4683dd3")`.
-   - `ContactSchema.Base.cs`: `RealUId = new Guid("16be3651-8fe2-4159-8dd0-a803d4683dd3")` — **точное совпадение**.
-
-2. **Справочник-наследник: descriptor.Parent ↔ BaseLookup.RealUId**:
-   - `Pkg/<Пакет>/Schemas/<Справочник>/descriptor.json` → `Descriptor.Parent.UId = "11ab4bcb-9b23-4b6d-9c86-520fae925d75"`, `Parent.Name = "BaseLookup"`.
-   - `BaseLookupSchema.Base.cs`: `RealUId = new Guid("11ab4bcb-9b23-4b6d-9c86-520fae925d75")` — **точное совпадение**. Это закрывает вопрос про Parent schema UId для Entity: на самом деле для Entity-схем (как и для клиентских схем) identity родителя хранится в `descriptor.json` → `Descriptor.Parent.UId`/`Parent.Name`, а НЕ в metadata.json.
-
-3. **LeadPageV2 canonical-Parent-UId ↔ новая карточка-наследник**:
-   - `Pkg/<Пакет>/Schemas/LeadPageV2/descriptor.json` (override с `ExtendParent: true`) имеет свой `Descriptor.UId`, `Parent.UId = "ddf8941f-92f3-4b10-9f59-faab18c12f46"` (Parent.Name = "LeadPageV2").
-   - `Pkg/<Пакет>/Schemas/<НоваяКарточка>/descriptor.json` (новая схема, наследующая LeadPageV2 под новым именем) имеет `Parent.UId = "ddf8941f-92f3-4b10-9f59-faab18c12f46"` — **точное совпадение**. Значит, при создании новой клиентской схемы, наследующей override-схему, каноническим Parent-UId является `Parent.UId` ИЗ ФАЙЛА override-схемы, а не собственный `Descriptor.UId` этого override.
-
-**Главный вывод**: поле `RealUId` C#-класса схемы = тот же самый идентификатор, что записывается в других местах проекта как `S4`/`ReferenceSchemaUId`/`FC2`/`EntitySchemaUId`/`descriptor.json.Parent.UId` — **единый стабильный идентификатор схемы на уровне всего проекта, независимо от того, есть у схемы своя папка в Pkg или нет**. Это позволяет использовать Autogenerated C#-классы как достоверный источник UId даже для базовых систем объектов, не имеющих видимого представления в Pkg.
+## Данные из БД CRM и identity заблокированных схем
+Инструмент `crm_db_query` и как узнать UId и колонки схем без папки в `Pkg` — в `crm-db.md`.
 
 ## ✅ Как расшифровать неизвестное поле metadata: сверка с Autogenerated C#
 Для залоченных и уже скомпилированных схем `Autogenerated/Src/<Имя>Schema.<Пакет>.cs` содержит те же данные, что `metadata.json`, но с человеческими именами свойств (`RequirementType`, `IsIndexed`, `DefValue`, `IsUnique`…). Метод: собрать по всем схемам проекта пары «элемент в `metadata.json` по UId ↔ тот же элемент в C#» и посчитать, какое свойство C# присутствует ровно тогда, когда присутствует поле. Совпадение 100% на сотнях примеров — надёжная расшифровка без экспериментов в Designer. Числовые значения enum смотреть в XML-документации `[app]/BPMSoft.*.xml` (`platform-api.md`). Так расшифрованы все поля `E*` колонок (см. `entity.md`).
 
-## Известный статус: что реально подтверждено ЗАПИСЬЮ (не только чтением)
-| Операция | Тип схемы | Статус |
-|---|---|---|
-| Добавить простую колонку (`D2`) и её подпись в `resource.xml` | Entity | ✅ подтверждено (`TestEntity`, колонка `ManualWrite`), см. `entity-edit.md` |
-| Создать объект с нуля за один шаг: 4 файла + ресурсы, колонка, событие `EG1`/`CK2` с флагом `D20.FA11` | Entity | ✅ подтверждено (с 28.09.2026 шаблон содержит обязательную `- MetaData.Schema.D1`, без неё объект виртуальный) (`TestCounter2` открылся в CRM без ошибок, событие активно), см. `entity-edit.md` |
-| Скрипты событий «Перед сохранением» / «После сохранения» (что сохраняется, как дописать после сохранения) | Entity | ✅ `entity-edit.md` |
-| Соответствие чекбоксов событий объекта и флагов `D20.FA<N>` | Entity | ✅ подтверждено (серия из 10 экспериментов), см. `entity.md` |
-| Override существующего объекта (`ExtendParent: true`) + lookup-колонка (`S4`/`E6`/`E17`/`E18`) | Entity | ✅ подтверждено (`TimeZone` с колонкой `TestContact` → `Contact`), см. `entity-edit.md` |
-| Колонки разных типов со свойствами: обязательность `E2`, значение по умолчанию `E12` (константа и системное значение), индексируемая `E6`, журнал `E16`, многострочный `E19` | Entity | ✅ подтверждено (`TestColumns`, 7 колонок), см. `entity-edit.md` |
-| Удалить схему: папки `Schemas/<Имя>/` и `Resources/<Имя>.<Категория>/`, затем «Обновить из файловой системы» в CRM | любой | ✅ подтверждено записью 05.10.2026: 25 схем разных типов и SQL-скрипт за одно обновление, см. `entity-edit.md` |
-| Собрать полную иерархию клиентской схемы и все секции родителя (скрипт) | ClientUnit | ✅ проверено чтением на 3 схемах, 0 ошибок; по нему написаны и подтверждены в CRM все клиентские схемы шагов 1–13 (28–29.09.2026) ✅, см. `client-schemas-edit.md` |
-| Добавить индекс (`D6`): уникальный, составной, сортировка «По убыванию» (`G2`) | Entity | ✅ подтверждено (`TestColumns`), см. `entity-edit.md` |
-| Изменить колонку (подпись, тип `S2`, обязательность `E2` строками журнала) и удалить колонку | Entity | ✅ подтверждено (`TestColumns`), см. `entity-edit.md` |
-| Новая карточка (Page) с нуля: вёрстка (`insert`), строки, атрибуты с `dependencies`, методы с `callParent`, `rules`, валидация, кнопка | ClientUnit | ✅ подтверждено (`TestColumnsPage`), см. `client-pages-edit.md` |
-| Замещение карточки: `merge`/`remove` элементов родителя, порядок вкладок через `order`, частичное переопределение атрибута, `getActions`, совмещённый режим | ClientUnit | ✅ подтверждено (`ProductPageV2`), см. `client-pages-edit.md` |
-| Новая деталь-реестр, подключение к карточке (`details` + `diff`, заголовок `<Ключ>DetailCaptionOnPage`), регистрация `SysDetail`, правка боевого замещения (CRLF) | ClientUnit / Data | ✅ подтверждено (`TestColumnsDetail` на `ContactPageV2`), см. `client-pages-edit.md`, `registration-edit.md` |
-| Замещение детали: `initDefaultCaption` с `callParent`, кнопка на панели, `remove` колонки реестра | ClientUnit | ✅ подтверждено (`ContactAddressDetailV2`), см. `client-pages-edit.md` |
-| Новый раздел (Section) с `getSectionActions`; кнопка карточки в совмещённом режиме (`publishPropertyValueToSection` + `CombinedModeActionButtonsCardLeftContainer` / `onCardAction`) | ClientUnit | ✅ подтверждено (`TestColumnsSection`), см. `client-pages-edit.md` |
-| Замещение раздела: кнопка в панели реестра, `merge` кнопки родителя, `getSectionActions`, кнопка раздела → метод замещения карточки (`onCardAction` + `tag`) | ClientUnit | ✅ подтверждено (`ProductSectionV2`), см. `client-pages-edit.md` |
-| Признак замещения `B7` в metadata замещающей схемы (клиентской и объекта) | ClientUnit / Entity | ✅ подтверждено: без `= MetaData.Schema.B7 true` клиент собирает замещение без базовых слоёв; см. `client-schemas.md` |
-| Наследник своей карточки (`B7 false`) и одноимённые элементы в разных контейнерах (`merge`/`remove` берут первый по обходу вёрстки) | ClientUnit | ✅ `client-schemas.md`, `client-pages-edit.md` |
-| Замещение мини-карточки (`merge`/`insert` в `MiniPage`, `onEntityInitialized`) | ClientUnit | ✅ подтверждено (`LeadMiniPage`), см. `client-pages-edit.md` |
-| Новая мини-карточка + регистрация в `SysModuleEdit` (`MiniPageSchemaUId`, `MiniPageModes`, `IsForceUpdate`) | ClientUnit / Data | ✅ подтверждено (`TestColumnsMiniPage`), см. `client-pages-edit.md` |
-| Новый модуль (`BaseModule`, формат B), встраивание через контейнер + `sandbox.loadModule`, сообщения PTP в обе стороны | ClientUnit | ✅ подтверждено (`TestModule` в `TestColumnsPage`), см. `client-logic-edit.md` |
-| Новый миксин (`configuration.mixins.*`, `Ext.create`), подключение через зависимость `define` + блок `mixins`, строки миксина | ClientUnit | ✅ подтверждено (`TestMixin` в `TestColumnsPage`), см. `client-schemas-edit.md` |
-| Патч существующего класса (`Ext override`, отдельная схема `Module`), подключение через зависимость `define` | ClientUnit | ✅ подтверждено (`TestModuleOverride`), см. `client-schemas-edit.md` |
-| Стили схемы (`.less` + `css!<Схема>`), отдельная схема стилей, картинки (`HD8` + `Images.<GUID>.Image`, `imageConfig`) | ClientUnit | ✅ подтверждено (`TestColumnsPage`, `TestStylesCSS`), см. `client-schemas-edit.md` |
-| Процесс с нуля (Старт → Задание-сценарий → Завершение) | Process | ✅ `process-edit.md` |
-| Настройки процесса, параметры процесса, элементы «Читать данные» (в т.ч. агрегация), «Формула», «Добавить данные», «Изменить данные», «Удалить данные» | Process | ✅ `process-edit.md` (настройки, параметры), `process-data-edit.md` (элементы) |
-| Шлюзы (исключающий, параллельный, «ИЛИ»), условные потоки и потоки по умолчанию | Process | ✅ `process-flow-edit.md` |
-| Методы процесса (`BK32`), `using` (`B3`), `Set`/`Get` между заданиями | Process | ✅ `process-flow-edit.md` |
-| Стартовый сигнал по объекту (добавлена / изменена колонка + фильтр) | Process | ✅ `process-flow-edit.md` |
-| Стартовый таймер (cron), промежуточный таймер, ожидание сигнала по записи | Process | ✅ `process-flow-edit.md` |
-| Запуск процесса с клиента (`ProcessModuleUtilities`) и из C# (`ProcessExecutor`) | Process | ✅ `process-edit.md` |
-| Подпроцесс с входными и выходными параметрами | Process | ✅ `process-flow-edit.md` |
-| «Связать объект с процессом»; дорожки (в Designer стенда не поддерживаются — одна дорожка) | Process | ✅ `process-tasks-edit.md`, дорожки — `process-edit.md` |
-| Своё действие процесса (`ProcessUserTaskSchemaManager`, `.cs`) с нуля, элемент «Выполнить действие процесса» в процессе, изменение действия и обновление процессов, где оно стоит, удаление и переименование параметра действия | ProcessUserTask / Process | ✅ `user-task-edit.md` |
-| Преднастроенная страница: своя страница (наследник `BasePageSimpleProcessTemplate`, поля в `HD11`) и элемент процесса клонированием | Process / ClientUnit | ✅ `process-tasks-edit.md` |
-| Элемент «Отправить email» (произвольное письмо) | Process | ✅ `process-tasks-edit.md` (структура и Designer; доставка не проверена — на стенде нет почтового ящика) |
-| Сквозной процесс по событию объекта: сигнал с фильтром по пути, «Читать данные» и «Изменить данные» с фильтром по параметру, формулы с датами (задача 3 — возраст контакта при создании лида) | Process | ✅ `process-tasks-edit.md` |
-| Генерирующий сигнал и старт по произвольному сигналу (формат Designer, запуск проверен) | Process | ✅ `process-flow-edit.md` |
-| Элемент «Автогенерируемая страница» (поле, кнопки, чтение введённого значения и нажатой кнопки) | Process | ✅ `process-tasks-edit.md` |
-| Подпроцесс по коллекции записей (multi-instance) и «Читать данные» в режиме коллекции | Process | ✅ `process-flow-edit.md`, «Читать данные» в режиме коллекции — `process-data-edit.md` |
-| Макросы в значениях параметров (текущие дата, время, пользователь, системная настройка, запись справочника) | Process | ✅ `process-edit.md` |
-| Элементы «Выполнить задачу», «Открыть страницу редактирования» (с предзаполнением полей), «Вопрос пользователю» | Process | ✅ `process-tasks-edit.md` (с ветвлением по ответу и чтением выбранного ответа) |
-| Прочие элементы процессов: «Отправить email», преднастроенная страница, «Вопрос пользователю», «Открыть страницу редактирования», «Связать объект с процессом», «Выполнить действие процесса», сигналы, таймеры, подпроцессы | Process | ✅ 09.10.2026 (process-tasks-edit.md); «Выполнить задачу» и автогенерируемая страница на проекте без образцов — 🧪 |
-| Веб-сервис (`ServiceSchemaManager`): сервис, метод, параметры; элемент «Вызвать веб-сервис» | Service / Process | ✅ подтверждено записью в CRM (21.10.2026, `TestWebService` + `TestProcWebService`: сервис, элемент, выполнение); см. `web-service.md`, `web-service-edit.md` |
-| Аутентификация REST-сервиса (`IQ5` Basic, `IR4`), значения из системных настроек (`IV2: 2`), вызов из C# (`IServiceSchemaClient`) | Service / SourceCode | ✅ подтверждено (22.10.2026), `web-service.md`, `web-service-edit.md` |
-| SqlScript (новый скрипт, выполняется при «Обновить из файловой системы») | SqlScript | ✅ `sql-script-edit.md` |
-| SourceCode: класс-помощник с локализуемой строкой, REST-сервис, слушатель событий объекта, изменение кода, вызов из процесса, слушатель событий приложения и ClassFactory, подмена платформенного класса (ReBind), чтение системной настройки | SourceCode | ✅ `source-code-edit.md` |
-| Data: системная настройка и её значение (`SysSettings` + `SysSettingsValue`), записи справочника с переводом, изменение данных и IsForceUpdate, удаление записей SQL-скриптом, набор для таблицы с колонками-справочниками, числом, логическим и датой (`InstallType` 1/2 при обновлении из ФС строк не загружают) | Data | ✅ `data-edit.md` |
-| Data: наборы регистрации, справочника, детали, иконки, системной настройки | Data | ✅ 08.10.2026 (registration-edit.md, data-edit.md, templates/data/); прочие таблицы — 🧪 |
-| Регистрация раздела (`SysModuleEntity`, `SysModule`, `SysModuleEdit`, `SysModuleInWorkplace`) и детали (`SysDetail`) | Data | ✅ подтверждено (раздел `TestColumns`); мини-карточка (`MiniPageSchemaUId` + `MiniPageModes` в строке `SysModuleEdit` нужного типа) — ✅ (`LeadMiniPage` для типа «Партнёры»), см. `registration-edit.md` |
-| Справочник в разделе «Справочники» (набор `Lookup_<Объект>`, таблица `Lookup`) | Data | ✅ `registration-edit.md` |
-| Колонки реестра нового раздела по умолчанию (переопределение `getDefaultSectionGridProfile`) | ClientUnit | ✅ подтверждено 06.10.2026 (`TestTicketSection`), см. `client-logic-edit.md` |
-| Редактируемая деталь (`ConfigurationGrid`, запреты по строке) | ClientUnit | ✅ подтверждено 06.10.2026 (`TestTicketCommentDetail`), см. `client-logic-edit.md` |
-| Деталь только для просмотра (без добавления, изменения, копирования, удаления) | ClientUnit | ✅ подтверждено 07.10.2026 (`TestTicketPriorityLogDetail`), см. `client-logic-edit.md` |
-| Подсказка у поля карточки (`tip` с `bindTo` на строку ресурсов) | ClientUnit | ✅ подтверждено записью в CRM (15.10.2026), рецепт — `client-pages-edit.md` |
-| Журнал изменений объекта (`D24` + `E16` у колонок, таблица `Sys<Объект>Log`) | Entity | ✅ подтверждено (21.10.2026), `entity-edit.md` |
-| Администрирование по операциям (`D15`), по записям (`D17`), по колонкам (`D16`); права по операциям и системные операции данными, права по умолчанию и на колонки SQL-скриптом | Entity / Data / SqlScript | ✅ подтверждено (21.10.2026), `rights-edit.md` |
-| Порядок SQL-скриптов через `DependsOn` (`{UId, Name}`) | SqlScript | ✅ подтверждено (21.10.2026), `sql-script.md` |
-| Набор данных с `InstallType: 2` при «Обновить из файловой системы» (обновляет существующие записи, новые не добавляет) | Data | ✅ подтверждено (21.10.2026), `data.md` |
-| Иерархический справочник (наследник `BaseHierarchicalLookup`, переопределение `Parent`), деактивация записей `D32`, значения по умолчанию `CurrentDate`/`CurrentUser`/`SequentialGuid`, ссылка на представление с `E8` | Entity | ✅ подтверждено (21.10.2026), `entity-edit.md` |
-| Группы в разделе: `<Объект>Folder` (`BaseFolder`) и `<Объект>InFolder` (`BaseItemInFolder`), `FolderMode`, `UseStaticFolders` в разделе | Entity / Data / ClientUnit | ✅ подтверждено (21.10.2026), `registration-edit.md` |
-| Новое рабочее место (`SysWorkplace` + `SysModuleInWorkplace` + `SysAdminUnitInWorkplace` данными) | Data | ✅ подтверждено (21.10.2026), `registration-edit.md` |
-| Карточки по типам (`TypeColumnUId` в `SysModuleEntity`, строки `SysModuleEdit` с `TypeColumnValue`, `ActionKindName`/`ActionKindCaption`) | Data | ✅ подтверждено (21.10.2026), `registration-edit.md` |
+## Что подтверждено записью
+Таблица по типам схем — в `knowledge-status.md`. Подтвердил рецепт записью в CRM — обнови строку там.
+
+## ✅ Порядок замещений между пакетами (подтверждено на реальных схемах стенда, 24.10.2026)
+- Цепочка замещений одной схемы идёт по зависимостям пакетов: пакет, который зависит от другого, замещает поверх него. Пример: объект замещён в пакетах `<Пакет1>` и `<Пакет2>`, `<Пакет2>` зависит от `<Пакет1>` — итоговые классы `<Объект>`, `<Объект>Schema`, `<Объект>EventsProcess` генерируются в `[app]/BPMSoft.Configuration/Autogenerated/Src/<Объект>Schema.<Пакет2>.cs` и наследуют уровень `<Пакет1>`.
+- Промежуточные уровни называются `<Объект>_<Пакет>_<Maintainer>` (класс объекта) и `<Объект>_<Пакет>EventsProcess` (процесс событий). Посмотреть цепочку: `grep -h 'public class <Объект> :' [app]/BPMSoft.Configuration/Autogenerated/Src/<Объект>Schema.*.cs` и SQL `SELECT p."Name" FROM "SysSchema" s JOIN "SysPackage" p ON p."Id" = s."SysPackageId" WHERE s."Name" = '<Объект>'`.
+- Если пакет с замещением родителя не входит в зависимости пакета наследника — ошибка `CS0311` (`errors.md`, `entity-edit.md`). 🧪 Порядок двух замещений в пакетах, не зависящих друг от друга, не проверялся — связывай такие пакеты зависимостью.
 
 ## Расширение — новые типы схем
 Этот же формат `metadata.json` встречается и у других менеджеров схем:
@@ -230,8 +114,12 @@ Age: {
 - Описание внешнего REST-сервиса для элемента процесса «Вызвать веб-сервис»: URI, методы, параметры запроса и ответа.
 - **Формат B (плоский JSON)**, три файла (`descriptor.json`, `metadata.json`, `properties.json`) и ресурсы `Resources/<Имя>.Service/`; `.cs` нет.
 
+### ✅ DcmSchemaManager (кейс)
+**Создано**: файлы `dcm.md` (факты) + `dcm-edit.md` (рецепты).
+- Стадии записи объекта раздела и шаги на них; настройка раздела и связь кейса с ней — наборы `SysDcmSettings` и `SysDcmSchemaInSettings`.
+- **Формат B (плоский JSON)**, три файла (`descriptor.json`, `metadata.json`, `properties.json`) и ресурсы `Resources/<Имя>.Dcm/`; `.cs` нет.
+
 ### Ещё не описанные типы
-- `DcmSchemaManager` (10 схем) — кейсы со стадиями (DCM).
 - Папки пакета `Files` и `Assemblies`; `descriptor.json` самого пакета (зависимости).
 - Преднастроенная страница и своё действие процесса уже описаны: `process-tasks-edit.md`, `user-task.md` + `user-task-edit.md`.
 

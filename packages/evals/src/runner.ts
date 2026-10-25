@@ -88,6 +88,18 @@ export function buildQueryArgs(config: EvalConfig, provider: Provider): Record<s
 	return { cwd: pkgRoot, readRoot: config.appRoot };
 }
 
+/** Variant parameters of the Cursor model: cursorModelParams from local.json, only for models.cursor (another --model runs in its default variant). */
+export function cursorModelParamsFor(config: EvalConfig, model?: string): Array<{ id: string; value: string }> | undefined {
+	const params = config.cursorModelParams;
+	if (!params || params.length === 0) {
+		return undefined;
+	}
+	if (model !== undefined && model !== config.models?.cursor) {
+		return undefined;
+	}
+	return params;
+}
+
 /** Builds the query function for a provider. API keys come from environment variables only. */
 export function createQueryFn(config: EvalConfig, provider: Provider, model?: string): QueryFn {
 	const chosen = model ?? config.models?.[provider];
@@ -120,6 +132,7 @@ export function createQueryFn(config: EvalConfig, provider: Provider, model?: st
 			...buildQueryArgs(config, "cursor"),
 			apiKey,
 			model: chosen,
+			modelParams: cursorModelParamsFor(config, model),
 			prompt: args.prompt,
 			resume: args.resume,
 			requestToolPermission: args.requestToolPermission,

@@ -28,7 +28,7 @@ export interface LocalToolsOptions {
 	signal?: AbortSignal;
 }
 
-export const LOCAL_TOOL_NAMES = ["read_file", "list_dir", "glob_files", "grep_files", "write_file", "edit_file", "run_shell"];
+export const LOCAL_TOOL_NAMES = ["read_file", "read_files", "list_dir", "glob_files", "grep_files", "write_file", "edit_file", "run_shell"];
 
 /** Output limit of one tool result, in characters. */
 const MAX_OUTPUT = 30000;
@@ -36,6 +36,10 @@ const MAX_OUTPUT = 30000;
 const DEFAULT_READ_LIMIT = 2000;
 /** Longer lines are cut in read_file output. */
 const MAX_LINE_LENGTH = 2000;
+/** Files per read_files call. */
+const MAX_READ_FILES = 20;
+/** Output limit of one read_files result, in characters: all files together. */
+const READ_FILES_TOTAL = MAX_OUTPUT * 2;
 /** Entries shown by list_dir. */
 const MAX_LIST_ENTRIES = 500;
 /** Files shown by glob_files. */
@@ -107,6 +111,22 @@ function optionalNumber(args: Record<string, unknown>, key: string): number | un
 
 function optionalBoolean(args: Record<string, unknown>, key: string): boolean {
 	return args[key] === true;
+}
+
+/** List of strings: an array, a JSON array in a string, or one string; empty strings and non-strings are dropped. */
+function optionalStringArray(args: Record<string, unknown>, key: string): string[] {
+	let value = args[key];
+	if (typeof value === "string" && value.trim().startsWith("[")) {
+		try {
+			value = JSON.parse(value);
+		} catch {
+			// not JSON — one path
+		}
+	}
+	if (typeof value === "string") {
+		return value === "" ? [] : [value];
+	}
+	return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string" && item !== "") : [];
 }
 
 /** Wraps a tool body: any exception becomes an error result instead of breaking the agent loop. */
@@ -295,6 +315,65 @@ export function createLocalTools(options: LocalToolsOptions): AppTool[] {
 	const cwd = options.cwd;
 	const resolvePath = (p: string) => path.resolve(cwd, p);
 
+	/** Reads one text file as numbered lines, within `budget` characters. Access is checked as for read_file. */
+	const readTextFile = (filePath: string, offsetArg: number | undefined, limitArg: number | undefined, budget: number): AppToolResult => {
+		const abs = resolvePath(filePath);
+		const decision = checkToolAccess("Read", { file_path: abs }, cwd, policy);
+		if (!decision.allowed) {
+			return denied(decision);
+		}
+		if (fs.statSync(abs).isDirectory()) {
+			return fail("Это папка — используй list_dir");
+		}
+		const buffer = fs.readFileSync(abs);
+		if (buffer.subarray(0, 8000).includes(0)) {
+			return fail("Двоичный файл — как текст его прочитать нельзя");
+		}
+
+		let text = buffer.toString("utf8");
+		const hasBom = text.startsWith("\uFEFF");
+		if (hasBom) {
+			text = text.slice(1);
+		}
+		const lines = text.split("\n").map((line) => (line.endsWith("\r") ? line.slice(0, -1) : line));
+		if (lines.length > 0 && lines[lines.length - 1] === "") {
+			lines.pop();
+		}
+
+		const out: string[] = [];
+		if (hasBom) {
+			out.push("[файл начинается с BOM]");
+		}
+		if (lines.length === 0) {
+			out.push("(файл пуст)");
+			return ok(out.join("\n"));
+		}
+		const offset = Math.max(1, Math.floor(offsetArg ?? 1));
+		const limit = Math.max(1, Math.floor(limitArg ?? DEFAULT_READ_LIMIT));
+		if (offset > lines.length) {
+			return fail(`В файле ${lines.length} строк, offset ${offset} за пределами файла`);
+		}
+		const start = offset - 1;
+		const end = Math.min(lines.length, start + limit);
+		// Character budget of the result, with room reserved for the tail note.
+		let size = out.reduce((sum, line) => sum + line.length + 1, 0);
+		let last = start;
+		for (let i = start; i < end; i++) {
+			const line = lines[i].length > MAX_LINE_LENGTH ? `${lines[i].slice(0, MAX_LINE_LENGTH)}… [строка обрезана]` : lines[i];
+			const numbered = `${String(i + 1).padStart(6)}\t${line}`;
+			if (i > start && size + numbered.length + 1 > budget - 200) {
+				break;
+			}
+			out.push(numbered);
+			size += numbered.length + 1;
+			last = i + 1;
+		}
+		if (last < lines.length) {
+			out.push(`… показаны строки ${offset}–${last} из ${lines.length} — читай с offset ${last + 1}`);
+		}
+		return ok(truncate(out.join("\n")));
+	};
+
 	const readFile = defineTool(
 		"read_file",
 		"Читает текстовый файл с номерами строк (путь абсолютный или относительно Pkg). Используй вместо встроенного Read. Файлы с секретами недоступны.",
@@ -303,62 +382,52 @@ export function createLocalTools(options: LocalToolsOptions): AppTool[] {
 			offset: { type: "number", description: "Номер первой строки, с 1", optional: true },
 			limit: { type: "number", description: "Сколько строк прочитать, по умолчанию 2000", optional: true }
 		},
+		async (args) => readTextFile(requireString(args, "path"), optionalNumber(args, "offset"), optionalNumber(args, "limit"), MAX_OUTPUT)
+	);
+
+	const readFiles = defineTool(
+		"read_files",
+		`Читает сразу несколько текстовых файлов (до ${MAX_READ_FILES}) одним вызовом — каждый целиком, с номерами строк, под заголовком «==> путь <==». Используй вместо нескольких read_file подряд. Общий объём ответа ограничен: не поместившиеся файлы перечислены в конце — прочитай их следующим вызовом. Файлы с секретами недоступны.`,
+		{
+			paths: { type: "string[]", description: `Пути к файлам: абсолютные или относительно Pkg, до ${MAX_READ_FILES}` }
+		},
 		async (args) => {
-			const abs = resolvePath(requireString(args, "path"));
-			const decision = checkToolAccess("Read", { file_path: abs }, cwd, policy);
-			if (!decision.allowed) {
-				return denied(decision);
+			const paths = [...new Set(optionalStringArray(args, "paths"))];
+			if (paths.length === 0) {
+				return fail("Не указан параметр paths — список путей к файлам");
 			}
-			if (fs.statSync(abs).isDirectory()) {
-				return fail("Это папка — используй list_dir");
+			if (paths.length > MAX_READ_FILES) {
+				return fail(`За один вызов — не больше ${MAX_READ_FILES} файлов, передано ${paths.length}`);
 			}
-			const buffer = fs.readFileSync(abs);
-			if (buffer.subarray(0, 8000).includes(0)) {
-				return fail("Двоичный файл — как текст его прочитать нельзя");
-			}
-
-			let text = buffer.toString("utf8");
-			const hasBom = text.startsWith("\uFEFF");
-			if (hasBom) {
-				text = text.slice(1);
-			}
-			const lines = text.split("\n").map((line) => (line.endsWith("\r") ? line.slice(0, -1) : line));
-			if (lines.length > 0 && lines[lines.length - 1] === "") {
-				lines.pop();
-			}
-
-			const out: string[] = [];
-			if (hasBom) {
-				out.push("[файл начинается с BOM]");
-			}
-			if (lines.length === 0) {
-				out.push("(файл пуст)");
-				return ok(out.join("\n"));
-			}
-			const offset = Math.max(1, Math.floor(optionalNumber(args, "offset") ?? 1));
-			const limit = Math.max(1, Math.floor(optionalNumber(args, "limit") ?? DEFAULT_READ_LIMIT));
-			if (offset > lines.length) {
-				return fail(`В файле ${lines.length} строк, offset ${offset} за пределами файла`);
-			}
-			const start = offset - 1;
-			const end = Math.min(lines.length, start + limit);
-			// Character budget of the result, with room reserved for the tail note.
-			let size = out.reduce((sum, line) => sum + line.length + 1, 0);
-			let last = start;
-			for (let i = start; i < end; i++) {
-				const line = lines[i].length > MAX_LINE_LENGTH ? `${lines[i].slice(0, MAX_LINE_LENGTH)}… [строка обрезана]` : lines[i];
-				const numbered = `${String(i + 1).padStart(6)}\t${line}`;
-				if (i > start && size + numbered.length + 1 > MAX_OUTPUT - 200) {
-					break;
+			const sections: string[] = [];
+			const skipped: string[] = [];
+			let used = 0;
+			let readCount = 0;
+			for (const filePath of paths) {
+				const header = `==> ${resolvePath(filePath)} <==`;
+				const room = READ_FILES_TOTAL - used - header.length - 1;
+				if (room < 1000) {
+					skipped.push(filePath);
+					continue;
 				}
-				out.push(numbered);
-				size += numbered.length + 1;
-				last = i + 1;
+				let result: AppToolResult;
+				try {
+					result = readTextFile(filePath, undefined, undefined, Math.min(MAX_OUTPUT, room));
+				} catch (error) {
+					result = fail(`Ошибка: ${error instanceof Error ? error.message : String(error)}`);
+				}
+				if (!result.isError) {
+					readCount++;
+				}
+				const section = `${header}\n${result.text}`;
+				sections.push(section);
+				used += section.length + 2;
 			}
-			if (last < lines.length) {
-				out.push(`… показаны строки ${offset}–${last} из ${lines.length} — читай с offset ${last + 1}`);
+			if (skipped.length > 0) {
+				sections.push(`… не прочитаны из-за общего объёма ответа (${READ_FILES_TOTAL} символов): ${skipped.join(", ")} — прочитай их следующим вызовом`);
 			}
-			return ok(truncate(out.join("\n")));
+			const text = sections.join("\n\n");
+			return readCount === 0 && skipped.length === 0 ? fail(text) : ok(text);
 		}
 	);
 
@@ -428,9 +497,10 @@ export function createLocalTools(options: LocalToolsOptions): AppTool[] {
 
 	const grepFiles = defineTool(
 		"grep_files",
-		"Ищет регулярное выражение (синтаксис ripgrep) в файлах папки. Режимы вывода: files_with_matches (по умолчанию), content, count. Файлы с секретами пропускаются.",
+		"Ищет регулярное выражение (синтаксис ripgrep) в файлах папки. Режимы вывода: files_with_matches (по умолчанию), content, count. Файлы с секретами пропускаются. Несколько шаблонов за один вызов — patterns: найдутся строки с любым из них.",
 		{
-			pattern: { type: "string", description: "Регулярное выражение (синтаксис ripgrep)" },
+			pattern: { type: "string", description: "Регулярное выражение (синтаксис ripgrep); можно вместо него или вместе с ним передать patterns", optional: true },
+			patterns: { type: "string[]", description: "Несколько регулярных выражений: совпадение с любым из них", optional: true },
 			path: { type: "string", description: "Файл или папка: абсолютный или относительно Pkg; по умолчанию Pkg", optional: true },
 			glob: { type: "string", description: "Фильтр имён файлов, например *.json", optional: true },
 			output_mode: { type: "string", description: "files_with_matches (по умолчанию) | content | count", optional: true },
@@ -439,7 +509,11 @@ export function createLocalTools(options: LocalToolsOptions): AppTool[] {
 			head_limit: { type: "number", description: "Максимум строк вывода, по умолчанию 200", optional: true }
 		},
 		async (args) => {
-			const pattern = requireString(args, "pattern");
+			const single = optionalString(args, "pattern");
+			const patterns = [...(single !== undefined ? [single] : []), ...optionalStringArray(args, "patterns")];
+			if (patterns.length === 0) {
+				throw new Error("Не указан параметр pattern или patterns");
+			}
 			const target = resolvePath(optionalString(args, "path") ?? ".");
 			const decision = checkToolAccess("Grep", { path: target }, cwd, policy);
 			if (!decision.allowed) {
@@ -467,7 +541,10 @@ export function createLocalTools(options: LocalToolsOptions): AppTool[] {
 			for (const excluded of SECRET_EXCLUDE_GLOBS) {
 				rgArgs.push("--glob", excluded);
 			}
-			rgArgs.push("--", pattern, target);
+			for (const item of patterns) {
+				rgArgs.push("-e", item);
+			}
+			rgArgs.push("--", target);
 
 			const found = await runRipgrep(rgArgs, platform);
 			const lines = found.stdout.replace(/\n$/, "").split("\n").filter((line, index, all) => !(all.length === 1 && line === ""));
@@ -610,5 +687,5 @@ export function createLocalTools(options: LocalToolsOptions): AppTool[] {
 		}
 	);
 
-	return [readFile, listDir, globFiles, grepFiles, writeFile, editFile, runShell];
+	return [readFile, readFiles, listDir, globFiles, grepFiles, writeFile, editFile, runShell];
 }

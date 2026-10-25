@@ -69,6 +69,21 @@ describe("loadConfig", () => {
 		expect(loadConfig(file).models).toEqual({ claude: "", cursor: "composer-2.5" });
 	});
 
+	it("keeps cursorModelParams", () => {
+		const file = path.join(tmpDir, "local.json");
+		const cursorModelParams = [{ id: "reasoning_effort", value: "medium" }];
+		fs.writeFileSync(file, JSON.stringify({ appRoot: "/app", cursorModelParams }));
+		expect(loadConfig(file).cursorModelParams).toEqual(cursorModelParams);
+	});
+
+	it("throws on malformed cursorModelParams", () => {
+		const file = path.join(tmpDir, "local.json");
+		fs.writeFileSync(file, JSON.stringify({ appRoot: "/app", cursorModelParams: [{ id: "reasoning_effort" }] }));
+		expect(() => loadConfig(file)).toThrow("cursorModelParams");
+		fs.writeFileSync(file, JSON.stringify({ appRoot: "/app", cursorModelParams: "medium" }));
+		expect(() => loadConfig(file)).toThrow("cursorModelParams");
+	});
+
 	it("keeps the db object with overrides", () => {
 		const file = path.join(tmpDir, "local.json");
 		fs.writeFileSync(file, JSON.stringify({

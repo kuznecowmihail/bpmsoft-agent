@@ -140,7 +140,7 @@ Designer копирует параметры метода в элемент. П�
 | `Object` + массив | `651ec16f-d140-46db-b9e2-825c985a8ac2` (коллекция объектов, свойства в `L18`) |
 | `Text`/`Integer` + массив | `4b51a8b5-1ee9-4437-9d58-f35e083cbcdf` (список значений) |
 
-`Float`, `DateTime`, `Guid`, `Time` в элементах проекта не встречались — 🧪 (UId типов — `[app]/Resources/ui/BPMSoft/core/enums/sysenums.js`).
+`Float`, `DateTime`, `Guid`, `Time` в элементах проекта не встречались — 🧪 (UId типов — `crm-db.md`, «Типы данных: GUID и коды»).
 
 ### Значения входных параметров (`L8`)
 Как у любого параметра процесса (`processes.md`, `process-edit.md`):

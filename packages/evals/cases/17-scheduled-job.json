@@ -1,0 +1,24 @@
+{
+  "title": "Периодическое задание на C#: IJobExecutor, постановка при старте приложения без дублей",
+  "provider": "cursor",
+  "task": "Нужна периодическая фоновая работа на сервере: раз в 15 минут считать контакты без e-mail и писать их количество в журнал приложения. Задание должно само ставиться в расписание при старте приложения и не дублироваться при каждом перезапуске. Всё сделай в одной схеме исходного кода {{prefix}}EvalContactEmailJob.",
+  "answers": [
+    { "when": "в как\\S* пакет", "text": "{{package}}" },
+    { "when": "зависимост|связ\\S* пакет|совмест", "text": "Не связывать пакеты: делай только в {{package}}, зависимости пакета не меняй" },
+    { "when": "процесс", "text": "Нужен код на C#, не бизнес-процесс" },
+    { "when": "Подтверждаете план", "text": "Делай" },
+    { "when": "Обновить CRM сейчас", "text": "Обнови и скомпилируй" }
+  ],
+  "maxTurns": 10,
+  "teardownSql": "DELETE FROM qrtz_simple_triggers WHERE trigger_name LIKE '%{{prefix}}EvalContactEmail%';\nDELETE FROM qrtz_cron_triggers WHERE trigger_name LIKE '%{{prefix}}EvalContactEmail%';\nDELETE FROM qrtz_triggers WHERE job_name LIKE '%{{prefix}}EvalContactEmail%';\nDELETE FROM qrtz_job_details WHERE job_name LIKE '%{{prefix}}EvalContactEmail%';",
+  "checks": [
+    { "type": "file_exists", "path": "Schemas/{{prefix}}EvalContactEmailJob/{{prefix}}EvalContactEmailJob.cs" },
+    { "type": "file_contains", "path": "Schemas/{{prefix}}EvalContactEmailJob/{{prefix}}EvalContactEmailJob.cs", "pattern": "IJobExecutor" },
+    { "type": "file_contains", "path": "Schemas/{{prefix}}EvalContactEmailJob/{{prefix}}EvalContactEmailJob.cs", "pattern": "ScheduleMinutelyJob" },
+    { "type": "file_contains", "path": "Schemas/{{prefix}}EvalContactEmailJob/{{prefix}}EvalContactEmailJob.cs", "pattern": "OnAppStart" },
+    { "type": "lint_clean" },
+    { "type": "crm_update_ok" },
+    { "type": "crm_compile_ok" },
+    { "type": "db_rows", "sql": "SELECT 1 FROM qrtz_job_details WHERE job_name LIKE '%{{prefix}}EvalContactEmail%'", "min": 1 }
+  ]
+}

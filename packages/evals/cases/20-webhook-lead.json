@@ -1,0 +1,27 @@
+{
+  "title": "Вебхук без кода: схема WebhookSchemaManager файлами создаёт лид, агент сам вызывает его на стенде",
+  "provider": "cursor",
+  "task": "Внешний сайт будет отправлять нам заявки вебхуком, без программного кода. Сделай вебхук {{prefix}}EvalLeadWebhook с POST-методом по адресу lead: принимает JSON с полями name и phone и создаёт лид, где «ФИО контакта» (колонка Contact) = name, «Мобильный телефон» = phone. Вызовы принимаются только от пользователя CRM, под которым ты работаешь (по его cookie). После обновления стенда сам вызови вебхук с name «{{prefix}}EvalWebhook Тест» и любым телефоном и убедись, что лид появился.",
+  "answers": [
+    { "when": "в как\\S* пакет", "text": "{{package}}" },
+    { "when": "зависимост|связ\\S* пакет|совмест", "text": "Не связывать пакеты: делай только в {{package}}, зависимости пакета не меняй" },
+    { "when": "сервис|C#|код", "text": "Нужен именно вебхук (раздел «Вебхуки»), без C# и REST-сервиса" },
+    { "when": "Подтверждаете план", "text": "Делай" },
+    { "when": "Обновить CRM сейчас", "text": "Обнови и скомпилируй" },
+    { "when": "провер|вызов", "text": "Проверь сам: вызови вебхук на стенде" }
+  ],
+  "maxTurns": 10,
+  "teardownSql": "DELETE FROM \"ActivityParticipant\" WHERE \"ActivityId\" IN (SELECT \"Id\" FROM \"Activity\" WHERE \"LeadId\" IN (SELECT \"Id\" FROM \"Lead\" WHERE \"Contact\" LIKE '{{prefix}}EvalWebhook%'));\nDELETE FROM \"Activity\" WHERE \"LeadId\" IN (SELECT \"Id\" FROM \"Lead\" WHERE \"Contact\" LIKE '{{prefix}}EvalWebhook%');\nDELETE FROM \"Lead\" WHERE \"Contact\" LIKE '{{prefix}}EvalWebhook%';",
+  "checks": [
+    { "type": "file_contains", "path": "Schemas/{{prefix}}EvalLeadWebhook/descriptor.json", "pattern": "WebhookSchemaManager" },
+    { "type": "file_contains", "path": "Schemas/{{prefix}}EvalLeadWebhook/metadata.json", "pattern": "\"IR9\":\\s*true" },
+    { "type": "file_contains", "path": "Schemas/{{prefix}}EvalLeadWebhook/metadata.json", "pattern": "\"AR1\":\\s*4" },
+    { "type": "file_contains", "path": "Schemas/{{prefix}}EvalLeadWebhook/metadata.json", "pattern": "\"IY1\":\\s*1" },
+    { "type": "file_exists", "path": "Resources/{{prefix}}EvalLeadWebhook.Webhook/resource.en-US.xml" },
+    { "type": "lint_clean" },
+    { "type": "crm_update_ok" },
+    { "type": "tool_called", "name": "crm_request" },
+    { "type": "crm_request_ok", "pathPattern": "webhook/[0-9a-f-]{36}/lead" },
+    { "type": "db_rows", "sql": "SELECT 1 FROM \"Lead\" WHERE \"Contact\" LIKE '{{prefix}}EvalWebhook%'", "min": 1 }
+  ]
+}

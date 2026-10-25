@@ -108,6 +108,56 @@ describe("localTools", () => {
 		});
 	});
 
+	describe("read_files", () => {
+		it("reads two files in one call", async () => {
+			fs.writeFileSync(path.join(pkg, "TestPkg", "b.json"), "{\n  \"B\": 2\n}\n");
+			const result = await run("read_files", { paths: ["TestPkg/a.json", "TestPkg/b.json"] });
+			expect(result.isError).toBe(false);
+			expect(result.text).toContain(`==> ${path.join(pkg, "TestPkg", "a.json")} <==`);
+			expect(result.text).toContain(`==> ${path.join(pkg, "TestPkg", "b.json")} <==`);
+			expect(result.text).toContain("\"A\": 1");
+			expect(result.text).toContain("\"B\": 2");
+		});
+
+		it("does not let a denied file break the others", async () => {
+			const result = await run("read_files", { paths: ["TestPkg/a.json", outside, path.join(app, "ConnectionStrings.config")] });
+			expect(result.isError).toBe(false);
+			expect(result.text).toContain("\"A\": 1");
+			expect(result.text).not.toContain("password=x");
+			expect(result.text).not.toContain("\toutside");
+		});
+
+		it("is an error when every file fails", async () => {
+			const result = await run("read_files", { paths: [outside] });
+			expect(result.isError).toBe(true);
+		});
+
+		it("refuses an empty list and more than 20 files", async () => {
+			expect((await run("read_files", { paths: [] })).isError).toBe(true);
+			const many = await run("read_files", { paths: Array.from({ length: 21 }, (_, i) => `f${i}.txt`) });
+			expect(many.isError).toBe(true);
+			expect(many.text).toContain("20");
+		});
+
+		it("accepts the list as a JSON string", async () => {
+			const result = await run("read_files", { paths: JSON.stringify(["TestPkg/a.json"]) });
+			expect(result.isError).toBe(false);
+			expect(result.text).toContain("\"A\": 1");
+		});
+
+		it("keeps the whole answer within the total budget and names the files it skipped", async () => {
+			const body = Array.from({ length: 600 }, (_, i) => `line ${i} ` + "x".repeat(40)).join("\n") + "\n";
+			for (const name of ["big1.txt", "big2.txt", "big3.txt"]) {
+				fs.writeFileSync(path.join(pkg, "TestPkg", name), body);
+			}
+			const result = await run("read_files", { paths: ["TestPkg/big1.txt", "TestPkg/big2.txt", "TestPkg/big3.txt"] });
+			expect(result.isError).toBe(false);
+			expect(result.text.length).toBeLessThan(61000);
+			expect(result.text).toContain("не прочитаны");
+			expect(result.text).toContain("big3.txt");
+		});
+	});
+
 	describe("list_dir", () => {
 		it("lists Pkg by default and marks folders with a slash", async () => {
 			const result = await run("list_dir", {});
@@ -141,6 +191,20 @@ describe("localTools", () => {
 			const result = await run("grep_files", { pattern: "password", path: app });
 			expect(result.text).toContain("notes.txt");
 			expect(result.text).not.toContain("ConnectionStrings.config");
+		});
+
+		it("finds lines matching any of several patterns", async () => {
+			fs.writeFileSync(path.join(pkg, "TestPkg", "c.txt"), "alpha\nbeta\ngamma\n");
+			const result = await run("grep_files", { patterns: ["alpha", "gamma"], path: "TestPkg/c.txt", output_mode: "content" });
+			expect(result.isError).toBe(false);
+			expect(result.text).toContain("alpha");
+			expect(result.text).toContain("gamma");
+			expect(result.text).not.toContain("beta");
+		});
+
+		it("requires pattern or patterns", async () => {
+			const result = await run("grep_files", {});
+			expect(result.isError).toBe(true);
 		});
 	});
 

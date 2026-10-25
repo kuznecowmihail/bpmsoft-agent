@@ -255,6 +255,20 @@ describe("cursorProvider", () => {
 			});
 		});
 
+		it("maps read_files to Read with the first path and the count of the rest", () => {
+			expect(normalizeCursorToolCall("read_files", { paths: ["/a/Pkg/x.json", "/a/Pkg/y.json"] })).toEqual({
+				name: "Read",
+				input: { file_path: "/a/Pkg/x.json и ещё 1", file_paths: ["/a/Pkg/x.json", "/a/Pkg/y.json"] }
+			});
+		});
+
+		it("maps grep_files with several patterns to Grep with them joined", () => {
+			expect(normalizeCursorToolCall("grep_files", { patterns: ["a", "b"], path: "p" })).toEqual({
+				name: "Grep",
+				input: { pattern: "a | b", path: "p" }
+			});
+		});
+
 		it("maps a direct run_shell call to Bash with the command", () => {
 			const result = normalizeCursorToolCall("run_shell", { command: "date +%s000" });
 			expect(result.name).toBe("Bash");
@@ -436,6 +450,10 @@ describe("cursorProvider", () => {
 			expect(result).not.toContain("<instructions>");
 		});
 
+		it("reminds the agent to batch reads and writes", () => {
+			expect(buildCursorFollowUpMessage("x")).toContain("read_files");
+		});
+
 		it("asks for plan confirmation with choices", () => {
 			const result = buildCursorFollowUpMessage("x");
 
@@ -481,6 +499,15 @@ describe("cursorProvider", () => {
 			expect(result).toContain("read_file");
 			expect(result).toContain("edit_file");
 			expect(result).toContain("run_shell");
+		});
+
+		it("tells the agent to batch reads and writes", () => {
+			const result = buildCursorSafetyRules("/app", "/app/Pkg", "/kn");
+
+			expect(result).toContain("read_files");
+			expect(result).toContain("пачкой");
+			expect(result).toContain("в одном сообщении");
+			expect(result).toContain("Не перечитывай файл, который только что записал");
 		});
 
 		it("tells the agent to edit only with write_file and edit_file, not python or sed", () => {

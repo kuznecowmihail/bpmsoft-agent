@@ -1,0 +1,9 @@
+= MetaData.Schema.UId "e01826f8-39e4-4b52-8517-695c7d441e40"
+= MetaData.Schema.A2 "{{prefix}}EvalOrder"
+= MetaData.Schema.A5 "6f652d8a-4112-48f1-a012-d008a5d54b95"
+= MetaData.Schema.B6 "{{packageUId}}"
+= MetaData.Schema.B8 "1.9.0.17103"
+= MetaData.Schema.D8 "11ab4bcb-9b23-4b6d-9c86-520fae925d75"
+- MetaData.Schema.D1
++ MetaData.Schema.D2 {"UId": "e252ce08-90c4-4060-aad1-3d65ce3f61e0", "A2": "Status", "A3": "e01826f8-39e4-4b52-8517-695c7d441e40", "A4": "e01826f8-39e4-4b52-8517-695c7d441e40", "A5": "6f652d8a-4112-48f1-a012-d008a5d54b95", "S2": "b295071f-7ea9-4e62-8d1a-919bf3732ff2", "S4": "96d3faa7-95f2-4792-beac-b821f768b14e", "E17": "StatusId", "E18": "StatusName"}
+~ MetaData.Schema.D2 ["e252ce08-90c4-4060-aad1-3d65ce3f61e0"]

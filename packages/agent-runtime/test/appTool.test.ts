@@ -31,6 +31,11 @@ describe("appToolJsonSchema", () => {
 		const schema = appToolJsonSchema({ ...tool, params: { path: { type: "string", description: "Путь", optional: true } } });
 		expect(schema.required).toEqual([]);
 	});
+
+	it("describes a string list as an array of strings", () => {
+		const schema = appToolJsonSchema({ ...tool, params: { paths: { type: "string[]", description: "Пути" } } });
+		expect(schema.properties).toEqual({ paths: { type: "array", items: { type: "string" }, description: "Пути" } });
+	});
 });
 
 describe("appToolContent", () => {

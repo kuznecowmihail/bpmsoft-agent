@@ -24,6 +24,7 @@
    - `crm` — адрес и пользователь CRM;
    - `db` — `{ host, port, user }` задаёт параметры подключения к БД; `true` берёт подключение из `ConnectionStrings.config` приложения;
    - `models` — модели провайдеров (`claude` может быть пустой строкой; для Cursor модель обязательна);
+   - `cursorModelParams` — необязательно: вариант модели Cursor, массив пар `{ "id", "value" }`, например `[{ "id": "context", "value": "500k" }, { "id": "reasoning_effort", "value": "medium" }, { "id": "fast", "value": "true" }]`. Параметры и их значения у каждой модели свои — их возвращает `listCursorModels` (в приложении это варианты модели в настройках); указывайте полный набор параметров варианта. Применяется к `models.cursor`; если `--model` задаёт другую модель, она работает в варианте по умолчанию. Без поля — вариант по умолчанию;
    - `dependsOn` — необязательно: список зависимостей пакета вместо ProductCore.
 
    Файл `local.json` не коммитится.
@@ -46,7 +47,7 @@ npm run eval -w @bpmsoft-agent/evals -- --case 04
 - `--case <id>` — один кейс (префикс номера или имя файла);
 - `--provider claude|cursor` — провайдер агента;
 - `--runs N` — число повторов кейса;
-- `--model <имя>` — модель агента, только вместе с `--provider`; по умолчанию — `models` из `local.json` (для Cursor обязательно);
+- `--model <имя>` — модель агента, только вместе с `--provider`; по умолчанию — `models` из `local.json` (для Cursor обязательно; параметры варианта `cursorModelParams` применяются, только если это та же модель, что в `models.cursor`);
 - `--allow-unsandboxed-shell` — shell без песочницы ОС. На Windows песочницы для shell нет, раннер в этом режиме подтверждает все действия.
 
 Результаты: `results/<runId>/report.md` и `*.jsonl` с транскриптами сессий.
@@ -79,16 +80,23 @@ npm run eval -w @bpmsoft-agent/evals -- --case 04
 | `04-compile-error.json` | Поиск и исправление ошибки компиляции (cursor, фикстура `source-code-helper`) |
 | `05-db-sql-script.json` | Подсчёт активностей по статусам через SQL-скрипт |
 | `06-no-silent-delete.json` | Найденные дубли в справочнике не удаляются без вопроса пользователю (cursor) |
-| `07-web-service-call.json` | REST веб-сервис и элемент «Вызвать веб-сервис» в процессе |
+| `07-web-service-call.json` | REST веб-сервис и элемент «Вызвать веб-сервис» в процессе (cursor) |
 | `08-client-esq-count.json` | Счётчик незавершённых активностей контакта на карточке через клиентский ESQ |
-| `09-client-async-validate.json` | Проверка уникальности e-mail контакта по базе перед сохранением (`asyncValidate`) |
+| `09-client-async-validate.json` | Проверка уникальности e-mail контакта по базе перед сохранением (`asyncValidate`) (cursor) |
 | `10-server-transaction.json` | REST-метод: контакт и задача по нему атомарно в одной транзакции `DBExecutor` |
 | `11-anonymous-service.json` | Анонимный REST-сервис: код через `SystemUserConnection`, маршрут в `appsettings.json` агент поручает пользователю |
 | `12-record-rights.json` | Объект с доступом по записям; право чтения по умолчанию — SQL-скриптом пакета, а не данными |
-| `13-section-folders.json` | Группы в существующем разделе (фикстура `simple-section`): объекты `<Объект>Folder`/`<Объект>InFolder`, режим групп в регистрации раздела, `UseStaticFolders` в схеме раздела |
+| `13-section-folders.json` | Группы в существующем разделе (фикстура `simple-section`): объекты `<Объект>Folder`/`<Объект>InFolder`, режим групп в регистрации раздела, `UseStaticFolders` в схеме раздела (cursor) |
 | `14-typed-cards.json` | Карточки по типам (фикстуры `simple-section` + `order-type`): `TypeColumnUId` в `SysModuleEntity`, строки `SysModuleEdit` на каждый тип, отдельная карточка для оптового типа |
-| `15-rest-auth-secret.json` | REST-сервис с Basic-аутентификацией: логин и пароль из системных настроек (`IQ5`, `IV2: 2`), пароль не попадает в файлы пакета (`file_not_contains`) |
+| `15-rest-auth-secret.json` | REST-сервис с Basic-аутентификацией: логин и пароль из системных настроек (`IQ5`, `IV2: 2`), пароль не попадает в файлы пакета (`file_not_contains`) (cursor) |
 | `16-rest-self-check.json` | Свой REST-сервис: после компиляции агент сам вызывает его через `crm_request` и приводит ответ (`crm_request_ok`) |
+| `17-scheduled-job.json` | Периодическое задание на C#: `IJobExecutor`, постановка в `OnAppStart` через `ScheduleMinutelyJob` без дублей, задание есть в `qrtz_job_details` (cursor) |
+| `18-file-attachment.json` | Файл к контакту из C#: `IFile`, `EntityFileLocator`, объект `ContactFile` и ссылка `ContactId` (cursor) |
+| `19-esq-paging.json` | Постраничная выборка ESQ: `SkipRowCount` и `RowCount` как номер последней строки; агент сам вызывает сервис через `crm_request` |
+| `20-webhook-lead.json` | Вебхук без кода: схема `WebhookSchemaManager` файлами (аутентификация Cookie, `IR9`, действие «Добавить данные»), агент сам вызывает `/webhook/<UId>/lead` через `crm_request`, лид есть в БД (cursor) |
+| `21-dcm-order-case.json` | Кейс (DCM) файлами (фикстуры `simple-section` + `order-status`): стадии по колонке «Статус», альтернативная стадия (`ParentStageUId`), обязательная задача и автопереход (`RequiredType`, `TransitionType`), наборы `SysDcmSettings` и `SysDcmSchemaInSettings`; агент сам создаёт заказ и переводит его на стадию через `crm_request`, шаг кейса есть в журнале процесса (`SysProcessElementLog`), даже если агент удалил тестовые записи |
+
+Провайдеры: 10 кейсов на cursor, 11 на claude. Флаг `--provider` перекрывает поле кейса для всего прогона.
 
 Все кейсы — нереализованные задачи: на чистом стенде их результатные проверки не проходят до старта агента.
 
@@ -103,6 +111,8 @@ npm run eval -w @bpmsoft-agent/evals -- --case 04
 Фикстура `simple-section` добавляет раздел «Заказы (эвал)» без групп: объект `{{prefix}}EvalOrder` (наследник `BaseLookup`), схемы раздела `{{prefix}}EvalOrderSection` и карточки `{{prefix}}EvalOrderPage` с ресурсами на `ru-RU` и `en-US`, наборы данных `SysModuleEntity`, `SysModule` (`FolderMode` «Не использовать группы») и `SysModuleEdit` с постоянными `Id`. Раздел не добавлен в рабочее место. Кейс с этой фикстурой удаляет записи регистрации и таблицы объекта в `teardownSql` (образец — `13-section-folders.json`).
 
 Фикстура `order-type` подключается после `simple-section`: справочник `{{prefix}}EvalOrderType` с записями «Розница» и «Опт» (постоянные `Id`), колонка `Type` у `{{prefix}}EvalOrder` и поле «Тип» на карточке (файлы объекта и карточки `simple-section` она перезаписывает).
+
+Фикстура `order-status` подключается после `simple-section` (без `order-type`): справочник `{{prefix}}EvalOrderStatus` с записями «Новый», «В работе», «Выполнен», «Отменён» (постоянные `Id`) и колонка `Status` у `{{prefix}}EvalOrder` (UId колонки постоянный). Карточку не меняет.
 
 ## Известные ограничения
 

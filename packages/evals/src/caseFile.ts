@@ -20,6 +20,11 @@ export interface EvalConfigFile {
 	db?: boolean | { host?: string; port?: number; user?: string };
 	/** Default model per provider; --model overrides it. */
 	models?: { claude?: string; cursor?: string };
+	/**
+	 * Variant of the Cursor model (id/value pairs from listCursorModels, e.g. reasoning_effort); applies to models.cursor.
+	 * Without it the model runs in its default variant.
+	 */
+	cursorModelParams?: Array<{ id: string; value: string }>;
 	/** Packages the eval package depends on; default ProductCore. */
 	dependsOn?: Array<{ UId: string; PackageVersion?: string; Name: string }>;
 }
@@ -74,11 +79,22 @@ function readJson(file: string): Record<string, unknown> {
 	return JSON.parse(text) as Record<string, unknown>;
 }
 
+/** True for an array of { id, value } with a non-empty string id and a string value. */
+function isModelParams(value: unknown): value is Array<{ id: string; value: string }> {
+	return Array.isArray(value) && value.every((item) => {
+		const r = item as Record<string, unknown> | null;
+		return r !== null && typeof r === "object" && typeof r.id === "string" && r.id !== "" && typeof r.value === "string";
+	});
+}
+
 /** Loads and checks the local config; fills package and prefix with defaults. */
 export function loadConfig(file: string): EvalConfig {
 	const raw = readJson(file);
 	if (typeof raw.appRoot !== "string" || raw.appRoot === "") {
 		throw new Error(`Нет поля appRoot в ${file}`);
+	}
+	if (raw.cursorModelParams !== undefined && !isModelParams(raw.cursorModelParams)) {
+		throw new Error(`Поле cursorModelParams в ${file} — массив объектов { "id": "...", "value": "..." } со строками`);
 	}
 	const config = raw as unknown as EvalConfigFile;
 	return {

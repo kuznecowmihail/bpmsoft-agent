@@ -78,9 +78,10 @@ function record(value: unknown): Record<string, unknown> {
 export function buildCursorSafetyRules(readRoot: string, writeRoot: string, knowledgeDir: string): string {
 	return [
 		"РЕЖИМ CURSOR. Встроенных инструментов чтения, поиска, правки и терминала в этой среде нет — работай только инструментами приложения:",
-		"- read_file, list_dir, glob_files, grep_files — чтение и поиск (вместо Read, LS, Glob, Grep); где в инструкциях сказано «инструмент Read» — это read_file.",
+		"- read_file, read_files, list_dir, glob_files, grep_files — чтение и поиск (вместо Read, LS, Glob, Grep); где в инструкциях сказано «инструмент Read» — это read_file или read_files.",
 		"- write_file — создать или перезаписать файл; edit_file — точная замена фрагмента (вместо инструмента правки); run_shell — команда bash в папке Pkg (date, node со скриптами из каталога знаний, perl -pi и т.п.).",
-		"- Правь файлы только write_file и edit_file; читай read_file и grep_files. Команды для правки текста (python, python3, ruby, php, sed -i, perl -i, node -e) не используй: они дольше, ломают кодировку и часть из них каждый раз требует подтверждения пользователя. run_shell — для date, uuidgen (идентификаторы — только uuidgen, не python), node --check, скриптов проверок из каталога знаний и чтения логов стенда.",
+		"- Правь файлы только write_file и edit_file; читай read_file, read_files и grep_files. Команды для правки текста (python, python3, ruby, php, sed -i, perl -i, node -e) не используй: они дольше, ломают кодировку и часть из них каждый раз требует подтверждения пользователя. run_shell — для date, uuidgen (идентификаторы — только uuidgen, не python), node --check, скриптов проверок из каталога знаний и чтения логов стенда.",
+		"- Экономь шаги: каждый ответ модели — это время пользователя. Нужные файлы читай пачкой — read_files со списком путей, а не read_file по одному; несколько шаблонов поиска передавай одним вызовом grep_files в patterns. Все файлы одной схемы (metadata.json, descriptor.json, ресурсы, исходный код) пиши в одном сообщении — несколько вызовов write_file сразу, а не по одному файлу за ответ. Не перечитывай файл, который только что записал или изменил: write_file и edit_file сообщают результат; перечитывай только после ошибки инструмента.",
 		"- Порядок работы из инструкций обязателен, даже если задача кажется простой: 1) пакет — если пользователь не назвал пакет, а в Pkg их несколько, сначала спроси, в каком пакете работать, и не выбирай за него, даже если найдёшь подходящие схемы; 2) вопросы по требованиям с вариантами ответов; 3) план с AC/CC/DoD и остановка до подтверждения пользователя: сообщение с планом всегда заканчивай блоком <choices> с вопросом «Подтверждаете план?» и вариантами «Делай» и «Нужны правки» — без этого блока у пользователя нет кнопок и план выглядит незаконченным. Только после подтверждения — изменения файлов.",
 		`- Читать можно только папку приложения ${readRoot} и каталог знаний ${knowledgeDir}, изменять — только ${writeRoot}. Приложение проверяет каждый путь и отклоняет остальные; команды выполняются без сети.`,
 		"- Не читай файлы с секретами: ConnectionStrings.config, *.pfx, *.p12, *.pem, *.key — даже внутри папки приложения. Тип СУБД бери из DBEngineType существующих SQL-скриптов в Pkg; если их нет — спроси у пользователя.",
@@ -99,6 +100,7 @@ const CURSOR_FOLLOW_UP_REMINDER = [
 	"Без подтверждённого плана файлы в Pkg не меняй.",
 	"Вопросы с вариантами — блоком <choices> в конце сообщения (формат — в инструкциях первого сообщения). Сообщение с планом всегда заканчивается блоком <choices> с вопросом «Подтверждаете план?» и вариантами «Делай» и «Нужны правки».",
 	"Исключение — исправление ошибки в только что сделанном по подтверждённому плану: исправляй сразу, без нового плана, если объём задачи не меняется.",
+	"Экономь шаги: читай файлы пачкой через read_files, файлы одной схемы пиши в одном сообщении, только что записанный файл не перечитывай.",
 	"</reminder>"
 ].join("\n");
 
@@ -178,9 +180,13 @@ function wrappedToolArguments(args: unknown): Record<string, unknown> {
 function localToolEvent(toolName: string, a: Record<string, unknown>): { name: string; input: Record<string, unknown> } {
 	switch (toolName) {
 		case "read_file": return { name: "Read", input: { file_path: a.path } };
+		case "read_files": {
+			const paths = Array.isArray(a.paths) ? a.paths.filter((item): item is string => typeof item === "string") : typeof a.paths === "string" ? [a.paths] : [];
+			return { name: "Read", input: { file_path: paths.length > 1 ? `${paths[0]} и ещё ${paths.length - 1}` : paths[0], file_paths: paths } };
+		}
 		case "list_dir": return { name: "LS", input: { path: a.path } };
 		case "glob_files": return { name: "Glob", input: { pattern: a.pattern, path: a.path } };
-		case "grep_files": return { name: "Grep", input: { pattern: a.pattern, path: a.path } };
+		case "grep_files": return { name: "Grep", input: { pattern: a.pattern ?? (Array.isArray(a.patterns) ? a.patterns.join(" | ") : a.patterns), path: a.path } };
 		case "write_file": return { name: "Write", input: { file_path: a.path } };
 		case "edit_file": return { name: "Edit", input: { file_path: a.path } };
 		default: { // run_shell

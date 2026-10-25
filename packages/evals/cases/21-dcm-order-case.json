@@ -1,0 +1,32 @@
+{
+  "title": "Кейс (DCM) файлами: стадии заказа по справочнику статусов, обязательная задача на стадии и автопереход, настройка раздела; агент сам проверяет запуск на стенде",
+  "provider": "claude",
+  "fixtures": ["simple-section", "order-status"],
+  "task": "В пакете {{package}} есть раздел «Заказы (эвал)» (объект {{prefix}}EvalOrder, карточка {{prefix}}EvalOrderPage), у заказа есть колонка «Статус» (справочник {{prefix}}EvalOrderStatus: «Новый», «В работе», «Выполнен», «Отменён»). Сделай для этого раздела кейс {{prefix}}EvalOrderCase с заголовком «{{prefix}}Eval кейс заказа»: стадии по колонке «Статус» — «Новый» → «В работе» → «Выполнен», «Отменён» — альтернативная неуспешная стадия от «В работе». На стадии «В работе» — обязательная задача «{{prefix}}EvalDcm проверить заказ» на текущего пользователя; когда задача выполнена, заказ сам переходит в «Выполнен». Связывать задачу с заказом не нужно: у активности нет колонки на заказ. После обновления стенда проверь сам: создай заказ «{{prefix}}EvalDcm Тест» со статусом «Новый», переведи его в «В работе» и убедись, что задача появилась.",
+  "answers": [
+    { "when": "Подтверждаете план", "text": "Делай" },
+    { "when": "Обновить CRM сейчас", "text": "Обнови" },
+    { "when": "в как\\S* пакет", "text": "{{package}}" },
+    { "when": "зависимост|связ\\S* пакет|совмест", "text": "Не связывать пакеты: делай только в {{package}}, зависимости пакета не меняй" },
+    { "when": "(колонк|связ)\\S*.{0,40}(Activity|активност)", "text": "Связь задачи с заказом не нужна, Activity не меняй" },
+    { "when": "провер\\S* сам|тестов\\S* заказ|созда\\S* заказ", "text": "Проверь сам на стенде" }
+  ],
+  "maxTurns": 10,
+  "teardownSql": "DELETE FROM \"ActivityParticipant\" WHERE \"ActivityId\" IN (SELECT \"Id\" FROM \"Activity\" WHERE \"Title\" LIKE '{{prefix}}EvalDcm%'); DELETE FROM \"Activity\" WHERE \"Title\" LIKE '{{prefix}}EvalDcm%'; DELETE FROM \"SysEntityCommonPrcEl\" WHERE \"EntitySchemaUId\" = 'e01826f8-39e4-4b52-8517-695c7d441e40'; DELETE FROM \"SysProcessElementLog\" WHERE \"SysProcessId\" IN (SELECT \"Id\" FROM \"SysProcessLog\" WHERE \"Name\" = '{{prefix}}Eval кейс заказа'); DELETE FROM \"SysProcessLog\" WHERE \"Name\" = '{{prefix}}Eval кейс заказа'; DELETE FROM \"SysDcmSchemaInSettings\" WHERE \"SysDcmSettingsId\" IN (SELECT \"Id\" FROM \"SysDcmSettings\" WHERE \"SysModuleEntityId\" = '1716990f-3bf8-4862-9518-ec9531bba025'); DELETE FROM \"SysDcmSettings\" WHERE \"SysModuleEntityId\" = '1716990f-3bf8-4862-9518-ec9531bba025'; DELETE FROM \"SysModuleEditLcz\" WHERE \"RecordId\" IN (SELECT \"Id\" FROM \"SysModuleEdit\" WHERE \"SysModuleEntityId\" = '1716990f-3bf8-4862-9518-ec9531bba025'); DELETE FROM \"SysModuleEdit\" WHERE \"SysModuleEntityId\" = '1716990f-3bf8-4862-9518-ec9531bba025'; DELETE FROM \"SysModuleLcz\" WHERE \"RecordId\" = 'eddc3f78-99dd-4bab-9c4f-34105ef26dbb'; DELETE FROM \"SysModuleInWorkplace\" WHERE \"SysModuleId\" = 'eddc3f78-99dd-4bab-9c4f-34105ef26dbb'; DELETE FROM \"SysModule\" WHERE \"Id\" = 'eddc3f78-99dd-4bab-9c4f-34105ef26dbb'; DELETE FROM \"SysModuleEntity\" WHERE \"Id\" = '1716990f-3bf8-4862-9518-ec9531bba025'; DELETE FROM \"Lookup\" WHERE \"SysEntitySchemaUId\" = '96d3faa7-95f2-4792-beac-b821f768b14e'; DROP TABLE IF EXISTS \"Sys{{prefix}}EvalOrderLcz\" CASCADE; DROP TABLE IF EXISTS \"{{prefix}}EvalOrder\" CASCADE; DROP TABLE IF EXISTS \"Sys{{prefix}}EvalOrderStatusLcz\" CASCADE; DROP TABLE IF EXISTS \"{{prefix}}EvalOrderStatus\" CASCADE;",
+  "checks": [
+    { "type": "file_contains", "path": "Schemas/{{prefix}}EvalOrderCase/descriptor.json", "pattern": "DcmSchemaManager" },
+    { "type": "file_contains", "path": "Schemas/{{prefix}}EvalOrderCase/metadata.json", "pattern": "e252ce08-90c4-4060-aad1-3d65ce3f61e0" },
+    { "type": "file_contains", "path": "Schemas/{{prefix}}EvalOrderCase/metadata.json", "pattern": "\"ParentStageUId\"" },
+    { "type": "file_contains", "path": "Schemas/{{prefix}}EvalOrderCase/metadata.json", "pattern": "\"TransitionType\":\\s*1" },
+    { "type": "file_contains", "path": "Schemas/{{prefix}}EvalOrderCase/metadata.json", "pattern": "\"RequiredType\":\\s*1" },
+    { "type": "file_contains", "path": "Schemas/{{prefix}}EvalOrderCase/metadata.json", "pattern": "b5c726f2-af5b-4381-bac6-913074144308" },
+    { "type": "file_exists", "path": "Resources/{{prefix}}EvalOrderCase.Dcm/resource.en-US.xml" },
+    { "type": "file_contains", "path": "Data/*/descriptor.json", "pattern": "\"Name\":\\s*\"SysDcmSchemaInSettings\"" },
+    { "type": "lint_clean" },
+    { "type": "crm_update_ok" },
+    { "type": "db_rows", "sql": "SELECT 1 FROM \"SysDcmSettings\" WHERE \"SysModuleEntityId\" = '1716990f-3bf8-4862-9518-ec9531bba025' AND \"StageColumnUId\" = 'e252ce08-90c4-4060-aad1-3d65ce3f61e0'", "min": 1 },
+    { "type": "db_rows", "sql": "SELECT 1 FROM \"SysDcmSchemaInSettings\" i JOIN \"SysSchema\" s ON s.\"UId\" = i.\"SysDcmSchemaUId\" WHERE s.\"Name\" = '{{prefix}}EvalOrderCase'", "min": 1 },
+    { "type": "tool_called", "name": "crm_request" },
+    { "type": "db_rows", "sql": "SELECT 1 FROM \"SysProcessElementLog\" e JOIN \"SysProcessLog\" l ON l.\"Id\" = e.\"SysProcessId\" WHERE l.\"Name\" = '{{prefix}}Eval кейс заказа' AND e.\"Type\" = 'BPMSoft.Core.DcmProcess.DcmSchemaElement'", "min": 1 }
+  ]
+}
