@@ -5,7 +5,7 @@ description: Use when the task needs an SQL script in a BPMSoft package, for exa
 
 # SQL-скрипт пакета BPMSoft
 
-Подскилл вызывается из `bpm-develop` (шаг 3, исследование) и при записи скрипта. Порядок работы, план и подтверждение — в `bpm-develop`. Правила стенда — в `CLAUDE.md`.
+Подскилл вызывается из `bpm-develop` (шаг 3, исследование) и при записи скрипта. Порядок работы, план и подтверждение — в `bpm-develop`. Правила стенда — в `AGENTS.md`.
 
 ## Что читать (по порядку)
 

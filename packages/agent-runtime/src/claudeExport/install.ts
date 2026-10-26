@@ -1,15 +1,24 @@
 import * as fs from "fs";
 import * as path from "path";
-import { ExportFile, ExportSources, fileSha256 } from "./sources";
+import { ExportSources, fileSha256, textSha256 } from "./sources";
 import { isInsideRoots } from "../safety/sandboxGuard";
 
-/** First line of a CLAUDE.md that the app wrote itself. */
+/** First line of a root file (AGENTS.md or CLAUDE.md) that the app wrote itself. */
 const MARKER = "<!-- bpmsoft-agent: generated -->";
+
+/** Root file with the core rules; Cursor reads it. */
+const AGENTS_MD = "AGENTS.md";
+
+/** Root file read by Claude Code; it imports AGENTS.md or the separate core. */
+const CLAUDE_MD = "CLAUDE.md";
+
+/** Line appended to a foreign AGENTS.md so that Cursor reads the separate core. */
+const AGENTS_READ_LINE = "Перед работой прочитай правила BPMSoft-агента: .claude/bpmsoft-agent.md";
 
 /** Import line that connects the separate core file to a foreign CLAUDE.md. */
 const IMPORT_LINE = "@.claude/bpmsoft-agent.md";
 
-/** Core file location when CLAUDE.md is not replaced. */
+/** Core file location when the root files are not replaced. */
 const SEPARATE_CORE_REL = ".claude/bpmsoft-agent.md";
 
 /** Manifest location, relative to the stand root. */
@@ -18,7 +27,7 @@ const MANIFEST_REL = ".claude/skills/.bpmsoft-agent.json";
 /** Claude Code settings with the CRM variables for the crm.js CLI, relative to the stand root. */
 const SETTINGS_REL = ".claude/settings.local.json";
 
-/** How the app treats a foreign CLAUDE.md: keep it and import the core, or replace it. */
+/** How the app treats a foreign root file: keep it and connect the separate core, or replace it. */
 export type ClaudeMdChoice = "separate" | "replace";
 
 /** Installation state read from the manifest. */
@@ -49,12 +58,15 @@ interface Manifest {
 	files: Record<string, string>;
 }
 
+/** A file the install writes: a copy of a source file, or generated text. */
+type OutputFile = { rel: string; source: string } | { rel: string; content: string };
+
 /** Converts a "/"-separated rel path to a path under the stand root. */
 function toDisk(appRoot: string, rel: string): string {
 	return path.join(appRoot, ...rel.split("/"));
 }
 
-/** Throws when a path the export touches resolves outside the stand root (a symlinked .claude, CLAUDE.md or file). */
+/** Throws when a path the export touches resolves outside the stand root (a symlinked .claude, root file or file). */
 function assertInsideStand(appRoot: string, dest: string): void {
 	if (!isInsideRoots(dest, [appRoot])) {
 		throw new Error(`Путь выходит за пределы папки проекта: ${dest}`);
@@ -70,9 +82,25 @@ function hasMarker(file: string): boolean {
 	return firstLine === MARKER;
 }
 
-/** Returns true when a manifest key may be touched: CLAUDE.md, or a plain path under .claude/ without ".." or "\\". */
+/** Returns true when a root file exists in the stand and was not written by the app. */
+function isForeign(appRoot: string, rel: string): boolean {
+	const file = toDisk(appRoot, rel);
+	return fs.existsSync(file) && !hasMarker(file);
+}
+
+/** Returns the sha256 of a file the install writes: its source copy, or its generated text. */
+function outputHash(file: OutputFile): string {
+	return "content" in file ? textSha256(file.content) : fileSha256(file.source);
+}
+
+/** Returns the CLAUDE.md stub that imports the given root file and carries the app marker. */
+function claudeStub(target: string): string {
+	return `${MARKER}\n@${target}\n`;
+}
+
+/** Returns true when a manifest key may be touched: a root file, or a plain path under .claude/ without ".." or "\\". */
 function isSafeManifestKey(rel: string): boolean {
-	if (rel === "CLAUDE.md") {
+	if (rel === CLAUDE_MD || rel === AGENTS_MD) {
 		return true;
 	}
 	return (
@@ -107,15 +135,15 @@ function readManifest(appRoot: string): Manifest | undefined {
 }
 
 /**
- * Returns the export files that exist on disk and differ from both the new source and (when a manifest exists)
- * the manifest hash, sorted. Without a manifest, every export file that differs from its source counts.
+ * Returns the export files that exist on disk and differ from both the new output and (when a manifest exists)
+ * the manifest hash, sorted. Without a manifest, every export file that differs from its output counts.
  */
 function modifiedFiles(appRoot: string, old: Manifest | undefined, newHashes: Map<string, string>): string[] {
 	const candidates = old ? Object.keys(old.files) : [...newHashes.keys()];
 	return candidates
 		.filter((rel) => {
 			const dest = toDisk(appRoot, rel);
-			if (rel === "CLAUDE.md" && !hasMarker(dest)) {
+			if ((rel === CLAUDE_MD || rel === AGENTS_MD) && !hasMarker(dest)) {
 				return false;
 			}
 			if (!fs.existsSync(dest)) {
@@ -130,15 +158,15 @@ function modifiedFiles(appRoot: string, old: Manifest | undefined, newHashes: Ma
 		.sort();
 }
 
-/** Appends the import line to a foreign CLAUDE.md once, keeping its line endings. */
-function addImport(file: string): void {
+/** Appends a line to a foreign root file once, keeping its line endings. */
+function addImport(file: string, line: string): void {
 	const text = fs.readFileSync(file, "utf8");
-	if (text.split(/\r?\n/).some((line) => line.trim() === IMPORT_LINE)) {
+	if (text.split(/\r?\n/).some((existing) => existing.trim() === line)) {
 		return;
 	}
 	const eol = text.includes("\r\n") ? "\r\n" : "\n";
 	const lead = text.length > 0 && !text.endsWith("\n") ? eol : "";
-	fs.appendFileSync(file, lead + IMPORT_LINE + eol);
+	fs.appendFileSync(file, lead + line + eol);
 }
 
 /** Deletes files from the old manifest that the new export no longer contains, and empty folders under .claude/skills. */
@@ -156,7 +184,7 @@ function removeStale(appRoot: string, old: Manifest | undefined, keep: Set<strin
 		if (!fs.existsSync(dest)) {
 			continue;
 		}
-		if (rel === "CLAUDE.md" && !hasMarker(dest)) {
+		if ((rel === CLAUDE_MD || rel === AGENTS_MD) && !hasMarker(dest)) {
 			continue;
 		}
 		assertInsideStand(appRoot, dest);
@@ -211,17 +239,22 @@ function writeCrmEnv(appRoot: string, crm: CrmEnvConnection): "written" | "inval
 	return "written";
 }
 
-/** Installs the skills, knowledge, lint bundle and CLAUDE.md core into the stand, and updates the manifest. */
+/**
+ * Installs the skills, knowledge, lint bundle and core rules into the stand, and updates the manifest.
+ * Root mode writes AGENTS.md (core) and a CLAUDE.md stub that imports it. Separate mode keeps foreign root files
+ * and connects them to the core in .claude/bpmsoft-agent.md.
+ */
 export function installClaudeSkills(
 	appRoot: string,
 	sources: ExportSources,
 	options: { appVersion: string; claudeMd?: ClaudeMdChoice; overwriteModified?: boolean; now?: () => Date; crm?: CrmEnvConnection },
 ): InstallOutcome {
 	const old = readManifest(appRoot);
-	const claudeMdPath = path.join(appRoot, "CLAUDE.md");
+	const agentsForeign = isForeign(appRoot, AGENTS_MD);
+	const claudeForeign = isForeign(appRoot, CLAUDE_MD);
 
 	let mode: "root" | "separate";
-	if (!fs.existsSync(claudeMdPath) || hasMarker(claudeMdPath)) {
+	if (!agentsForeign && !claudeForeign) {
 		mode = "root";
 	} else if (old?.claudeMd === "separate") {
 		mode = "separate";
@@ -231,21 +264,37 @@ export function installClaudeSkills(
 		return { kind: "needs-claude-md-choice" };
 	}
 
-	const coreRel = mode === "root" ? "CLAUDE.md" : SEPARATE_CORE_REL;
-	const all: ExportFile[] = [...sources.files, { rel: coreRel, source: sources.core }].sort((a, b) =>
-		a.rel < b.rel ? -1 : a.rel > b.rel ? 1 : 0,
-	);
-	const newHashes = new Map(all.map((file) => [file.rel, fileSha256(file.source)] as const));
+	const written: OutputFile[] = [...sources.files];
+	const appended: Array<{ rel: string; line: string }> = [];
+	if (mode === "root") {
+		written.push({ rel: AGENTS_MD, source: sources.core }, { rel: CLAUDE_MD, content: claudeStub(AGENTS_MD) });
+	} else {
+		if (agentsForeign) {
+			appended.push({ rel: AGENTS_MD, line: AGENTS_READ_LINE });
+		} else {
+			written.push({ rel: AGENTS_MD, source: sources.core });
+		}
+		if (claudeForeign) {
+			appended.push({ rel: CLAUDE_MD, line: IMPORT_LINE });
+		} else {
+			written.push({ rel: CLAUDE_MD, content: claudeStub(agentsForeign ? SEPARATE_CORE_REL : AGENTS_MD) });
+		}
+		if (agentsForeign || claudeForeign) {
+			written.push({ rel: SEPARATE_CORE_REL, source: sources.core });
+		}
+	}
+	written.sort((a, b) => (a.rel < b.rel ? -1 : a.rel > b.rel ? 1 : 0));
 
+	const newHashes = new Map(written.map((file) => [file.rel, outputHash(file)] as const));
 	const modified = modifiedFiles(appRoot, old, newHashes);
 	if (modified.length > 0 && !options.overwriteModified) {
 		return { kind: "needs-overwrite-confirm", modified };
 	}
 
-	const newRels = new Set(all.map((file) => file.rel));
+	const newRels = new Set(written.map((file) => file.rel));
 	const touched = [
-		...all.map((file) => toDisk(appRoot, file.rel)),
-		...(mode === "separate" ? [claudeMdPath] : []),
+		...written.map((file) => toDisk(appRoot, file.rel)),
+		...appended.map((item) => toDisk(appRoot, item.rel)),
 		toDisk(appRoot, MANIFEST_REL),
 		...Object.keys(old?.files ?? {})
 			.filter((rel) => !newRels.has(rel))
@@ -257,14 +306,18 @@ export function installClaudeSkills(
 	}
 
 	const files: Record<string, string> = {};
-	for (const file of all) {
+	for (const file of written) {
 		const dest = toDisk(appRoot, file.rel);
 		fs.mkdirSync(path.dirname(dest), { recursive: true });
-		fs.copyFileSync(file.source, dest);
-		files[file.rel] = fileSha256(file.source);
+		if ("content" in file) {
+			fs.writeFileSync(dest, file.content);
+		} else {
+			fs.copyFileSync(file.source, dest);
+		}
+		files[file.rel] = outputHash(file);
 	}
-	if (mode === "separate") {
-		addImport(claudeMdPath);
+	for (const item of appended) {
+		addImport(toDisk(appRoot, item.rel), item.line);
 	}
 
 	const removed = removeStale(appRoot, old, newRels);
@@ -282,5 +335,5 @@ export function installClaudeSkills(
 
 	const crmEnv = options.crm ? writeCrmEnv(appRoot, options.crm) : "skipped";
 
-	return { kind: "installed", written: all.length, removed, target: path.join(appRoot, ".claude"), crmEnv };
+	return { kind: "installed", written: written.length, removed, target: path.join(appRoot, ".claude"), crmEnv };
 }

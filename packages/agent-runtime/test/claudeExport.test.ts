@@ -3,6 +3,7 @@ import * as os from "os";
 import * as path from "path";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { collectExportSources, claudeSkillsStatus, installClaudeSkills } from "../src/claudeExport";
+import { textSha256 } from "../src/claudeExport/sources";
 
 describe("claudeExport", () => {
 	const MARKER = "<!-- bpmsoft-agent: generated -->";
@@ -48,7 +49,7 @@ describe("claudeExport", () => {
 		put(path.join(knowledgeDir, ".DS_Store"), "junk");
 		put(lintBundle, "/* bundle */\n");
 		put(crmBundle, "/* crm cli */\n");
-		put(path.join(exportDir, "CLAUDE.md"), `${MARKER}\n# Ядро\n`);
+		put(path.join(exportDir, "AGENTS.md"), `${MARKER}\n# Ядро\n`);
 		put(path.join(exportDir, "skills", "bpm-develop", "SKILL.md"), "---\nname: bpm-develop\n---\n");
 	});
 
@@ -64,12 +65,15 @@ describe("claudeExport", () => {
 		expect(exists(".claude", "skills", "bpm-knowledge", "scripts", "check-entity.js")).toBe(true);
 		expect(exists(".claude", "skills", "bpm-knowledge", "scripts", "pkg-lint.js")).toBe(true);
 		expect(exists(".claude", "skills", "bpm-knowledge", ".DS_Store")).toBe(false);
-		expect(read("CLAUDE.md").split("\n")[0]).toBe(MARKER);
+		expect(read("AGENTS.md").split("\n")[0]).toBe(MARKER);
+		expect(read("AGENTS.md")).toBe(`${MARKER}\n# Ядро\n`);
+		expect(read("CLAUDE.md")).toBe(`${MARKER}\n@AGENTS.md\n`);
 		const manifest = JSON.parse(read(".claude", "skills", ".bpmsoft-agent.json"));
 		expect(manifest.claudeMd).toBe("root");
 		expect(manifest.appVersion).toBe("0.1.0");
 		expect(manifest.installedAt).toBe(NOW.toISOString());
 		expect(Object.keys(manifest.files)).toContain("CLAUDE.md");
+		expect(Object.keys(manifest.files)).toContain("AGENTS.md");
 	});
 
 	it("status: not-installed, then installed, then outdated after a source change", () => {
@@ -162,6 +166,7 @@ describe("claudeExport", () => {
 		expect(first.kind).toBe("installed");
 		expect(read(".claude", "bpmsoft-agent.md").split("\n")[0]).toBe(MARKER);
 		expect(read("CLAUDE.md")).toBe("# Мой проект\r\nтекст\r\n@.claude/bpmsoft-agent.md\r\n");
+		expect(read("AGENTS.md")).toBe(`${MARKER}\n# Ядро\n`);
 
 		const second = installClaudeSkills(appRoot, sources(), opts);
 		expect(second.kind).toBe("installed");
@@ -174,7 +179,8 @@ describe("claudeExport", () => {
 		put(path.join(appRoot, "CLAUDE.md"), "# Мой проект\n");
 		const outcome = installClaudeSkills(appRoot, sources(), { ...opts, claudeMd: "replace" });
 		expect(outcome.kind).toBe("installed");
-		expect(read("CLAUDE.md")).toBe(`${MARKER}\n# Ядро\n`);
+		expect(read("CLAUDE.md")).toBe(`${MARKER}\n@AGENTS.md\n`);
+		expect(read("AGENTS.md")).toBe(`${MARKER}\n# Ядро\n`);
 		expect(JSON.parse(read(".claude", "skills", ".bpmsoft-agent.json")).claudeMd).toBe("root");
 	});
 
@@ -301,8 +307,61 @@ describe("claudeExport", () => {
 
 	it("hash changes when the core changes", () => {
 		const a = sources().hash;
-		put(path.join(exportDir, "CLAUDE.md"), `${MARKER}\n# Другое ядро\n`);
+		put(path.join(exportDir, "AGENTS.md"), `${MARKER}\n# Другое ядро\n`);
 		expect(sources().hash).not.toBe(a);
 		expect(sources().hash).toMatch(/^[0-9a-f]{64}$/);
+	});
+
+	it("foreign AGENTS.md alone asks for a choice and nothing is written", () => {
+		put(path.join(appRoot, "AGENTS.md"), "# Мой AGENTS\n");
+		expect(installClaudeSkills(appRoot, sources(), opts)).toEqual({ kind: "needs-claude-md-choice" });
+		expect(read("AGENTS.md")).toBe("# Мой AGENTS\n");
+		expect(exists("CLAUDE.md")).toBe(false);
+		expect(exists(".claude")).toBe(false);
+	});
+
+	it("separate mode with foreign AGENTS.md appends the read line once and stubs CLAUDE.md", () => {
+		put(path.join(appRoot, "AGENTS.md"), "# Мой AGENTS\n");
+		const first = installClaudeSkills(appRoot, sources(), { ...opts, claudeMd: "separate" });
+		expect(first.kind).toBe("installed");
+		const line = "Перед работой прочитай правила BPMSoft-агента: .claude/bpmsoft-agent.md";
+		expect(read("AGENTS.md")).toBe(`# Мой AGENTS\n${line}\n`);
+		expect(read(".claude", "bpmsoft-agent.md")).toBe(`${MARKER}\n# Ядро\n`);
+		expect(read("CLAUDE.md")).toBe(`${MARKER}\n@.claude/bpmsoft-agent.md\n`);
+
+		const second = installClaudeSkills(appRoot, sources(), opts);
+		expect(second.kind).toBe("installed");
+		expect(read("AGENTS.md").split(/\r?\n/).filter((l) => l.trim() === line).length).toBe(1);
+		expect(JSON.parse(read(".claude", "skills", ".bpmsoft-agent.json")).claudeMd).toBe("separate");
+	});
+
+	it("old root install migrates to AGENTS.md core and CLAUDE.md stub without confirmation", () => {
+		const oldCore = `${MARKER}\n# Ядро\n`;
+		put(path.join(appRoot, "CLAUDE.md"), oldCore);
+		put(
+			path.join(appRoot, ".claude", "skills", ".bpmsoft-agent.json"),
+			JSON.stringify({
+				appVersion: "0.1.0",
+				installedAt: NOW.toISOString(),
+				hash: "old",
+				claudeMd: "root",
+				files: { "CLAUDE.md": textSha256(oldCore) },
+			}),
+		);
+
+		const outcome = installClaudeSkills(appRoot, sources(), opts);
+		expect(outcome.kind).toBe("installed");
+		expect(read("CLAUDE.md")).toBe(`${MARKER}\n@AGENTS.md\n`);
+		expect(read("AGENTS.md")).toBe(`${MARKER}\n# Ядро\n`);
+	});
+
+	it("stale foreign AGENTS.md from an old manifest is never deleted", () => {
+		installClaudeSkills(appRoot, sources(), opts);
+		put(path.join(appRoot, "AGENTS.md"), "# Мой AGENTS\n");
+
+		const outcome = installClaudeSkills(appRoot, sources(), { ...opts, claudeMd: "separate" });
+		expect(outcome.kind).toBe("installed");
+		expect(read("AGENTS.md").startsWith("# Мой AGENTS\n")).toBe(true);
+		expect(exists("AGENTS.md")).toBe(true);
 	});
 });
