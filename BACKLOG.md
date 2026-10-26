@@ -287,3 +287,70 @@
 Третий раунд (25.10.2026), сам на стенде эвалов: вебхуки — ✅ `webhook.md`, `webhook-edit.md` (схема `WebhookSchemaManager` файлами, публикация при старте по `IR9`, вызов с cookie пользователя); импорт из Excel — ✅ `file-import.md`; поиск дублей — ✅ `duplicates.md` (проверка при сохранении; массовый поиск — 🧪, нет внешнего сервиса); веб-формы — ✅ раздел в `integration-api.md`; поле `Web` — на базовой платформе сохраняется, причина в проектной доработке; переводы — только 🧪 в `metadata-editing.md`, применение требует разрешения.
 
 План: 1) агент сам — пункты «сам» одним раундом (одна тестовая схема и одна компиляция), знания, уборка, коммит; 2) вместе — начать с разрешения на правку `appsettings.json` (одна правка и перезапуск закрывают CSP и `SpecifyWebOperationIdentity`), затем печатная форма; остальное — по решению, нужно ли это проектам; 3) пользователь — полный прогон эвалов и слияние.
+
+### Провайдер Codex (OpenAI)
+
+**Статус:** ресерч 26.10.2026, ждёт прототипа. Выводы о `apply_patch` и `dynamicTools` не проверены.
+
+**Зачем.** Третий провайдер модели рядом с Claude и Cursor: модели OpenAI и вход по подписке ChatGPT.
+
+#### Что известно
+- **TS SDK (`@openai/codex-sdk`) не подходит.** Он запускает CLI и читает поток событий JSONL: есть `workingDirectory`, `outputSchema`, `env`, `config`, но нет обработчиков подтверждений и своих инструментов.
+- **Нужен `codex app-server`.** Это JSON-RPC через stdio, на нём работают VS Code и десктоп Codex. В нём есть:
+  - `thread/start` с `cwd`, `sandbox` (или `permissions` — профили прав), `approvalPolicy`, `dynamicTools`;
+  - `turn/interrupt` для отмены;
+  - события `item/started` и `item/completed`, дельты текста;
+  - запросы подтверждения `item/commandExecution/requestApproval` и `item/fileChange/requestApproval`;
+  - вызов нашего инструмента запросом `item/tool/call`.
+
+  Типы TS генерирует `codex app-server generate-ts` под установленную версию.
+- **`dynamicTools` — аналог `customTools` у Cursor:** инструменты выполняются в процессе приложения. Они экспериментальные, нужен `experimentalApi: true` в `initialize`. Открытый баг: при форке треда инструменты наследуются.
+- **Встроенный shell выключается** (`features.shell_tool = false`), **`apply_patch` — нет.** Issue про его отключение закрыт как «not planned», а команды в форме `apply_patch` Codex перехватывает и из других своих инструментов.
+- **Песочница macOS:** Seatbelt (`sandbox-exec`). Профили прав умеют запрещать чтение (`":root" = "deny"`, `":minimal" = "read"`, маски путей). Сеть в `workspace-write` выключена.
+- **Песочница Windows** — три реализации:
+
+  | Реализация | Требования | Запрет чтения | Сеть | Проблемы |
+  |---|---|---|---|---|
+  | MXC (Microsoft Execution Containers) | Windows 11 24H2/25H2 со сборкой ≥ x.9278 (август 2026), общедоступна с октября 2026 | да | пропускает loopback | дочерние процессы завершаются вместе с командой |
+  | `elevated` | настройка с правами администратора: отдельные пользователи, правила файрвола | да | правило файрвола | заявлено 20–35 с на каждую команду |
+  | `unelevated` | нет | **нет** | только переменная окружения | ломается `apply_patch` при нескольких папках для записи |
+
+  Shell по умолчанию — PowerShell. Одинакового поведения у всех пользователей Windows встроенная песочница не даёт.
+
+#### Как сделать
+1. **Та же схема, что у Cursor**, на обеих ОС. Встроенный shell и прочее выключить: `features.shell_tool = false`, `view_image`, веб-поиск. Наши `read_file`, `list_dir`, `glob_files`, `grep_files`, `write_file`, `edit_file`, `run_shell`, `pkg_lint`, `crm_*`, `crm_db_query` и инструменты браузера отдать через `dynamicTools`. Проверка путей — `sandboxGuard`; на macOS `run_shell`, как сейчас, под `sandbox-exec`, на Windows — с подтверждения.
+2. **`apply_patch` через подтверждение.** Тред запускать с `sandbox: read-only` и `approvalPolicy: on-request`. Тогда каждая правка через `apply_patch` должна приходить к нам как `item/fileChange/requestApproval` со списком путей. Приложение разрешает правку без вопроса, если она внутри Pkg по `sandboxGuard`, остальное отклоняет. Предположение: Codex проверяет пути патча сам, без песочницы ОС, поэтому способ работает и на Windows.
+3. **Изоляция настроек.** Отдельный `CODEX_HOME` в папке данных приложения, чтобы не подхватывались `~/.codex/config.toml`, `AGENTS.md`, MCP-серверы и скиллы пользователя (как `settingSources: []` у Cursor). Проверить, что `.codex/config.toml` внутри Pkg не применяется.
+4. **Авторизация.** API-ключ — в Keychain, процессу передаётся через `CODEX_API_KEY`. Вход по подписке ChatGPT хранит токен в `auth.json` внутри `CODEX_HOME` открытым текстом. В `SECRET_ENV_VARS` добавить `OPENAI_API_KEY` и `CODEX_API_KEY`.
+5. **Упаковка.** Бинарники по платформам — опциональные зависимости-алиасы (`npm:@openai/codex@<версия>-win32-x64` и т. п.). Расширить `scripts/fetch-platform-packages.mjs` и `apps/desktop/build/afterPack.cjs`, версию закрепить.
+6. **Запасной вариант, если `dynamicTools` нестабильны:** приложение поднимает локальный MCP-сервер со streamable HTTP и токеном. У MCP-вызова по умолчанию тайм-аут 60 с, для `crm_compile` нужен больший `tool_timeout_sec`.
+
+#### Риски
+- **Изменчивость протокола.** Профили прав в бете, `dynamicTools` экспериментальные, синтаксис профилей уже менялся (`"none"` → `"deny"`, `:project_roots` → `:workspace_roots`). Версию закрепить, типы генерировать из неё.
+- **Неотключаемый `apply_patch`.** Если правки через него не приходят на подтверждение в `read-only`, модель может писать файлы мимо `sandboxGuard`. Без этого провайдер выпускать нельзя.
+- **Битые публикации на npm.** Сборки под Windows не раз не публиковались (0.120.0, 0.162.1), а npm при этом завершается без ошибки. Сборка должна проверять, что бинарник целевой платформы есть.
+- **Токен ChatGPT в открытом файле.** `auth.json` надо закрыть от агента песочницей и правилами чтения.
+
+#### Открытые вопросы
+1. Куда передавать системный промпт: `developerInstructions` в `thread/start`, `AGENTS.md` или первое сообщение (как у Cursor)?
+2. Нужен ли вход по подписке ChatGPT или достаточно API-ключа?
+3. Какие модели предлагать в настройках и как считать стоимость для лога (таблица цен, события о токенах)?
+
+#### Этапы
+1. **Прототип (спайк), отдельный скрипт вне приложения:**
+   - `app-server` по stdio, `initialize` с `experimentalApi`, `thread/start` с `cwd` = тестовый Pkg, `sandbox: read-only`, `approvalPolicy: on-request`, `features.shell_tool = false`;
+   - один `dynamicTool` (`read_file`): модель его вызывает, `item/tool/call` приходит, ответ доходит до модели;
+   - просьба поправить файл в Pkg: приходит ли `item/fileChange/requestApproval` с путями, применяется ли правка после «allow», отклоняется ли после «deny», то же для пути вне Pkg;
+   - отдельный `CODEX_HOME`: вход по ключу проходит, пользовательский `config.toml` не подхватывается;
+   - всё это на macOS и на Windows (без MXC и с ним).
+2. Провайдер `codexProvider.ts` по образцу `cursorProvider.ts`: те же локальные инструменты и инструменты CRM, отмена через `turn/interrupt`, события в формат чата.
+3. Настройки (ключ, модель), упаковка бинарников, лог и стоимость.
+4. Поддержка провайдера в эвалах и полный прогон.
+
+Источники:
+- [Codex: подтверждения и безопасность](https://learn.chatgpt.com/docs/agent-approvals-security)
+- [Codex: песочница Windows](https://learn.chatgpt.com/docs/windows/windows-sandbox)
+- [Codex SDK](https://learn.chatgpt.com/docs/codex-sdk)
+- [App Server](https://learn.chatgpt.com/docs/app-server)
+- [Профили прав](https://www.codex-docs.com/en/docs/permissions)
+- issues openai/codex: [#8161](https://github.com/openai/codex/issues/8161) (`apply_patch`), [#6049](https://github.com/openai/codex/issues/6049) (только MCP), [#32314](https://github.com/openai/codex/issues/32314) (`elevated`), [#55754](https://github.com/openai/codex/issues/55754) (`dynamicTools`), [#52683](https://github.com/openai/codex/issues/52683) (npm)
