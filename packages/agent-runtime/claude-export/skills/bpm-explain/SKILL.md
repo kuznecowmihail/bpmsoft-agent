@@ -16,7 +16,7 @@ description: Use when the user asks how something works now in the BPMSoft proje
    - клиентские схемы (раздел, карточка, деталь, модуль) — `client-schemas.md`, `client-schema-types.md`, `client-schemas-hierarchy.md`;
    - C# и исходный код — `source-code.md`, `platform-api.md`, `server-data-api.md`, `server-events-edit.md`, `server-background-edit.md`, `files.md`;
    - свои действия процесса — `user-task.md`;
-   - данные, настройки, SQL-скрипты — `data.md`, `sql-script.md`;
+   - данные, настройки, SQL-скрипты — `data.md`, `sql-script.md`, таблицы БД — `crm-db.md`;
    - регистрация раздела и карточки в интерфейсе — `registration.md`;
    - вебхуки, импорт из Excel, поиск дублей, веб-формы — `webhook.md`, `file-import.md`, `duplicates.md`, `integration-api.md`;
    - браузер и страницы — `browser-check.md`.

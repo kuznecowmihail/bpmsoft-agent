@@ -61,5 +61,5 @@ description: Use when the user asks to implement, add, change or delete somethin
 | вебхук (входящий HTTP без кода) | `bpm-web-service` | `webhook.md`, `webhook-edit.md` |
 | кейс (стадии записи раздела, DCM) | `bpm-process` | `dcm.md`, `dcm-edit.md` |
 
-Всегда до записи: `metadata-editing.md`. Для незнакомого кода поля — `metadata-codes.md`. Шаблоны — `templates/README.md`, если в проекте нет своего образца. Ошибка компиляции, загрузки или выполнения — сначала `errors.md`. Импорт из Excel — `file-import.md`, поиск дублей — `duplicates.md`.
+Всегда до записи: `metadata-editing.md`. Для незнакомого кода поля — `metadata-codes.md`. Шаблоны — `templates/README.md`, если в проекте нет своего образца. Ошибка компиляции, загрузки или выполнения — сначала `errors.md`. Импорт из Excel — `file-import.md`, поиск дублей — `duplicates.md`. Что подтверждено записью, а что 🧪 — `knowledge-status.md`. Таблицы БД CRM, UId типов данных и identity заблокированных схем — `crm-db.md`.
 Пути знаний — `.claude/skills/bpm-knowledge/<файл>`.

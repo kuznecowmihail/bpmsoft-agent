@@ -158,4 +158,13 @@ describe("claude-export texts", () => {
 		}
 		expect(checked).toBeGreaterThan(0);
 	});
+
+	it("every knowledge file is mentioned in the export texts", () => {
+		const exportText = allTexts().map((item) => item.text).join("\n");
+		const missing = fs
+			.readdirSync(knowledgeDir)
+			.filter((name) => name.endsWith(".md"))
+			.filter((name) => !exportText.includes(name));
+		expect(missing, `knowledge files not mentioned in claude-export (CLAUDE.md or skills): ${missing.join(", ")}`).toEqual([]);
+	});
 });
