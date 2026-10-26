@@ -329,11 +329,11 @@ export function SettingsMenu({
       } else {
         setSkillsClaudeMd(undefined)
         const crmNote = outcome.crmEnv === 'written'
-          ? 'Доступ к CRM для Claude Code записан в .claude/settings.local.json.'
+          ? 'Доступ к CRM для Claude Code и Cursor записан в .claude/settings.local.json.'
           : outcome.crmEnv === 'invalid-settings'
             ? 'Файл .claude/settings.local.json не JSON — доступ к CRM не записан.'
             : ''
-        setSkillsNote(`Готово: ${outcome.target}. Чтобы передать коллегам, заархивируйте папку .claude и CLAUDE.md${crmNote ? `. ${crmNote}` : ''}`)
+        setSkillsNote(`Готово: ${outcome.target}. Чтобы передать коллегам, заархивируйте папку .claude, AGENTS.md и CLAUDE.md${crmNote ? `. ${crmNote}` : ''}`)
         await loadClaudeSkillsStatus(appRoot)
       }
     } catch (error) {
@@ -880,20 +880,20 @@ export function SettingsMenu({
       <div className="popover-section">
         <div className="popover-row">
           <div>
-            <div className="popover-row-title">Claude Code</div>
-            <div className="popover-row-hint">Скиллы и знания агента для Claude Code в папке проекта (.claude)</div>
+            <div className="popover-row-title">Claude Code и Cursor</div>
+            <div className="popover-row-hint">Скиллы и знания агента для Claude Code и Cursor в папке проекта (.claude, AGENTS.md, CLAUDE.md)</div>
           </div>
         </div>
         {claudeSkills && <div className="popover-note">{claudeSkillsStatusText(claudeSkills)}</div>}
         {!appRoot && <div className="popover-note">Откройте проект, чтобы установить скиллы</div>}
         {skillsPending === 'claude-md' && (
           <div className="popover-field">
-            <div className="popover-note">В проекте уже есть свой CLAUDE.md</div>
+            <div className="popover-note">В проекте уже есть свой CLAUDE.md или AGENTS.md</div>
             <button type="button" className="btn btn-secondary btn-sm" disabled={isBusySkills || isRunning} onClick={() => chooseClaudeMd('separate')}>
               Подключить отдельным файлом
             </button>
             <button type="button" className="btn btn-secondary btn-sm" disabled={isBusySkills || isRunning} onClick={() => chooseClaudeMd('replace')}>
-              Заменить мой CLAUDE.md
+              Заменить мои файлы
             </button>
             <button type="button" className="btn btn-secondary btn-sm" disabled={isBusySkills} onClick={cancelClaudeSkillsInstall}>
               Отмена

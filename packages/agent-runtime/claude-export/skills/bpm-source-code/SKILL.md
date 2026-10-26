@@ -5,7 +5,7 @@ description: Use when the task needs C# source code in a BPMSoft package, for ex
 
 # Исходный код C# в пакете BPMSoft
 
-Подскилл вызывается из `bpm-develop` (шаг 3, исследование) и при записи C#. Порядок работы, план и подтверждение — в `bpm-develop`. Правила стенда — в `CLAUDE.md`.
+Подскилл вызывается из `bpm-develop` (шаг 3, исследование) и при записи C#. Порядок работы, план и подтверждение — в `bpm-develop`. Правила стенда — в `AGENTS.md`.
 
 ## Что читать (по порядку)
 

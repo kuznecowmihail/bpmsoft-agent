@@ -30,7 +30,7 @@ packages/
   metadata-core/   # определение структуры приложения BPMSoft
   agent-runtime/   # запуск агента: промпт, база знаний, песочница, инструменты CRM, БД и pkg_lint
     knowledge/     # база знаний агента о metadata BPMSoft: факты <тип>.md и рецепты <тип>-edit.md
-    claude-export/ # CLAUDE.md и скиллы для Claude Code, которые приложение ставит в стенд
+    claude-export/ # AGENTS.md и скиллы для Claude Code и Cursor, которые приложение ставит в стенд
   evals/           # эвалы — автотесты поведения агента на тестовом стенде
 apps/
   desktop/         # Electron: выбор проекта, чат, история чатов, разрешения, логи

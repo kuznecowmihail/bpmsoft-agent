@@ -10,6 +10,8 @@ const skillNames = [
 	"bpm-develop",
 	"bpm-explain",
 	"bpm-troubleshoot",
+	"bpm-crm-query",
+	"bpm-browser-check",
 	"bpm-entity",
 	"bpm-client-schemas",
 	"bpm-process",
@@ -47,7 +49,7 @@ const splitAppSection = (text: string): { section: string; rest: string } => {
 	const lines = text.split(/\r?\n/);
 	const start = lines.findIndex((line) => line.trim() === appSectionHeading);
 	if (start === -1) {
-		throw new Error(`CLAUDE.md has no section "${appSectionHeading}"`);
+		throw new Error(`AGENTS.md has no section "${appSectionHeading}"`);
 	}
 	let end = lines.findIndex((line, index) => index > start && line.startsWith("## "));
 	if (end === -1) {
@@ -75,7 +77,7 @@ const readAllFiles = (dir: string): string[] => {
 
 /** Every markdown text of the export: the core plus all SKILL.md files. */
 const allTexts = (): Array<{ rel: string; text: string }> => {
-	const result = [{ rel: "CLAUDE.md", text: fs.readFileSync(path.join(exportDir, "CLAUDE.md"), "utf8") }];
+	const result = [{ rel: "AGENTS.md", text: fs.readFileSync(path.join(exportDir, "AGENTS.md"), "utf8") }];
 	for (const name of skillNames) {
 		const rel = path.join("skills", name, "SKILL.md");
 		result.push({ rel, text: fs.readFileSync(path.join(exportDir, rel), "utf8") });
@@ -85,14 +87,14 @@ const allTexts = (): Array<{ rel: string; text: string }> => {
 
 describe("claude-export texts", () => {
 	it("has core and all skills", () => {
-		expect(fs.existsSync(path.join(exportDir, "CLAUDE.md"))).toBe(true);
+		expect(fs.existsSync(path.join(exportDir, "AGENTS.md"))).toBe(true);
 		for (const name of skillNames) {
 			expect(fs.existsSync(path.join(exportDir, "skills", name, "SKILL.md"))).toBe(true);
 		}
 	});
 
 	it("core starts with the marker", () => {
-		const firstLine = fs.readFileSync(path.join(exportDir, "CLAUDE.md"), "utf8").split(/\r?\n/)[0];
+		const firstLine = fs.readFileSync(path.join(exportDir, "AGENTS.md"), "utf8").split(/\r?\n/)[0];
 		expect(firstLine).toBe(marker);
 	});
 
@@ -114,21 +116,21 @@ describe("claude-export texts", () => {
 		const absolute = ["/Users/", "C:\\", "~/"];
 		for (const { rel, text } of allTexts()) {
 			// In the core, app tool names are allowed only inside the app-names section.
-			const scoped = rel === "CLAUDE.md" ? splitAppSection(text).rest : text;
+			const scoped = rel === "AGENTS.md" ? splitAppSection(text).rest : text;
 			for (const word of appOnly) {
 				expect(scoped.includes(word), `${rel} contains "${word}" outside the app-names section`).toBe(false);
 			}
 			for (const word of absolute) {
 				expect(text.includes(word), `${rel} contains "${word}"`).toBe(false);
 			}
-			if (rel !== "CLAUDE.md") {
+			if (rel !== "AGENTS.md") {
 				expect(text.includes("pkg_lint"), `${rel} contains "pkg_lint"`).toBe(false);
 			}
 		}
 	});
 
 	it("core explains every app tool name used in knowledge", () => {
-		const { section } = splitAppSection(fs.readFileSync(path.join(exportDir, "CLAUDE.md"), "utf8"));
+		const { section } = splitAppSection(fs.readFileSync(path.join(exportDir, "AGENTS.md"), "utf8"));
 		const knowledgeTexts = readAllFiles(knowledgeDir);
 		for (const name of appNames) {
 			if (knowledgeTexts.some((text) => text.includes(name))) {
@@ -165,6 +167,6 @@ describe("claude-export texts", () => {
 			.readdirSync(knowledgeDir)
 			.filter((name) => name.endsWith(".md"))
 			.filter((name) => !exportText.includes(name));
-		expect(missing, `knowledge files not mentioned in claude-export (CLAUDE.md or skills): ${missing.join(", ")}`).toEqual([]);
+		expect(missing, `knowledge files not mentioned in claude-export (AGENTS.md or skills): ${missing.join(", ")}`).toEqual([]);
 	});
 });

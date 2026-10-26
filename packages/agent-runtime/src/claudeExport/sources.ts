@@ -8,7 +8,7 @@ export interface ExportFile {
 	source: string;
 }
 
-/** Files to install, the path to the core CLAUDE.md template, and the hash of the whole export. */
+/** Files to install, the path to the core AGENTS.md template, and the hash of the whole export. */
 export interface ExportSources {
 	files: ExportFile[];
 	core: string;
@@ -21,6 +21,11 @@ const KNOWLEDGE_REL = ".claude/skills/bpm-knowledge";
 /** Returns the sha256 hex of a file's bytes. */
 export function fileSha256(file: string): string {
 	return crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex");
+}
+
+/** Returns the sha256 hex of a text's UTF-8 bytes. */
+export function textSha256(text: string): string {
+	return crypto.createHash("sha256").update(text, "utf8").digest("hex");
 }
 
 /** Lists all files under a folder recursively as absolute paths, skipping .DS_Store. */
@@ -80,8 +85,8 @@ export function collectExportSources(dirs: { knowledgeDir: string; exportDir: st
 		{ rel: `${KNOWLEDGE_REL}/scripts/crm.js`, source: dirs.crmBundle },
 	].sort((a, b) => (a.rel < b.rel ? -1 : a.rel > b.rel ? 1 : 0));
 
-	const core = path.join(dirs.exportDir, "CLAUDE.md");
-	const lines = [...files, { rel: "CLAUDE.md", source: core }]
+	const core = path.join(dirs.exportDir, "AGENTS.md");
+	const lines = [...files, { rel: "AGENTS.md", source: core }]
 		.sort((a, b) => (a.rel < b.rel ? -1 : a.rel > b.rel ? 1 : 0))
 		.map((file) => `${file.rel}\t${fileSha256(file.source)}\n`);
 	const hash = crypto.createHash("sha256").update(lines.join("")).digest("hex");

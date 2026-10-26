@@ -38,7 +38,8 @@ const USAGE = [
 	"  browser-login [--port <N>] — передать пароль CRM странице в браузере, чтобы войти в CRM без пароля в чате",
 ].join("\n");
 
-const NOT_CONFIGURED = "Доступ к CRM не настроен: нет переменных BPMSOFT_CRM_URL, BPMSOFT_CRM_USER, BPMSOFT_CRM_PASSWORD. Переустановите скиллы в приложении bpmsoft-agent (Настройки → скиллы для Claude Code) или попросите пользователя выполнить действие в CRM самому.";
+const NOT_CONFIGURED = "Доступ к CRM не настроен: нет переменных BPMSOFT_CRM_URL, BPMSOFT_CRM_USER, BPMSOFT_CRM_PASSWORD ни в окружении, ни в .claude/settings.local.json. Переустановите скиллы в приложении bpmsoft-agent (Настройки → скиллы для Claude Code и Cursor) или попросите пользователя выполнить действие в CRM самому.";
+const CONNECTION_KEYS = ["BPMSOFT_CRM_URL", "BPMSOFT_CRM_USER", "BPMSOFT_CRM_PASSWORD"];
 const COMMANDS = ["update", "compile", "restart", "request", "browser-login"];
 const REQUEST_TIMEOUT_MS = 120000;
 const DEFAULT_MAX_CHARS = 4000;
@@ -59,6 +60,39 @@ function readConnection(env: NodeJS.ProcessEnv): CrmConnection | undefined {
 		return undefined;
 	}
 	return { url, user, password };
+}
+
+/** CRM variables from the env block of .claude/settings.local.json in cwd; {} when the file is missing or invalid. */
+function readSettingsEnv(cwd: string): NodeJS.ProcessEnv {
+	try {
+		const raw = fs.readFileSync(path.join(cwd, ".claude", "settings.local.json"), "utf8").replace(/^\uFEFF/, "");
+		const parsed: unknown = JSON.parse(raw);
+		const block = typeof parsed === "object" && parsed !== null ? (parsed as { env?: unknown }).env : undefined;
+		if (typeof block !== "object" || block === null) {
+			return {};
+		}
+		const result: NodeJS.ProcessEnv = {};
+		for (const key of CONNECTION_KEYS) {
+			const value = (block as Record<string, unknown>)[key];
+			if (typeof value === "string") {
+				result[key] = value;
+			}
+		}
+		return result;
+	} catch {
+		return {};
+	}
+}
+
+/** Environment without empty values, so an empty variable does not hide the value from the settings file. */
+function nonEmpty(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+	const result: NodeJS.ProcessEnv = {};
+	for (const [key, value] of Object.entries(env)) {
+		if (value) {
+			result[key] = value;
+		}
+	}
+	return result;
 }
 
 /** Failure text of login or request; the messages never contain the password. */
@@ -188,6 +222,7 @@ async function runRequest(args: string[], connection: CrmConnection, deps: CrmCl
 /**
  * browser-login: serves the password once on 127.0.0.1 with CORS for the CRM origin. The user runs the printed
  * JavaScript on the CRM page; the page fetches the password and logs in itself, so the password never reaches the chat.
+ * Only a GET with Origin equal to the CRM origin gets the password; any other request gets 403 and does not consume it.
  */
 async function runBrowserLogin(args: string[], connection: CrmConnection, deps: CrmCliDeps): Promise<CrmCliResult> {
 	let port = DEFAULT_BROWSER_PORT;
@@ -226,10 +261,16 @@ async function runBrowserLogin(args: string[], connection: CrmConnection, deps: 
 			server.closeAllConnections();
 			resolve(result);
 		};
-		server.on("request", (_req, res) => {
+		server.on("request", (req, res) => {
 			if (served) {
 				res.statusCode = 404;
 				res.end();
+				return;
+			}
+			if (req.method !== "GET" || req.headers.origin !== origin) {
+				log(`Запрос без адреса CRM (Origin: ${req.headers.origin ?? "нет"}) — пароль не отдан. Выполни фрагмент на странице ${connection.url.replace(/\/+$/, "")}/Login/Login.html, адрес должен совпадать точно (localhost и 127.0.0.1 — разные адреса).`);
+				res.writeHead(403, { "Content-Type": "text/plain; charset=utf-8" });
+				res.end("Пароль отдаётся только странице CRM");
 				return;
 			}
 			served = true;
@@ -241,14 +282,15 @@ async function runBrowserLogin(args: string[], connection: CrmConnection, deps: 
 			const address = server.address();
 			const actualPort = typeof address === "object" && address !== null ? address.port : port;
 			const script = [
+				"(async () => {",
 				`const pw = await fetch("http://127.0.0.1:${actualPort}/").then(r => r.text());`,
 				`const r = await fetch(${JSON.stringify(`${basePath}/ServiceModel/AuthService.svc/Login`)}, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({UserName: ${JSON.stringify(connection.user)}, UserPassword: pw})});`,
-				`r.status + " " + (await r.text()).slice(0, 80)`,
+				`return r.status + " " + (await r.text()).slice(0, 80); })()`,
 			].join(" ");
 			log(`Открой в браузере страницу входа: ${connection.url.replace(/\/+$/, "")}/Login/Login.html`);
 			log("Фрагмент JavaScript для этой страницы:");
 			log(script);
-			log("Выполни фрагмент в этой странице (инструмент выполнения JavaScript); ответ 200 — вход выполнен.");
+			log("Выполни фрагмент в этой странице инструментом выполнения JavaScript (в Cursor — browser_cdp, метод Runtime.evaluate с awaitPromise: true и returnByValue: true); ответ 200 — вход выполнен. Пароль не вводи в форму и не подбирай.");
 			log(`Жду, пока страница заберёт пароль (до ${Math.round(timeoutMs / 1000)} с).`);
 			timer = setTimeout(() => finish({ code: 1, text: `Страница не забрала пароль за ${Math.round(timeoutMs / 1000)} с` }), timeoutMs);
 		});
@@ -264,7 +306,7 @@ export async function runCrmCli(argv: string[], env: NodeJS.ProcessEnv, deps: Cr
 	if (!COMMANDS.includes(command)) {
 		return usage(`Неизвестная команда: ${command}`);
 	}
-	const connection = readConnection(env);
+	const connection = readConnection(env) ?? readConnection({ ...readSettingsEnv(deps.cwd), ...nonEmpty(env) });
 	if (!connection) {
 		return { code: 2, text: NOT_CONFIGURED };
 	}
