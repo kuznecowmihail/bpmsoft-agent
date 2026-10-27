@@ -48,21 +48,7 @@
 ## ✅ Карточка: фильтр-правило, проверка по БД, значения и фильтр детали, сортировка списка, сообщения
 
 **Подтверждено записью в CRM (21.10.2026).**
-- Фильтр справочного поля правилом `FILTRATION` в `rules` (модуль `BusinessRuleModule` — в зависимостях схемы):
-  ```js
-  "<Колонка справочника>": {
-  	"<ИмяПравила>": {
-  		ruleType: BusinessRuleModule.enums.RuleType.FILTRATION,
-  		autocomplete: false,
-  		baseAttributePatch: "<Колонка справочного объекта>",
-  		comparisonType: BPMSoft.ComparisonType.EQUAL,
-  		type: BusinessRuleModule.enums.ValueType.CONSTANT,
-  		value: <значение>
-  	}
-  }
-  ```
-  Фильтр действует и в окне выбора, и в выпадающем списке. Уже заполненное значение, которое не проходит фильтр, остаётся в поле. Id записи в `value` выноси в клиентский модуль констант (раздел ниже). Фильтр по другому полю карточки — `type: BusinessRuleModule.enums.ValueType.ATTRIBUTE, attribute: "<Колонка карточки>"` и `autoClean: true` (очистить поле при смене значения), 🧪 не проверено.
-- Коды `BusinessRuleModule.enums` (по коду ядра `[app]/conf/content/BusinessRuleModule.js`; в `businessRules` Designer пишет числа): `RuleType` — `DISABLED` -1, `BINDPARAMETER` 0, `FILTRATION` 1, `AUTOCOMPLETE` 2, `POPULATE_ATTRIBUTE` 3; `ValueType` — `CONSTANT` 0, `ATTRIBUTE` 1, `SYSSETTING` 2, `SYSVALUE` 3, `CARDSTATE` 4, `PARAMETER` 5, `FORMULA` 6.
+- Фильтр справочного поля правилом `FILTRATION` в `rules` (✅ 21.10.2026) и коды `BusinessRuleModule.enums` — `client-rules-edit.md`, `client-rules.md`.
 - Сортировка справочного поля: атрибут `"<Колонка>": {lookupListConfig: {orders: [{columnPath: "Name", direction: BPMSoft.OrderDirection.DESC}]}}`. Действует только в выпадающем списке поля (подсказки при вводе: `getLookupQuery` → `applyColumnsOrderToLookupQuery` в `BasePageV2.js`). Окно выбора справочника строит свой запрос и порядок не меняет — проверено.
 - Проверка по БД перед сохранением — переопредели `asyncValidate`:
   ```js

@@ -50,7 +50,7 @@ description: Use when the user asks to implement, add, change or delete somethin
 | Тип схемы | Подскилл | Файлы знаний |
 |---|---|---|
 | объект, колонки, события объекта | `bpm-entity` | `entity.md`, `entity-schema.md`, `entity-edit.md`, `entity-columns-edit.md`, `entity-events-edit.md` |
-| клиентские схемы (раздел, карточка, деталь, модуль, миксин) | `bpm-client-schemas` | `client-schemas.md`, `client-schema-types.md`, `client-schemas-hierarchy.md`, `client-schemas-edit.md`, `client-pages-edit.md`, `client-logic-edit.md` |
+| клиентские схемы (раздел, карточка, деталь, модуль, миксин) | `bpm-client-schemas` | `client-schemas.md`, `client-schema-types.md`, `client-schemas-hierarchy.md`, `client-schemas-edit.md`, `client-pages-edit.md`, `client-logic-edit.md`, `client-rules.md`, `client-rules-edit.md` |
 | бизнес-процесс | `bpm-process` | `processes.md`, `process-edit.md`, `process-data-edit.md`, `process-flow-edit.md`, `process-tasks-edit.md`, `process-run-edit.md`, `process-user-pages.md` |
 | своё действие процесса с C# | `bpm-user-task` | `user-task.md`, `user-task-edit.md` |
 | исходный код C# | `bpm-source-code` | `source-code.md`, `source-code-edit.md`, `server-events-edit.md`, `platform-api.md`, `server-data-api.md`, `server-background-edit.md`, `files.md` |
