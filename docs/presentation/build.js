@@ -368,7 +368,7 @@ pres.addSection({ title: 'Claude Code' });
 s = content('Claude Code', 'Экспорт скиллов в Claude Code');
 [
   'Настройки → «Claude Code» → «Установить скиллы в проект»',
-  'В стенд ставится .claude: CLAUDE.md, 12 скиллов bpm-*, база знаний, pkg-lint.js и crm.js',
+  'В стенд ставится .claude: CLAUDE.md, 12 скиллов bpm-*, база знаний, pkg-lint.js и MCP-сервер bpmsoft',
   'Свой CLAUDE.md уже есть — подключить отдельным файлом или заменить',
   'Файлы, изменённые вручную, — предупредит перед перезаписью',
   'После обновления приложения — кнопка «Обновить скиллы»'
@@ -383,7 +383,7 @@ shot(s, 'settings_claude.png', 8.3, 1.45, 4.4, 3.575);
   s.addShape(pres.shapes.ROUNDED_RECTANGLE, { x, y, w: 1.95, h: 0.38, fill: { color: ACCENT_L }, line: { color: ACCENT_B, width: 1 }, rectRadius: 0.19 });
   txt(s, t, { x, y, w: 1.95, h: 0.38, align: 'center', valign: 'middle', fontSize: 12, bold: true, color: ACCENT });
 });
-txt(s, 'Те же правила и знания — в Claude Code. Запросов к БД там нет: SQL агент отдаёт вам, данные читает REST через crm.js', { x: 0.6, y: 6.42, w: 12.1, h: 0.45, color: MUTED, italic: true });
+txt(s, 'Те же правила и знания — в Claude Code. Данные CRM читает MCP-сервер bpmsoft; запрос к БД — через crm_db_query, если доступ включён, иначе SQL агент отдаёт вам', { x: 0.6, y: 6.42, w: 12.1, h: 0.45, color: MUTED, italic: true });
 
 // 16. Logs and observations
 pres.addSection({ title: 'Логи и знания' });
