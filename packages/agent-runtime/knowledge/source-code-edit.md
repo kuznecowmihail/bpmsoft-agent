@@ -249,6 +249,7 @@ namespace BPMSoft.Configuration
 }
 ```
 - `AppEventListenerBase` — `BPMSoft.Web.Common`; методы `OnAppStart`, `OnAppEnd`, `OnSessionStart`, `OnSessionEnd`. Регистрировать слушатель не нужно: платформа (`AppEventLoader`) сама находит в сборке конфигурации все классы, реализующие `IAppEventListener`.
+- ✅ Не делай общий абстрактный базовый класс от `AppEventListenerBase` (подтверждено на реальных схемах проекта, 28.10.2026): платформа при каждом старте создаёт экземпляр каждого наследника `AppEventListenerBase` и на абстрактном пишет в `Error.log` `AppEventDispatcher OnAppEvent - Error creating an instance of the <Класс> type | System.MissingMethodException: Constructor on type … not found` (сотни строк в журналах). Общий код выноси в хелпер или в не наследующий `AppEventListenerBase` класс.
 - `ClassFactory` — `BPMSoft.Core.Factories`: `Bind<IИнтерфейс, Реализация>()` при старте, `ClassFactory.Get<IИнтерфейс>()` в коде. Подмена существующей привязки — `ClassFactory.ReBind<...>()`.
 - Системное подключение в `OnAppStart`: `((AppConnection)context.Application["AppConnection"]).SystemUserConnection` (образец — любой наследник `AppEventListenerBase` в `Pkg`).
 - `OnAppStart` выполняется только при запуске приложения; компиляция его перезапускает сама (в логе `BPMSoft.WebHost.Application OnStart - Application started`).

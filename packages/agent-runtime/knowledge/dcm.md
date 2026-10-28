@@ -11,6 +11,8 @@
 - Дизайнер сохраняет кейс в БД и сразу в файлы пакета (`Schemas/<Имя>/`, `Resources/<Имя>.Dcm/`); при этом убирает `DependsOn` из `descriptor.json` и ставит в `properties.json` свой `CreatedInVersion`.
 - Кейс работает после «Обновить из файловой системы», компиляция не нужна.
 
+- ✅ Свойства кейса в БД (подтверждено запросом к БД, 28.10.2026, 15 кейсов): таблица `"SysSchemaProperty"` (`"SysSchemaId"` = `"SysSchema"."Id"` кейса, `"Name"`, `"Value"`) — `EntitySchemaUId`, `StageColumnUId`, `Enabled`, `IsActiveVersion`, `Version`, `IsTracing`, `CreatedInVersion`. Условие запуска (`Filters`) и стадии — только в metadata: `convert_from("MetaData", 'UTF8')` из `"VwSysSchemaInfo"`; это текст diff-журнала, а не JSON, поэтому `::json` падает (`invalid input syntax for type json`) — ищи `position`/`regexp_matches` по `"Filters"`, `"StageRecordId"`.
+
 ## ✅ Как работает экземпляр кейса
 - Запуск — системный стартовый сигнал «запись добавлена» по объекту `EntitySchemaUId` с фильтром `Filters` кейса: новая запись объекта, подходящая под условие, получает экземпляр кейса. Запуск для записей, созданных раньше кейса, 🧪.
 - Выбор кейса: среди кейсов объекта берутся активные (`Enabled`) актуальные версии (`IsActiveVersion`), для записи — тот, чьи `Filters` ей подходят. Проверено: при условии «Категория = <значение>» запись с этим значением получила экземпляр, с другим — нет.
