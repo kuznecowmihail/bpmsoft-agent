@@ -93,6 +93,26 @@ describe("claude-export texts", () => {
 		}
 	});
 
+	it("no references to the removed crm.js script or its env and settings file", () => {
+		const forbidden = ["crm.js", "BPMSOFT_CRM_", "settings.local.json"];
+		const walk = (dir: string): string[] =>
+			fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+				const abs = path.join(dir, entry.name);
+				if (entry.isDirectory()) {
+					return walk(abs);
+				}
+				return entry.name.endsWith(".md") ? [abs] : [];
+			});
+		const files = walk(exportDir);
+		expect(files.length).toBeGreaterThan(0);
+		for (const file of files) {
+			const text = fs.readFileSync(file, "utf8");
+			for (const word of forbidden) {
+				expect(text.includes(word), `${path.relative(exportDir, file)} contains "${word}"`).toBe(false);
+			}
+		}
+	});
+
 	it("core starts with the marker", () => {
 		const firstLine = fs.readFileSync(path.join(exportDir, "AGENTS.md"), "utf8").split(/\r?\n/)[0];
 		expect(firstLine).toBe(marker);
@@ -112,7 +132,16 @@ describe("claude-export texts", () => {
 	});
 
 	it("no app-only tools and no absolute paths", () => {
-		const appOnly = ["crm_db_query", "crm_update_from_fs", "crm_compile", "crm_browser_", "<choices>"];
+		// crm_* names of the bpmsoft MCP server are allowed in the whole export; the old in-app browser tools stay in the app-names section only.
+		const appOnly = [
+			"crm_browser_open",
+			"crm_browser_text",
+			"crm_browser_console",
+			"crm_browser_network",
+			"crm_browser_screenshot",
+			"crm_browser_click",
+			"<choices>"
+		];
 		const absolute = ["/Users/", "C:\\", "~/"];
 		for (const { rel, text } of allTexts()) {
 			// In the core, app tool names are allowed only inside the app-names section.
