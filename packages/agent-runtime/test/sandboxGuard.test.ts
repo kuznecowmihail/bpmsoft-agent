@@ -2,7 +2,7 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { checkToolAccess, checkBashCommand, resolveSandboxPath, isInsideRoots, isReadOnlyToolCall, isAutoApprovedToolCall, isSecretFile, toNativePath, isPathInside, SandboxPolicy } from "../src/safety/sandboxGuard";
+import { checkToolAccess, checkBashCommand, resolveSandboxPath, isInsideRoots, isReadOnlyToolCall, isAutoApprovedToolCall, isSecretFile, toNativePath, isPathInside, maskQuotedPathSpaces, SandboxPolicy } from "../src/safety/sandboxGuard";
 
 describe("sandboxGuard", () => {
 	let tmpDir: string;
@@ -293,6 +293,70 @@ describe("sandboxGuard", () => {
 			const decision = checkBashCommand(command, pkg, policy);
 			expect(decision.allowed).toBe(false);
 			expect(decision.reason).toContain("вне проекта");
+		});
+
+		describe("quoted paths with spaces", () => {
+			let spacedKnowledge: string;
+			let spacedOther: string;
+			let spacedPolicy: SandboxPolicy;
+
+			beforeAll(() => {
+				spacedKnowledge = path.join(tmpDir, "BPMSoft Agent.app", "knowledge");
+				spacedOther = path.join(tmpDir, "other dir");
+				fs.mkdirSync(spacedKnowledge, { recursive: true });
+				fs.mkdirSync(spacedOther, { recursive: true });
+				fs.writeFileSync(path.join(spacedKnowledge, "integration-api.md"), "# API\n");
+				fs.writeFileSync(path.join(spacedKnowledge, "a.md"), "a\n");
+				fs.writeFileSync(path.join(spacedOther, "x.md"), "x\n");
+				spacedPolicy = { readRoots: [app, spacedKnowledge], writeRoots: [pkg], sourceRoots: [spacedKnowledge] };
+			});
+
+			it("allows cd into a quoted knowledge dir with a space", () => {
+				const decision = checkBashCommand(`cd "${spacedKnowledge}"; grep -n x integration-api.md`, pkg, spacedPolicy);
+				expect(decision.allowed).toBe(true);
+			});
+
+			it("allows grep on a double-quoted absolute path with a space", () => {
+				const decision = checkBashCommand(`grep -n x "${path.join(spacedKnowledge, "integration-api.md")}"`, pkg, spacedPolicy);
+				expect(decision.allowed).toBe(true);
+			});
+
+			it("allows wc on a variable holding a quoted path with a space", () => {
+				const decision = checkBashCommand(`K="${spacedKnowledge}"; wc -l "$K/integration-api.md"`, pkg, spacedPolicy);
+				expect(decision.allowed).toBe(true);
+			});
+
+			it("allows cat on a single-quoted path with a space", () => {
+				const decision = checkBashCommand(`cat '${path.join(spacedKnowledge, "integration-api.md")}'`, pkg, spacedPolicy);
+				expect(decision.allowed).toBe(true);
+			});
+
+			it("denies a quoted path with a space outside the roots and names the full path", () => {
+				const outsideFile = path.join(spacedOther, "x.md");
+				const decision = checkBashCommand(`grep -n x "${outsideFile}"`, pkg, spacedPolicy);
+				expect(decision.allowed).toBe(false);
+				expect(decision.reason).toContain(outsideFile);
+			});
+
+			it("denies writing into the spaced knowledge dir", () => {
+				const decision = checkBashCommand(`echo x > "${path.join(spacedKnowledge, "a.md")}"`, pkg, spacedPolicy);
+				expect(decision.allowed).toBe(false);
+			});
+		});
+
+		describe("maskQuotedPathSpaces", () => {
+			it("keeps length and removes spaces inside a quoted Windows path only", () => {
+				const command = 'grep a "C:\\Program Files\\BPMSoft Agent\\k\\x.md" b';
+				const masked = maskQuotedPathSpaces(command);
+				expect(masked.length).toBe(command.length);
+				expect(masked).not.toContain("Program Files");
+				expect(masked.startsWith("grep a ")).toBe(true);
+				expect(masked.endsWith(" b")).toBe(true);
+			});
+
+			it("does not change a quoted string that is not a path", () => {
+				expect(maskQuotedPathSpaces('echo "hello world"')).toBe('echo "hello world"');
+			});
 		});
 	});
 

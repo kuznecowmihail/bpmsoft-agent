@@ -275,6 +275,14 @@ export function isAutoApprovedToolCall(toolName: string, input: Record<string, u
 	return false;
 }
 
+/** Placeholder for spaces inside quoted path strings, so a path with spaces stays one token; same length keeps match indexes. */
+const QUOTED_SPACE = "\u0000";
+
+/** Replaces spaces inside quoted strings that start like a path (absolute, ~/, ../ or a Windows drive) with QUOTED_SPACE. */
+export function maskQuotedPathSpaces(command: string): string {
+	return command.replace(/(["'])((?:~\/|\/|\.\.|[A-Za-z]:[\\/])[^"'\n]*)\1/g, (_all, quote: string, body: string) => quote + body.replace(/ /g, QUOTED_SPACE) + quote);
+}
+
 /** Path-like tokens in a shell command: absolute, home-relative, parent-relative, or Windows drive paths. */
 const BASH_PATH_TOKEN = /(?:^|[\s'"`=:(,;|&<>])((?:~\/|\/|\.\.|[A-Za-z]:[\\/])[^\s'"`;|&<>(),]*)/g;
 
@@ -454,8 +462,8 @@ export function checkBashCommand(command: string, cwd: string, policy: SandboxPo
 		}
 	}
 
-	for (const match of command.matchAll(BASH_PATH_TOKEN)) {
-		const token = match[1];
+	for (const match of maskQuotedPathSpaces(command).matchAll(BASH_PATH_TOKEN)) {
+		const token = match[1].split(QUOTED_SPACE).join(" ");
 		if (ALWAYS_ALLOWED.has(token)) {
 			continue;
 		}
