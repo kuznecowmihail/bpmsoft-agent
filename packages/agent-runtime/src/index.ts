@@ -12,4 +12,5 @@ export * from "./tools/localTools";
 export * from "./tools/gitBash";
 export * from "./tools/stagingCleanup";
 export * from "./lint";
+export * from "./mcp";
 export * from "./claudeExport";

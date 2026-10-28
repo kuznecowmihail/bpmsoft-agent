@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc -p tsconfig.json && esbuild src/lint/pkgLintMain.ts --bundle --platform=node --target=node18 --outfile=dist/claude-export/pkg-lint.js && esbuild src/crm/crmMain.ts --bundle --platform=node --target=node18 --outfile=dist/claude-export/crm.js",
+    "build": "tsc -p tsconfig.json && esbuild src/lint/pkgLintMain.ts --bundle --platform=node --target=node18 --outfile=dist/claude-export/pkg-lint.js && esbuild src/crm/crmMain.ts --bundle --platform=node --target=node18 --outfile=dist/claude-export/crm.js && esbuild src/mcp/mcpMain.ts --bundle --platform=node --target=node18 --external:pg-native --outfile=dist/claude-export/bpmsoft-mcp.js",
     "test": "vitest run"
   },
   "dependencies": {

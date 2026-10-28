@@ -22,7 +22,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 export function parseStandConfig(text: string): StandConfig | { error: string } {
 	let raw: unknown;
 	try {
-		raw = JSON.parse(text.replace(/^﻿/, ""));
+		raw = JSON.parse(text.replace(/^\uFEFF/, ""));
 	} catch {
 		return { error: NOT_JSON_ERROR };
 	}
