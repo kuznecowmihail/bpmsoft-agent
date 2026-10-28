@@ -138,3 +138,42 @@ export function extractBuildErrors(text: string): string {
 export function hasAppStarted(text: string): boolean {
 	return /Application started/.test(text);
 }
+
+/** True when the last LoadPackagesToDB block in the text has its end marker. */
+export function isPackageSyncFinished(text: string): boolean {
+	const lines = text.split(/\r?\n/);
+	let start = -1;
+	for (let i = lines.length - 1; i >= 0; i--) {
+		if (lines[i].includes(PACKAGE_BLOCK_START)) {
+			start = i;
+			break;
+		}
+	}
+	if (start < 0) {
+		return false;
+	}
+	return lines.slice(start + 1).some((line) => line.includes(PACKAGE_BLOCK_END));
+}
+
+/** Result of the last build marker in Build.log text. */
+export function buildResult(text: string): "succeeded" | "failed" | undefined {
+	let result: "succeeded" | "failed" | undefined;
+	for (const line of text.split(/\r?\n/)) {
+		const found = BUILD_MARKER.exec(line);
+		if (found) {
+			result = found[1] === "FAILED" ? "failed" : "succeeded";
+		}
+	}
+	return result;
+}
+
+/** Last line of the text that starts with a date, "" when none. */
+export function lastLogLine(text: string): string {
+	let last = "";
+	for (const line of text.split(/\r?\n/)) {
+		if (/^\d{4}-\d{2}-\d{2} /.test(line)) {
+			last = line.trim();
+		}
+	}
+	return last.slice(0, 200);
+}

@@ -1,11 +1,18 @@
+import { Agent, fetch as undiciFetch } from "undici";
 import { errorMessage } from "../db/crmDbTool";
 
 export interface CrmConnection { url: string; user: string; password: string }
 export interface CrmResponse { status: number; text: string; json: unknown }
 export type FetchLike = typeof fetch;
 
+/** Node's fetch drops a request after 300 s without response headers; CRM update and build run longer, our own timer limits them. */
+const LONG_REQUESTS = new Agent({ headersTimeout: 0, bodyTimeout: 0 });
+const TIMEOUT_CODES = ["UND_ERR_HEADERS_TIMEOUT", "UND_ERR_BODY_TIMEOUT"];
+
 export class CrmLoginError extends Error {}
 export class CrmUnavailableError extends Error {}
+/** No answer in time: the action on the stand may still run. */
+export class CrmTimeoutError extends CrmUnavailableError {}
 /** The user stopped the request: not a failure of the CRM. */
 export class CrmStoppedError extends Error {}
 
@@ -42,7 +49,7 @@ export class CrmSession {
 
 	constructor(private readonly connection: CrmConnection, fetchImpl?: FetchLike) {
 		this.baseUrl = connection.url.replace(/\/+$/, "");
-		this.fetchImpl = fetchImpl ?? ((input, init) => fetch(input, init));
+		this.fetchImpl = fetchImpl ?? ((input, init) => undiciFetch(input as never, { ...(init ?? {}), dispatcher: LONG_REQUESTS } as never) as unknown as Promise<Response>);
 	}
 
 	/** Throws CrmLoginError (wrong login, message from the CRM) or CrmUnavailableError (network/HTTP failure). */
@@ -101,7 +108,11 @@ export class CrmSession {
 				throw new CrmStoppedError("остановлено пользователем");
 			}
 			if (controller.signal.aborted) {
-				throw new CrmUnavailableError(`таймаут ${timeoutMs / 1000} с`);
+				throw new CrmTimeoutError(`таймаут ${timeoutMs / 1000} с`);
+			}
+			const code = (e as { cause?: { code?: unknown } } | null | undefined)?.cause?.code;
+			if (typeof code === "string" && TIMEOUT_CODES.includes(code)) {
+				throw new CrmTimeoutError(networkMessage(e));
 			}
 			throw new CrmUnavailableError(networkMessage(e));
 		} finally {

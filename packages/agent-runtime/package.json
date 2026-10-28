@@ -14,6 +14,7 @@
     "@cursor/sdk": "^1.0.36",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "pg": "^8.23.1",
+    "undici": "^6.21.0",
     "zod": "^4.0.0"
   },
   "devDependencies": {

@@ -1,6 +1,6 @@
 import { errorMessage } from "../db/crmDbTool";
 import type { AppTool, AppToolResult } from "../tools/appTool";
-import { CrmConnection, CrmLoginError, CrmSession, CrmStoppedError, FetchLike } from "./crmSession";
+import { CrmConnection, CrmLoginError, CrmSession, CrmStoppedError, CrmTimeoutError, FetchLike } from "./crmSession";
 
 export const CRM_REQUEST_TOOL = "crm_request";
 export const DEFAULT_REQUEST_MAX_CHARS = 4000;
@@ -8,6 +8,7 @@ const MAX_REQUEST_MAX_CHARS = 50000;
 const REQUEST_TIMEOUT_MS = 120000;
 const BODY_PREVIEW_CHARS = 500;
 const FALLBACK = "Не повторяй вызов: попроси пользователя выполнить запрос самому или проверить подключение к CRM в настройках приложения.";
+const TIMEOUT_FALLBACK = "Запрос мог выполниться на стенде: не повторяй его вслепую — проверь результат чтением данных или журналом стенда, или спроси пользователя.";
 
 const DESCRIPTION = "Один HTTP-запрос к стенду CRM под учётной записью из настроек: вход и заголовок BPMCSRF инструмент делает сам. Возвращает HTTP <код> и тело ответа (обрезано до maxChars). GET и POST DataService SelectQuery выполняются сразу; любой другой POST (изменение данных, свои сервисы, запуск процесса) пользователь разрешает сам.";
 
@@ -120,6 +121,9 @@ export function createCrmRequestTool(options: CrmRequestToolOptions): AppTool {
 				}
 				const message = errorMessage(e).replace(/[.\s]+$/, "");
 				record({ durationMs: Date.now() - started, error: message });
+				if (e instanceof CrmTimeoutError) {
+					return { text: `CRM не ответила: ${message}. ${TIMEOUT_FALLBACK}`, isError: true };
+				}
 				const prefix = e instanceof CrmLoginError ? "Вход в CRM не выполнен" : "CRM недоступна";
 				return { text: `${prefix}: ${message}. ${FALLBACK}`, isError: true };
 			}

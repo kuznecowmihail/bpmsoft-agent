@@ -2,7 +2,7 @@ import * as http from "http";
 import * as path from "path";
 import { errorMessage } from "../db/crmDbTool";
 import { runPkgLintCli } from "../lint/pkgLintCli";
-import { CrmConnection, CrmLoginError, CrmResponse, CrmSession, FetchLike } from "./crmSession";
+import { CrmConnection, CrmLoginError, CrmResponse, CrmSession, CrmTimeoutError, FetchLike } from "./crmSession";
 import { CRM_COMPILE_TOOL, CRM_UPDATE_TOOL, createCrmTools, restartCrm } from "./crmTools";
 import { formatCrmResponse, isStandPath } from "./crmRequestTool";
 
@@ -50,7 +50,7 @@ const BROWSER_LOGIN_TIMEOUT_MS = 120000;
 /** Failure text of login or request; the messages never contain the password. */
 function failureText(e: unknown): string {
 	const message = errorMessage(e).replace(/[.\s]+$/, "");
-	const prefix = e instanceof CrmLoginError ? "Вход в CRM не выполнен" : "CRM недоступна";
+	const prefix = e instanceof CrmLoginError ? "Вход в CRM не выполнен" : e instanceof CrmTimeoutError ? "CRM не ответила" : "CRM недоступна";
 	return `${prefix}: ${message}.`;
 }
 

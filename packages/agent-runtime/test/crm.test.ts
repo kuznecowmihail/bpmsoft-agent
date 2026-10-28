@@ -12,8 +12,10 @@ import {
 	CrmTool,
 	CrmToolsOptions,
 	FetchLike,
+	buildResult,
 	createCrmTools,
 	extractBuildErrors,
+	isPackageSyncFinished,
 	markLog,
 	readSince,
 	utcDateFolder,
@@ -585,4 +587,88 @@ describe("CRM tools", () => {
 		expect(records[0].stopped).toBe(true);
 		expect(requests).toHaveLength(0);
 	});
+
+	it("after an update timeout takes the outcome from the stand log when the package block has ended", async () => {
+		const appRoot = makeAppRoot();
+		const { fetchImpl } = fakeCrm({
+			"/ServiceModel/AuthService.svc/Login": () => loginResponse(),
+			"/ServiceModel/AppInstallerService.svc/LoadPackagesToDB": () => {
+				fs.appendFileSync(logFile(appRoot, "PackagesSynchronization.log"), [
+					"2026-10-13 10:40:00,000 [1] INFO --> PackageInstallUtilities.LoadPackagesToDB",
+					"2026-10-13 10:45:00,000 [1] INFO <-- PackageInstallUtilities.LoadPackagesToDB",
+					"",
+				].join("\n"));
+				throw timeoutError();
+			},
+		});
+		const result = await getTool(CRM_UPDATE_TOOL, { connection, fetchImpl, appRoot, logWaitPollMs: 10, logWaitLimitMs: 1000 }).execute();
+
+		expect(result.isError).toBe(false);
+		expect(result.text).toMatch(/по журналу|завершение видно в журнале/);
+	});
+
+	it("after an update timeout without the end marker says not to repeat the call and does not blame the CRM as down", async () => {
+		const appRoot = makeAppRoot();
+		const { fetchImpl } = fakeCrm({
+			"/ServiceModel/AuthService.svc/Login": () => loginResponse(),
+			"/ServiceModel/AppInstallerService.svc/LoadPackagesToDB": () => {
+				fs.appendFileSync(logFile(appRoot, "PackagesSynchronization.log"), "2026-10-13 10:40:00,000 [1] INFO --> PackageInstallUtilities.LoadPackagesToDB\n");
+				throw timeoutError();
+			},
+		});
+		const result = await getTool(CRM_UPDATE_TOOL, { connection, fetchImpl, appRoot, logWaitPollMs: 10, logWaitLimitMs: 50 }).execute();
+
+		expect(result.isError).toBe(true);
+		expect(result.text).toContain("не повторяй вызов");
+		expect(result.text).not.toContain("CRM недоступна");
+	});
+
+	it("after an update timeout without appRoot says the CRM did not answer", async () => {
+		const { fetchImpl } = fakeCrm({
+			"/ServiceModel/AuthService.svc/Login": () => loginResponse(),
+			"/ServiceModel/AppInstallerService.svc/LoadPackagesToDB": () => {
+				throw timeoutError();
+			},
+		});
+		const result = await getTool(CRM_UPDATE_TOOL, { connection, fetchImpl }).execute();
+
+		expect(result.isError).toBe(true);
+		expect(result.text).toContain("CRM не ответила");
+	});
+
+	it("after a compile timeout reads Build.log and restarts when the build succeeded", async () => {
+		const appRoot = makeAppRoot();
+		const { fetchImpl, requests } = fakeCrm({
+			"/ServiceModel/AuthService.svc/Login": () => loginResponse(),
+			"/ServiceModel/WorkspaceExplorerService.svc/Build": () => {
+				fs.appendFileSync(logFile(appRoot, "Build.log"), "2026-10-13 10:50:00,000 [1] INFO Build succeeded.\n");
+				throw timeoutError();
+			},
+			"/ServiceModel/AppInstallerService.svc/RestartApp": () => {
+				fs.appendFileSync(logFile(appRoot, "Common.log"), "2026-10-13 10:51:00,000 [1] INFO Application started\n");
+				return jsonResponse({ success: true, errorInfo: null });
+			},
+		});
+		const result = await getTool(CRM_COMPILE_TOOL, { connection, fetchImpl, appRoot, restartPollMs: 10, logWaitPollMs: 10 }).execute();
+
+		expect(requests.some((request) => request.url.endsWith("/RestartApp"))).toBe(true);
+		expect(result.isError).toBe(false);
+		expect(result.text).toContain("Приложение перезапущено");
+	});
+
+	it("checks the end of a package sync block and the last build result in log text", () => {
+		expect(isPackageSyncFinished("x --> PackageInstallUtilities.LoadPackagesToDB\ny")).toBe(false);
+		expect(isPackageSyncFinished("x --> PackageInstallUtilities.LoadPackagesToDB\ny <-- PackageInstallUtilities.LoadPackagesToDB")).toBe(true);
+		expect(isPackageSyncFinished("no block")).toBe(false);
+		expect(buildResult("Build FAILED.\nBuild succeeded.")).toBe("succeeded");
+		expect(buildResult("Build succeeded.\nBuild FAILED.")).toBe("failed");
+		expect(buildResult("nothing")).toBeUndefined();
+	});
 });
+
+/** Network timeout as Node's fetch reports it when no response headers arrive in time. */
+function timeoutError(): TypeError {
+	const err = new TypeError("fetch failed");
+	(err as { cause?: unknown }).cause = { code: "UND_ERR_HEADERS_TIMEOUT" };
+	return err;
+}

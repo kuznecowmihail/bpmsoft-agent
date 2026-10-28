@@ -1,8 +1,8 @@
 import * as fs from "fs";
 import * as path from "path";
 import { errorMessage } from "../db/crmDbTool";
-import { CrmConnection, CrmLoginError, CrmSession, CrmStoppedError, FetchLike } from "./crmSession";
-import { LogMark, extractBuildErrors, extractPackageSync, hasAppStarted, markLog, readSince } from "./crmLogs";
+import { CrmConnection, CrmLoginError, CrmResponse, CrmSession, CrmStoppedError, CrmTimeoutError, FetchLike } from "./crmSession";
+import { LogMark, buildResult, extractBuildErrors, extractPackageSync, hasAppStarted, isPackageSyncFinished, lastLogLine, markLog, readSince } from "./crmLogs";
 import { DEFAULT_MAX_FAILED_ACTIONS, FixLoop, errorSignature, schemaNameFromFile } from "./fixLoop";
 
 export interface CrmActionRecord { action: "update" | "compile"; success: boolean; durationMs: number; summary: string; error?: string; denied?: boolean; attempt?: number; foreignSchemas?: string[]; blocked?: boolean; stopped?: boolean }
@@ -17,6 +17,9 @@ export interface CrmToolsOptions {
 	/** Tests: polling interval for restart readiness (default 2000) and limit (default 180000). */
 	restartPollMs?: number;
 	restartLimitMs?: number;
+	/** Tests: after a timeout, how often (default 5000) and how long (default 600000) to wait for the end marker in the stand log. */
+	logWaitPollMs?: number;
+	logWaitLimitMs?: number;
 	/** Failed actions allowed per turn before the checkpoint (default 5). */
 	maxFailedActions?: number;
 	/** Names of schemas changed in this chat; errors in other schemas get a notice. */
@@ -43,6 +46,8 @@ const BUILD_TIMEOUT_MS = 900000;
 const RESTART_TIMEOUT_MS = 120000;
 const DEFAULT_RESTART_POLL_MS = 2000;
 const DEFAULT_RESTART_LIMIT_MS = 180000;
+const DEFAULT_LOG_WAIT_POLL_MS = 5000;
+const DEFAULT_LOG_WAIT_LIMIT_MS = 600000;
 /** Without the log: a successful login counts as "app is back" only after a failed attempt or after this delay. */
 const LOGIN_ONLY_READY_AFTER_MS = 60000;
 const MAX_HTTP_TEXT_CHARS = 500;
@@ -182,9 +187,85 @@ async function runAction(
 	}
 }
 
-async function runUpdate(session: CrmSession, logRoot: string | undefined, signal?: AbortSignal): Promise<ActionOutcome> {
+/** Waits in the stand log for the end marker of an action whose request timed out; undefined when the limit passes first. */
+async function waitForLog(options: CrmToolsOptions, mark: LogMark, done: (text: string) => boolean): Promise<string | undefined> {
+	const pollMs = options.logWaitPollMs ?? DEFAULT_LOG_WAIT_POLL_MS;
+	const limitMs = options.logWaitLimitMs ?? DEFAULT_LOG_WAIT_LIMIT_MS;
+	const started = Date.now();
+	while (Date.now() - started < limitMs) {
+		if (options.signal?.aborted) {
+			throw new CrmStoppedError("остановлено пользователем");
+		}
+		await sleep(pollMs);
+		if (options.signal?.aborted) {
+			throw new CrmStoppedError("остановлено пользователем");
+		}
+		const text = readSince(mark);
+		if (done(text)) {
+			return text;
+		}
+	}
+	return undefined;
+}
+
+/** The update request timed out: the stand may still run it, so the outcome comes from PackagesSynchronization.log. */
+async function updateAfterTimeout(options: CrmToolsOptions, mark: LogMark | undefined, reason: string): Promise<ActionOutcome> {
+	if (!mark) {
+		const text = `CRM не ответила на «Обновить из файловой системы» (${reason}). На стенде обновление может продолжаться. Журналы стенда недоступны: не повторяй вызов сразу — попроси пользователя проверить в CRM, завершилось ли обновление, и продолжай после его ответа.`;
+		return { ...failure(text, `CRM не ответила: ${reason}`), countable: false };
+	}
+	const text = await waitForLog(options, mark, isPackageSyncFinished);
+	if (text === undefined) {
+		const minutes = Math.round((options.logWaitLimitMs ?? DEFAULT_LOG_WAIT_LIMIT_MS) / 60000);
+		const last = lastLogLine(readSince(mark));
+		const message = `CRM не ответила на «Обновить из файловой системы» (${reason}), и за ${minutes} мин ожидания в журнале PackagesSynchronization.log не появилось завершение («<-- PackageInstallUtilities.LoadPackagesToDB»).`
+			+ (last ? ` Последняя запись: ${last}.` : "")
+			+ " Обновление на стенде может ещё идти: не повторяй вызов. Проверь журнал сам позже (Logs/<дата UTC>/PackagesSynchronization.log); если записи не появляются и маркера нет — попроси пользователя проверить стенд.";
+		return { ...failure(message, `CRM не ответила: ${reason}`), countable: false };
+	}
+	const extract = extractPackageSync(text);
+	if (extract === "") {
+		return {
+			success: true,
+			text: `Обновление из файловой системы выполнено: CRM не ответила вовремя (${reason}), но завершение видно в журнале PackagesSynchronization.log. Список загруженного недоступен.`,
+			summary: "Обновление из файловой системы выполнено (по журналу).",
+		};
+	}
+	const message = `Обновление из файловой системы завершилось (по журналу; CRM не ответила вовремя — ${reason}), но в журнале PackagesSynchronization.log есть исключения:\n${extract}\nЕсли они про схемы, которые ты менял, — исправь и вызови обновление снова; иначе покажи их пользователю.`;
+	return { ...failure(message, "исключения в журнале PackagesSynchronization.log"), countable: false };
+}
+
+/** The build request timed out: the outcome comes from Build.log; "succeeded" lets the caller restart as after a normal success. */
+async function compileAfterTimeout(options: CrmToolsOptions, mark: LogMark | undefined, reason: string): Promise<ActionOutcome | "succeeded"> {
+	if (!mark) {
+		const text = `CRM не ответила на компиляцию (${reason}). На стенде компиляция может продолжаться, приложение не перезапускалось. Журналы стенда недоступны: не повторяй вызов сразу — попроси пользователя проверить в CRM, завершилась ли компиляция.`;
+		return { ...failure(text, `CRM не ответила: ${reason}`), countable: false };
+	}
+	const text = await waitForLog(options, mark, (log) => buildResult(log) !== undefined);
+	if (text === undefined) {
+		const minutes = Math.round((options.logWaitLimitMs ?? DEFAULT_LOG_WAIT_LIMIT_MS) / 60000);
+		const message = `CRM не ответила на компиляцию (${reason}), и за ${minutes} мин ожидания в журнале Build.log не появился результат («Build succeeded.» или «Build FAILED.»). Компиляция на стенде может ещё идти, приложение не перезапускалось: не повторяй вызов, проверь Build.log сам позже.`;
+		return { ...failure(message, `CRM не ответила: ${reason}`), countable: false };
+	}
+	if (buildResult(text) === "failed") {
+		const errors = extractBuildErrors(text);
+		const message = `Компиляция завершилась с ошибками (по журналу Build.log; CRM не ответила вовремя — ${reason}):\n${errors}\nИсправь ошибки в файлах схем, затем снова обновление и компиляция. Приложение не перезапускалось.`;
+		return failure(message, firstLine(errors) || "Build FAILED.");
+	}
+	return "succeeded";
+}
+
+async function runUpdate(options: CrmToolsOptions, session: CrmSession, logRoot: string | undefined): Promise<ActionOutcome> {
 	const mark = logRoot ? markLog(logRoot, "PackagesSynchronization.log") : undefined;
-	const response = await session.post(LOAD_PACKAGES_PATH, UPDATE_TIMEOUT_MS, signal);
+	let response: CrmResponse;
+	try {
+		response = await session.post(LOAD_PACKAGES_PATH, UPDATE_TIMEOUT_MS, options.signal);
+	} catch (e) {
+		if (!(e instanceof CrmTimeoutError)) {
+			throw e;
+		}
+		return updateAfterTimeout(options, mark, errorMessage(e).replace(/[.\s]+$/, ""));
+	}
 	const json = asRecord(response.json);
 
 	const loaded: string[] = [];
@@ -277,7 +358,19 @@ async function waitForRestart(options: CrmToolsOptions, commonMark: LogMark | un
 
 async function runCompile(options: CrmToolsOptions, session: CrmSession, logRoot: string | undefined): Promise<ActionOutcome> {
 	const mark = logRoot ? markLog(logRoot, "Build.log") : undefined;
-	const response = await session.post(BUILD_PATH, BUILD_TIMEOUT_MS, options.signal);
+	let response: CrmResponse;
+	try {
+		response = await session.post(BUILD_PATH, BUILD_TIMEOUT_MS, options.signal);
+	} catch (e) {
+		if (!(e instanceof CrmTimeoutError)) {
+			throw e;
+		}
+		const outcome = await compileAfterTimeout(options, mark, errorMessage(e).replace(/[.\s]+$/, ""));
+		if (outcome !== "succeeded") {
+			return outcome;
+		}
+		response = { status: 200, text: "", json: { success: true, message: "успешно (по журналу Build.log)", errors: null } };
+	}
 	const json = asRecord(response.json);
 
 	const real = asArray(json.errors).map(asRecord).filter((item) => item.warning === false);
@@ -337,7 +430,7 @@ export function createCrmTools(options: CrmToolsOptions): CrmTool[] {
 	/** Time of the last successful update in this tools instance (ms). */
 	let lastUpdateOkAt: number | undefined;
 	const runUpdateStep = async (): Promise<{ text: string; isError: boolean }> => {
-		const result = await runAction(options, loop, "update", UPDATE_CAPTION, (session, logRoot) => runUpdate(session, logRoot, options.signal));
+		const result = await runAction(options, loop, "update", UPDATE_CAPTION, (session, logRoot) => runUpdate(options, session, logRoot));
 		if (!result.isError) {
 			lastUpdateOkAt = Date.now();
 		}
