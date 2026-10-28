@@ -1,6 +1,6 @@
 import type { BrowserWindow } from 'electron'
 import { runBpmsoftAgentQuery, runCursorAgentQuery, createCrmDbTool, testCrmDbConnection, createCrmTools, testCrmConnection, createPkgLintTool, createCrmRequestTool, lintChanged, changedSchemaNames, hasChangedFiles } from '@bpmsoft-agent/agent-runtime'
-import type { AgentEvent, ToolPermissionRequest, CrmDbToolOptions, CrmConnection } from '@bpmsoft-agent/agent-runtime'
+import type { AgentEvent, ToolPermissionRequest, CrmDbToolOptions, CrmConnection, StandDbConfig } from '@bpmsoft-agent/agent-runtime'
 import { join, resolve } from 'path'
 import { saveSecret, loadSecret, clearSecret } from './secureStore'
 import { startChatLogIfNeeded, endChatLog, logChatRecord, reopenChatLog, getCurrentChatId } from './chatLog'
@@ -179,6 +179,21 @@ export function dbConnectionOptions(readRoot: string): CrmDbToolOptions {
       user: dbUser || undefined,
       password: activeProject ? loadSecret(dbPasswordSecret(activeProject)) : undefined
     }
+  }
+}
+
+/** Database access written into the stand for the MCP server: undefined when database access is off. */
+export function dbExportOptions(): StandDbConfig | undefined {
+  if (!activeProject || !getAppSettings().dbAccessEnabled) {
+    return undefined
+  }
+  const { dbHost, dbPort, dbUser } = getProjectConnection(activeProject)
+  const password = loadSecret(dbPasswordSecret(activeProject))
+  return {
+    ...(dbHost ? { host: dbHost } : {}),
+    ...(dbPort ? { port: Number(dbPort) } : {}),
+    ...(dbUser ? { user: dbUser } : {}),
+    ...(password ? { password } : {})
   }
 }
 

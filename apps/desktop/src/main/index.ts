@@ -26,6 +26,7 @@ import {
   hasDbPassword,
   clearDbPassword,
   testDbConnection,
+  dbExportOptions,
   setCrmPassword,
   hasCrmPassword,
   clearCrmPassword,
@@ -498,7 +499,8 @@ app.whenReady().then(() => {
       claudeMd: options?.claudeMd === 'separate' || options?.claudeMd === 'replace' ? options.claudeMd : undefined,
       overwriteModified: options?.overwriteModified === true,
       appVersion: app.getVersion(),
-      crm: crmConnection()
+      crm: crmConnection(),
+      db: dbExportOptions()
     })
   )
 

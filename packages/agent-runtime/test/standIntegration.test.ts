@@ -41,6 +41,9 @@ describe("standIntegration", () => {
 		expect(settings.enabledMcpjsonServers).toEqual(["bpmsoft"]);
 		expect(settings.permissions.allow).toEqual(MCP_PERMISSIONS);
 		expect(JSON.parse(read(".claude", "bpmsoft-agent.local.json"))).toEqual({ version: 1, crm, db: { port: 5433 } });
+		if (process.platform !== "win32") {
+			expect(fs.statSync(path.join(root, ".claude", "bpmsoft-agent.local.json")).mode & 0o777).toBe(0o600);
+		}
 	});
 
 	it("keeps foreign keys and servers and does not duplicate entries on reinstall", () => {

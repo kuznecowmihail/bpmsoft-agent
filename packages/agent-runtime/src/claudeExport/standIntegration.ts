@@ -63,27 +63,27 @@ function readJson(dest: string): JsonFile | "invalid" | undefined {
 	const text = fs.readFileSync(dest, "utf8");
 	let value: unknown;
 	try {
-		value = JSON.parse(text.replace(/^﻿/, ""));
+		value = JSON.parse(text.replace(/^\uFEFF/, ""));
 	} catch {
 		return "invalid";
 	}
 	if (!isRecord(value)) {
 		return "invalid";
 	}
-	return { value, bom: text.startsWith("﻿"), crlf: text.includes("\r\n") };
+	return { value, bom: text.startsWith("\uFEFF"), crlf: text.includes("\r\n") };
 }
 
 /** Writes a JSON object, keeping BOM and CRLF of the file it replaces when given. */
-function writeJson(dest: string, value: Record<string, unknown>, like?: { bom: boolean; crlf: boolean }): void {
+function writeJson(dest: string, value: Record<string, unknown>, like?: { bom: boolean; crlf: boolean }, mode?: number): void {
 	let text = JSON.stringify(value, null, 2) + "\n";
 	if (like?.crlf) {
 		text = text.replace(/\n/g, "\r\n");
 	}
 	if (like?.bom) {
-		text = "﻿" + text;
+		text = "\uFEFF" + text;
 	}
 	fs.mkdirSync(path.dirname(dest), { recursive: true });
-	fs.writeFileSync(dest, text);
+	fs.writeFileSync(dest, text, mode === undefined ? undefined : { mode });
 }
 
 /** Writes a JSON object under the stand root only when its content differs from the current one. */
@@ -173,7 +173,7 @@ export function writeStandIntegration(appRoot: string, options: StandIntegration
 	const accessDest = toDisk(appRoot, STAND_CONFIG_REL);
 	if (register) {
 		assertInsideStand(appRoot, accessDest);
-		writeJson(accessDest, { version: 1, ...(options.crm && { crm: options.crm }), ...(options.db && { db: options.db }) });
+		writeJson(accessDest, { version: 1, ...(options.crm && { crm: options.crm }), ...(options.db && { db: options.db }) }, undefined, 0o600);
 	} else if (fs.existsSync(accessDest)) {
 		assertInsideStand(appRoot, accessDest);
 		fs.unlinkSync(accessDest);

@@ -328,12 +328,13 @@ export function SettingsMenu({
         setSkillsPending({ modified: outcome.modified })
       } else {
         setSkillsClaudeMd(undefined)
-        const crmNote = outcome.crmEnv === 'written'
-          ? 'Доступ к CRM для Claude Code и Cursor записан в .claude/settings.local.json.'
-          : outcome.crmEnv === 'invalid-settings'
-            ? 'Файл .claude/settings.local.json не JSON — доступ к CRM не записан.'
-            : ''
-        setSkillsNote(`Готово: ${outcome.target}. Чтобы передать коллегам, заархивируйте папку .claude, AGENTS.md и CLAUDE.md${crmNote ? `. ${crmNote}` : ''}`)
+        const { integration } = outcome
+        const integrationNote = integration.invalid.length > 0
+          ? `Не удалось изменить (файл не JSON): ${integration.invalid.join(', ')}.`
+          : integration.state === 'registered'
+            ? `MCP-сервер bpmsoft подключён: действия на стенде${settings?.dbAccessEnabled ? ' и запрос к БД' : ''} доступны агенту. В Cursor включите сервер в Settings → MCP, если он выключен.`
+            : 'Доступ к CRM и БД не настроен: агент будет просить вас выполнять действия на стенде.'
+        setSkillsNote(`Готово: ${outcome.target}. Чтобы передать коллегам, заархивируйте папку .claude, AGENTS.md и CLAUDE.md. ${integrationNote}`)
         await loadClaudeSkillsStatus(appRoot)
       }
     } catch (error) {
