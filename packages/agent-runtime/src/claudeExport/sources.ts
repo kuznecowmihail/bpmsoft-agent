@@ -18,6 +18,9 @@ export interface ExportSources {
 /** Folder of the knowledge copy inside the stand root. */
 const KNOWLEDGE_REL = ".claude/skills/bpm-knowledge";
 
+/** MCP server bundle inside the stand root, started by Claude Code and Cursor. */
+export const MCP_BUNDLE_REL = ".claude/skills/bpm-knowledge/scripts/bpmsoft-mcp.js";
+
 /** Returns the sha256 hex of a file's bytes. */
 export function fileSha256(file: string): string {
 	return crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex");
@@ -59,20 +62,20 @@ export function defaultExportSources(): ExportSources {
 	if (!fs.existsSync(lintBundle)) {
 		throw new Error("Не найден pkg-lint.js: выполните npm run build в packages/agent-runtime");
 	}
-	const crmBundle = path.join(__dirname, "..", "claude-export", "crm.js");
-	if (!fs.existsSync(crmBundle)) {
-		throw new Error("Не найден crm.js: выполните npm run build в packages/agent-runtime");
+	const mcpBundle = path.join(__dirname, "..", "claude-export", "bpmsoft-mcp.js");
+	if (!fs.existsSync(mcpBundle)) {
+		throw new Error("Не найден bpmsoft-mcp.js: выполните npm run build в packages/agent-runtime");
 	}
 	return collectExportSources({
 		knowledgeDir: path.join(__dirname, "..", "..", "knowledge"),
 		exportDir: path.join(__dirname, "..", "..", "claude-export"),
 		lintBundle,
-		crmBundle,
+		mcpBundle,
 	});
 }
 
-/** Collects the export files from the knowledge, skill-text, lint and CRM CLI folders, and computes the export hash. */
-export function collectExportSources(dirs: { knowledgeDir: string; exportDir: string; lintBundle: string; crmBundle: string }): ExportSources {
+/** Collects the export files from the knowledge, skill-text, lint and MCP bundle folders, and computes the export hash. */
+export function collectExportSources(dirs: { knowledgeDir: string; exportDir: string; lintBundle: string; mcpBundle: string }): ExportSources {
 	const skillsDir = path.join(dirs.exportDir, "skills");
 	const skillFiles = fs
 		.readdirSync(skillsDir, { withFileTypes: true })
@@ -82,7 +85,7 @@ export function collectExportSources(dirs: { knowledgeDir: string; exportDir: st
 		...skillFiles,
 		...mapTree(dirs.knowledgeDir, KNOWLEDGE_REL),
 		{ rel: `${KNOWLEDGE_REL}/scripts/pkg-lint.js`, source: dirs.lintBundle },
-		{ rel: `${KNOWLEDGE_REL}/scripts/crm.js`, source: dirs.crmBundle },
+		{ rel: MCP_BUNDLE_REL, source: dirs.mcpBundle },
 	].sort((a, b) => (a.rel < b.rel ? -1 : a.rel > b.rel ? 1 : 0));
 
 	const core = path.join(dirs.exportDir, "AGENTS.md");

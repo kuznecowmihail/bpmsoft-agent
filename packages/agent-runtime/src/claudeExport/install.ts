@@ -1,6 +1,9 @@
 import * as fs from "fs";
 import * as path from "path";
-import { ExportSources, fileSha256, textSha256 } from "./sources";
+import { ExportSources, MCP_BUNDLE_REL, fileSha256, textSha256 } from "./sources";
+import { StandIntegrationResult, writeStandIntegration } from "./standIntegration";
+import { CrmConnection } from "../crm/crmSession";
+import { StandDbConfig } from "../mcp/standConfig";
 import { isInsideRoots } from "../safety/sandboxGuard";
 
 /** First line of a root file (AGENTS.md or CLAUDE.md) that the app wrote itself. */
@@ -24,9 +27,6 @@ const SEPARATE_CORE_REL = ".claude/bpmsoft-agent.md";
 /** Manifest location, relative to the stand root. */
 const MANIFEST_REL = ".claude/skills/.bpmsoft-agent.json";
 
-/** Claude Code settings with the CRM variables for the crm.js CLI, relative to the stand root. */
-const SETTINGS_REL = ".claude/settings.local.json";
-
 /** How the app treats a foreign root file: keep it and connect the separate core, or replace it. */
 export type ClaudeMdChoice = "separate" | "replace";
 
@@ -36,16 +36,9 @@ export type ClaudeSkillsStatus =
 	| { state: "installed"; installedAt: string; appVersion: string }
 	| { state: "outdated"; installedAt: string; appVersion: string };
 
-/** CRM connection written into .claude/settings.local.json for the Claude Code CLI. */
-export interface CrmEnvConnection {
-	url: string;
-	user: string;
-	password: string;
-}
-
 /** Result of an installation attempt; nothing is written unless the kind is "installed". */
 export type InstallOutcome =
-	| { kind: "installed"; written: number; removed: number; target: string; crmEnv: "written" | "skipped" | "invalid-settings" }
+	| { kind: "installed"; written: number; removed: number; target: string; integration: StandIntegrationResult }
 	| { kind: "needs-claude-md-choice" }
 	| { kind: "needs-overwrite-confirm"; modified: string[] };
 
@@ -210,36 +203,6 @@ export function claudeSkillsStatus(appRoot: string, sources: ExportSources): Cla
 }
 
 /**
- * Sets the CRM variables in env of .claude/settings.local.json, keeping other keys and env entries.
- * A file that is not a JSON object (or whose env is not an object) is left untouched and reported as invalid.
- */
-function writeCrmEnv(appRoot: string, crm: CrmEnvConnection): "written" | "invalid-settings" {
-	const dest = toDisk(appRoot, SETTINGS_REL);
-	assertInsideStand(appRoot, dest);
-	let settings: Record<string, unknown> = {};
-	if (fs.existsSync(dest)) {
-		let parsed: unknown;
-		try {
-			parsed = JSON.parse(fs.readFileSync(dest, "utf8").replace(/^\uFEFF/, ""));
-		} catch {
-			return "invalid-settings";
-		}
-		if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-			return "invalid-settings";
-		}
-		settings = parsed as Record<string, unknown>;
-	}
-	if (settings.env !== undefined && (typeof settings.env !== "object" || settings.env === null || Array.isArray(settings.env))) {
-		return "invalid-settings";
-	}
-	const env = (settings.env ?? {}) as Record<string, unknown>;
-	settings.env = { ...env, BPMSOFT_CRM_URL: crm.url, BPMSOFT_CRM_USER: crm.user, BPMSOFT_CRM_PASSWORD: crm.password };
-	fs.mkdirSync(path.dirname(dest), { recursive: true });
-	fs.writeFileSync(dest, JSON.stringify(settings, null, 2) + "\n");
-	return "written";
-}
-
-/**
  * Installs the skills, knowledge, lint bundle and core rules into the stand, and updates the manifest.
  * Root mode writes AGENTS.md (core) and a CLAUDE.md stub that imports it. Separate mode keeps foreign root files
  * and connects them to the core in .claude/bpmsoft-agent.md.
@@ -247,7 +210,7 @@ function writeCrmEnv(appRoot: string, crm: CrmEnvConnection): "written" | "inval
 export function installClaudeSkills(
 	appRoot: string,
 	sources: ExportSources,
-	options: { appVersion: string; claudeMd?: ClaudeMdChoice; overwriteModified?: boolean; now?: () => Date; crm?: CrmEnvConnection },
+	options: { appVersion: string; claudeMd?: ClaudeMdChoice; overwriteModified?: boolean; now?: () => Date; crm?: CrmConnection; db?: StandDbConfig },
 ): InstallOutcome {
 	const old = readManifest(appRoot);
 	const agentsForeign = isForeign(appRoot, AGENTS_MD);
@@ -333,7 +296,7 @@ export function installClaudeSkills(
 	fs.mkdirSync(path.dirname(manifestPath), { recursive: true });
 	fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + "\n");
 
-	const crmEnv = options.crm ? writeCrmEnv(appRoot, options.crm) : "skipped";
+	const integration = writeStandIntegration(appRoot, { crm: options.crm, db: options.db, mcpBundle: toDisk(appRoot, MCP_BUNDLE_REL) });
 
-	return { kind: "installed", written: written.length, removed, target: path.join(appRoot, ".claude"), crmEnv };
+	return { kind: "installed", written: written.length, removed, target: path.join(appRoot, ".claude"), integration };
 }
