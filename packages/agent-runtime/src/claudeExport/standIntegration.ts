@@ -174,6 +174,7 @@ export function writeStandIntegration(appRoot: string, options: StandIntegration
 	if (register) {
 		assertInsideStand(appRoot, accessDest);
 		writeJson(accessDest, { version: 1, ...(options.crm && { crm: options.crm }), ...(options.db && { db: options.db }) }, undefined, 0o600);
+		fs.chmodSync(accessDest, 0o600);
 	} else if (fs.existsSync(accessDest)) {
 		assertInsideStand(appRoot, accessDest);
 		fs.unlinkSync(accessDest);

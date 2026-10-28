@@ -329,12 +329,13 @@ export function SettingsMenu({
       } else {
         setSkillsClaudeMd(undefined)
         const { integration } = outcome
-        const integrationNote = integration.invalid.length > 0
-          ? `Не удалось изменить (файл не JSON): ${integration.invalid.join(', ')}.`
-          : integration.state === 'registered'
-            ? `MCP-сервер bpmsoft подключён: действия на стенде${settings?.dbAccessEnabled ? ' и запрос к БД' : ''} доступны агенту. В Cursor включите сервер в Settings → MCP, если он выключен.`
-            : 'Доступ к CRM и БД не настроен: агент будет просить вас выполнять действия на стенде.'
-        setSkillsNote(`Готово: ${outcome.target}. Чтобы передать коллегам, заархивируйте папку .claude, AGENTS.md и CLAUDE.md. ${integrationNote}`)
+        const stateNote = integration.state === 'registered'
+          ? `MCP-сервер bpmsoft подключён: действия на стенде${settings?.dbAccessEnabled ? ' и запрос к БД' : ''} доступны агенту. В Cursor включите сервер в Settings → MCP, если он выключен.`
+          : 'Доступ к CRM и БД не настроен: агент будет просить вас выполнять действия на стенде.'
+        const invalidNote = integration.invalid.length > 0
+          ? ` Не удалось изменить (файл не JSON): ${integration.invalid.join(', ')}.`
+          : ''
+        setSkillsNote(`Готово: ${outcome.target}. Чтобы передать коллегам, заархивируйте папку .claude, AGENTS.md и CLAUDE.md. ${stateNote}${invalidNote}`)
         await loadClaudeSkillsStatus(appRoot)
       }
     } catch (error) {

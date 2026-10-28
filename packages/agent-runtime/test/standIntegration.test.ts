@@ -46,6 +46,15 @@ describe("standIntegration", () => {
 		}
 	});
 
+	it("tightens the mode of an existing access file", () => {
+		put(".claude/bpmsoft-agent.local.json", "{}");
+		fs.chmodSync(path.join(root, ".claude", "bpmsoft-agent.local.json"), 0o644);
+		writeStandIntegration(root, { crm, mcpBundle: bundle() });
+		if (process.platform !== "win32") {
+			expect(fs.statSync(path.join(root, ".claude", "bpmsoft-agent.local.json")).mode & 0o777).toBe(0o600);
+		}
+	});
+
 	it("keeps foreign keys and servers and does not duplicate entries on reinstall", () => {
 		put(".mcp.json", JSON.stringify({ mcpServers: { other: { command: "x" } } }));
 		put(".claude/settings.local.json", JSON.stringify({ model: "m", permissions: { allow: ["Bash(ls)"] }, enabledMcpjsonServers: ["other"] }));
