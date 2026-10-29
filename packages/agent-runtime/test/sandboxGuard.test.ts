@@ -637,6 +637,11 @@ describe("sandboxGuard", () => {
 			expect(isAutoApprovedToolCall("crm_request", {})).toBe(true);
 		});
 
+		it("returns true for the git create MR tool (it confirms itself)", () => {
+			expect(isAutoApprovedToolCall("mcp__app__git_create_mr", {})).toBe(true);
+			expect(isAutoApprovedToolCall("mcp__app__git_other", {})).toBe(false);
+		});
+
 		it("returns false for another tool of the app MCP server", () => {
 			expect(isAutoApprovedToolCall("mcp__app__other", {})).toBe(false);
 		});

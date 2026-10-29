@@ -1,5 +1,5 @@
 import type { BrowserWindow } from 'electron'
-import { runBpmsoftAgentQuery, runCursorAgentQuery, createCrmDbTool, testCrmDbConnection, createCrmTools, testCrmConnection, createPkgLintTool, createCrmRequestTool, lintChanged, changedSchemaNames, hasChangedFiles } from '@bpmsoft-agent/agent-runtime'
+import { runBpmsoftAgentQuery, runCursorAgentQuery, createCrmDbTool, testCrmDbConnection, createCrmTools, testCrmConnection, createPkgLintTool, createGitTools, createCrmRequestTool, lintChanged, changedSchemaNames, hasChangedFiles } from '@bpmsoft-agent/agent-runtime'
 import type { AgentEvent, ToolPermissionRequest, CrmDbToolOptions, CrmConnection, StandDbConfig } from '@bpmsoft-agent/agent-runtime'
 import { join, resolve } from 'path'
 import { saveSecret, loadSecret, clearSecret } from './secureStore'
@@ -485,7 +485,12 @@ export async function sendAgentMessage(
           onRequest: (record) => logChatRecord('crm_request', { ...record })
         })
       : undefined
-    const appTools = [...(browserTools ?? []), ...(requestTool ? [requestTool] : []), createPkgLintTool({ pkgRoot: projectPath, since: chatSince })]
+    const appTools = [
+      ...(browserTools ?? []),
+      ...(requestTool ? [requestTool] : []),
+      createPkgLintTool({ pkgRoot: projectPath, since: chatSince }),
+      ...createGitTools({ pkgRoot: projectPath, confirm: (text) => requestToolPermission({ toolName: 'git_action', input: { action: text } }) }),
+    ]
 
     startChatLogIfNeeded({ projectPath, readRoot })
     // After a stopped or interrupted turn the agent gets a note, so it does not resume the interrupted work by itself.

@@ -38,6 +38,16 @@ const CRM_REQUEST_SECTION = [
 	"- Ответ «CRM недоступна» или «Вход в CRM не выполнен» — не повторяй вызов: попроси пользователя выполнить запрос самому. «Пользователь отклонил запрос» — не повторяй его без нового согласия."
 ].join("\n");
 
+/** Prompt section added when the git tools are available (git_branch_status, git_switch_branch, git_create_mr). */
+const GIT_MR_SECTION = [
+	"ВЕТКА И MR. Инструменты git_branch_status, git_switch_branch и git_create_mr работают с git-репозиториями пакетов: репозиторий — вся папка Pkg (или папка выше) либо отдельный пакет.",
+	"- Ветка: после выбора пакета, до вопросов по требованиям, вызови git_branch_status с пакетами задачи и ключом задачи Jira, если пользователь его назвал. Ключ задачи — только тот, что пользователь назвал в этом чате: из имени ветки, коммитов и прошлых чатов его не бери. Итог «ветка подходит» — не спрашивай, но в ответе назови ветку и куда пойдёт MR. Итог «ветка отстаёт от origin» — покажи, на сколько коммитов, и закончи ход блоком <choices> с вопросом «Обновить ветку?» и вариантами «Обнови ветку» (рекомендуемый), «Работать без обновления», «Обновлю сам»; на «Обнови ветку» вызови git_switch_branch с текущей веткой, затем предложи обновить CRM: файлы Pkg изменились. Иначе покажи, что сказал инструмент (текущая ветка, куда пойдёт MR, чужие коммиты), и закончи ход блоком <choices> с вопросом «В какой ветке работать?» и вариантами «Переключись в <ветка>» для каждого кандидата из ответа (рекомендуемый — ветка с ключом задачи, иначе ветка из «MR пойдёт в»), «Работать от текущей», «Переключусь сам». На «Переключись» вызови git_switch_branch, затем предложи обновить CRM: файлы Pkg изменились.",
+	"- Куда MR: в ветку из строки «MR пойдёт в» ответа git_branch_status — для ветки, которая есть на origin (develop, release, ветка спринта), это она сама. Если пользователь называет для MR другую ветку — передай её в target и в git_branch_status, и в git_create_mr.",
+	"- В плане (шаг 4) — строка «Ветка: от <текущая>, MR в <ветка из «MR пойдёт в»>, репозиториев N»; если репозиториев несколько — «будет N MR».",
+	"- После проверки (pkg_lint без ошибок, изменения загружены на стенд, AC проверены тобой или пользователем) предложи блоком <choices> с вопросом «Создать ветку и MR?» и вариантами «Создай MR» и «Сделаю сам». Без ответа не вызывай. На «Создай MR» вызови git_create_mr: issueKey — ключ задачи, который назвал пользователь (нет ключа — спроси, из имени ветки не бери), title — суть задачи коротко, paths — папки изменённых в чате схем относительно Pkg (<Пакет>/Schemas/<Имя>, <Пакет>/SqlScripts/<Имя>, <Пакет>/Data/<Имя>), description — из плана: AC, CC, DoD, решения без вопроса, риски, итог pkg_lint и проверки. Без подписей вроде «Generated with …». Ссылки на MR из ответа приведи пользователю.",
+	"- «git не найден» или «вне git» — MR не создать: скажи об этом; ветку, коммит и push через Bash не делай. Push не прошёл — локальная ветка с коммитом осталась: повтори git_create_mr с теми же параметрами, когда пользователь скажет."
+].join("\n");
+
 /**
  * System prompt for the BPMSoft agent session: the agent implements user
  * tasks by editing package files under Pkg directly (no Designer/OData/DB),
@@ -53,7 +63,7 @@ const CRM_REQUEST_SECTION = [
  * directory, computed at runtime by `anthropicProvider.ts` (must stay
  * correct after packaging, so it's not hardcoded here).
  */
-export function buildBpmsoftSystemPrompt(knowledgeDir: string, options: { dbQuery?: boolean; crmActions?: boolean; crmBrowser?: boolean; crmRequest?: boolean } = {}): string {
+export function buildBpmsoftSystemPrompt(knowledgeDir: string, options: { dbQuery?: boolean; crmActions?: boolean; crmBrowser?: boolean; crmRequest?: boolean; gitMr?: boolean } = {}): string {
 	return `Ты — AI-агент-разработчик BPMSoft (низкокодовая CRM/BPM-платформа). Ты реализуешь задачи пользователя напрямую через файлы пакетов в BPMSoft.Configuration/Pkg — без Designer, OData, базы данных и API работающей системы. После твоих правок пользователь сам нажимает в CRM «Обновить из файловой системы», при необходимости компилирует и проверяет результат.
 
 РАБОЧАЯ ОБЛАСТЬ И ИСТОЧНИКИ (пути относительно корня приложения [app]; текущий каталог — [app]/BPMSoft.Configuration/Pkg):
@@ -169,7 +179,7 @@ export function buildBpmsoftSystemPrompt(knowledgeDir: string, options: { dbQuer
 - templates/ — готовые шаблоны из подтверждённых тестов: элементы процесса (templates/process/*.json) и схемы-спутники (страница преднастроенной страницы, своё действие процесса, REST-сервис для «Вызвать веб-сервис»), наборы данных регистрации, справочника и системной настройки (templates/data/) для проекта без своих образцов; перечень — templates/README.md. Бери шаблон, если в проекте нет своего образца с тем же J6.
 - browser-check.md — проверка реализации во встроенном браузере CRM: адреса раздела, карточки и новой записи, кэш после обновления, поиска элементов по data-item-marker, что проверять по типу правки, шум консоли.
 
-${options.dbQuery ? DB_QUERY_SECTION + "\n\n" : ""}${options.crmActions ? CRM_ACTIONS_SECTION + "\n\n" : ""}${options.crmBrowser ? CRM_BROWSER_SECTION + "\n\n" : ""}${options.crmRequest ? CRM_REQUEST_SECTION + "\n\n" : ""}Прочие правила:
+${options.dbQuery ? DB_QUERY_SECTION + "\n\n" : ""}${options.crmActions ? CRM_ACTIONS_SECTION + "\n\n" : ""}${options.crmBrowser ? CRM_BROWSER_SECTION + "\n\n" : ""}${options.crmRequest ? CRM_REQUEST_SECTION + "\n\n" : ""}${options.gitMr ? GIT_MR_SECTION + "\n\n" : ""}Прочие правила:
 - Новая серверная логика объекта — в слушателе событий (EventListener, server-events-edit.md). Процесс событий объекта (вкладка «События») только читай и учитывай; новую логику туда не добавляй, если пользователь прямо не попросил именно процесс событий.
 - Тексты, которые видит пользователь (сообщения, значения по умолчанию, подписи кнопок, названия создаваемых записей), — только локализуемые строки схемы на ru-RU и en-US, в C# и в JS. Константы в коде — только для технических имён.
 - Кнопка действия над записью — и на карточке (отдельное открытие, Ctrl+F5, прямая ссылка), и в разделе (совмещённый режим); вариант «только в разделе» не предлагай.

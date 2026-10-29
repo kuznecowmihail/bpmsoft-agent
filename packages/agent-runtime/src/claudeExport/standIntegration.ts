@@ -6,7 +6,7 @@ import { STAND_CONFIG_REL, type StandDbConfig } from "../mcp/standConfig";
 import { isInsideRoots } from "../safety/sandboxGuard";
 
 /** Permissions that Claude Code allows for the tools of the bpmsoft server. */
-export const MCP_PERMISSIONS = ["mcp__bpmsoft__crm_db_query", "mcp__bpmsoft__crm_update_from_fs", "mcp__bpmsoft__crm_browser_login"];
+export const MCP_PERMISSIONS = ["mcp__bpmsoft__crm_db_query", "mcp__bpmsoft__crm_update_from_fs", "mcp__bpmsoft__crm_browser_login", "mcp__bpmsoft__git_branch_status"];
 
 /** MCP config files that list the server, relative to the stand root. */
 const MCP_FILES_REL = [".mcp.json", ".cursor/mcp.json"];

@@ -1,15 +1,16 @@
 import * as path from "path";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import type { StandConfig } from "./standConfig";
 import { standCompile, standRequest, standRestart, standUpdate, startBrowserLogin } from "../crm/standActions";
 import type { BrowserLoginHandle, StandDeps, StandResult } from "../crm/standActions";
 import { createCrmDbTool } from "../db/crmDbTool";
 import type { DbClient, DbClientConfig } from "../db/crmDbTool";
+import { createGitTools } from "../git/gitTools";
+import { appToolZodShape } from "../tools/appToolZod";
 
 export const MCP_SERVER_NAME = "bpmsoft";
-export const MCP_TOOL_NAMES = ["crm_update_from_fs", "crm_compile", "crm_restart", "crm_request", "crm_browser_login", "crm_db_query"] as const;
+export const MCP_TOOL_NAMES = ["crm_update_from_fs", "crm_compile", "crm_restart", "crm_request", "crm_browser_login", "crm_db_query", "git_branch_status", "git_switch_branch", "git_create_mr"] as const;
 
 export interface BpmsoftMcpOptions extends StandDeps {
 	config: StandConfig;
@@ -73,9 +74,13 @@ export function createBpmsoftMcpServer(options: BpmsoftMcpOptions): McpServer {
 			return { content: [{ type: "text" as const, text: result.text }], isError: result.isError };
 		});
 	}
-	if (!crm && !config.db) {
-		// McpServer registers tools/list only with the first tool; answer an empty list explicitly.
-		server.server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: [] }));
+	const pkgRoot = path.join(deps.root, "BPMSoft.Configuration", "Pkg");
+	// Changing git tools are confirmed by the host (Claude Code / Cursor permissions), so no confirm here.
+	for (const gitTool of createGitTools({ pkgRoot })) {
+		server.registerTool(gitTool.name, { description: gitTool.description, inputSchema: appToolZodShape(gitTool) }, async (args) => {
+			const result = await gitTool.execute(args as Record<string, unknown>);
+			return { content: [{ type: "text" as const, text: result.text }], isError: result.isError };
+		});
 	}
 	return server;
 }

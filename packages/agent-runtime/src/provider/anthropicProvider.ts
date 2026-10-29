@@ -13,6 +13,7 @@ import type { CrmDbTool } from "../db/crmDbTool";
 import type { CrmTool } from "../crm/crmTools";
 import type { AppTool } from "../tools/appTool";
 import { appToolContent } from "../tools/appTool";
+import { appToolZodShape } from "../tools/appToolZod";
 import { cleanupStagingDirs } from "../tools/stagingCleanup";
 
 const STOP_ABORT_DELAY_MS = 5000;
@@ -69,17 +70,6 @@ export interface RunBpmsoftAgentQueryOptions {
 	crmTools?: CrmTool[];
 	/** Tools of the host app (built-in CRM browser and others); omit when none. */
 	appTools?: AppTool[];
-}
-
-/** Zod shape of an app tool's parameters (flat string, number or boolean values, or lists of strings). */
-function zodShape(appTool: AppTool): Record<string, z.ZodType> {
-	const shape: Record<string, z.ZodType> = {};
-	for (const [name, param] of Object.entries(appTool.params)) {
-		let schema: z.ZodType = param.type === "number" ? z.number() : param.type === "boolean" ? z.boolean() : param.type === "string[]" ? z.array(z.string()) : z.string();
-		schema = schema.describe(param.description);
-		shape[name] = param.optional ? schema.optional() : schema;
-	}
-	return shape;
 }
 
 /**
@@ -226,7 +216,7 @@ export async function* runBpmsoftAgentQuery(
 				tool(
 					appTool.name,
 					appTool.description,
-					zodShape(appTool),
+					appToolZodShape(appTool),
 					async (args) => {
 						const result = await appTool.execute(args as Record<string, unknown>);
 						return { content: appToolContent(result), isError: result.isError };
@@ -244,7 +234,7 @@ export async function* runBpmsoftAgentQuery(
 		resume: options.resume,
 		abortController,
 		env: agentEnv(options.apiKey),
-		systemPrompt: { type: "custom", prompt: buildBpmsoftSystemPrompt(knowledgeDir, { dbQuery: Boolean(options.dbTool), crmActions: Boolean(options.crmTools?.length), crmBrowser: Boolean(options.appTools?.some((t) => t.name.startsWith("crm_browser_"))), crmRequest: Boolean(options.appTools?.some((t) => t.name === "crm_request")) }) },
+		systemPrompt: { type: "custom", prompt: buildBpmsoftSystemPrompt(knowledgeDir, { dbQuery: Boolean(options.dbTool), crmActions: Boolean(options.crmTools?.length), crmBrowser: Boolean(options.appTools?.some((t) => t.name.startsWith("crm_browser_"))), crmRequest: Boolean(options.appTools?.some((t) => t.name === "crm_request")), gitMr: Boolean(options.appTools?.some((t) => t.name === "git_create_mr")) }) },
 		// Isolation from the developer's own Claude Code setup: without these the
 		// SDK loads ~/.claude settings (plugins, SessionStart hooks) and personal
 		// skills into the BPMSoft agent. Our behaviour comes only from the system

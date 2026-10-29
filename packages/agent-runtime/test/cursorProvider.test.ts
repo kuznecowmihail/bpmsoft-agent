@@ -247,7 +247,30 @@ describe("cursorProvider", () => {
 		});
 	});
 
-	describe("normalizeCursorToolCall (local tools)", () => {
+	describe("normalizeCursorToolCall (app tools wrapped by mcp)", () => {
+			it("shows an MCP-wrapped git_switch_branch call under its own name", () => {
+				expect(normalizeCursorToolCall("mcp", { providerIdentifier: "custom-user-tools", toolName: "git_switch_branch", args: { package: "P", branch: "release/1" } })).toEqual({
+					name: "git_switch_branch",
+					input: { package: "P", branch: "release/1" }
+				});
+			});
+
+			it("shows an MCP-wrapped git_create_mr call under its own name", () => {
+				expect(normalizeCursorToolCall("mcp", { providerIdentifier: "custom-user-tools", toolName: "git_create_mr", args: { issueKey: "PRJ-1" } })).toEqual({
+					name: "git_create_mr",
+					input: { issueKey: "PRJ-1" }
+				});
+			});
+
+			it("keeps git_create_mr when its description mentions pkg_lint", () => {
+				expect(normalizeCursorToolCall("mcp", { providerIdentifier: "custom-user-tools", toolName: "git_create_mr", args: { issueKey: "PRJ-1", description: "итог pkg_lint и проверки" } })).toEqual({
+					name: "git_create_mr",
+					input: { issueKey: "PRJ-1", description: "итог pkg_lint и проверки" },
+				});
+			});
+		});
+
+		describe("normalizeCursorToolCall (local tools)", () => {
 		it("maps a direct read_file call to Read", () => {
 			expect(normalizeCursorToolCall("read_file", { path: "/a/b.json" })).toEqual({
 				name: "Read",

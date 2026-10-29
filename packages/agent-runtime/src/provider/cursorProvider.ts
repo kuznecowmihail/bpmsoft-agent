@@ -210,6 +210,20 @@ export function normalizeCursorToolCall(name: string, args: unknown): { name: st
 			return localToolEvent(explicit, Object.keys(inner).length > 0 ? inner : r);
 		}
 	}
+	// Any other tool wrapped by Cursor's mcp call (our app tools: git_*, pkg_lint, crm_*): show it under its own name.
+	if (/mcp/i.test(name)) {
+		const r = record(args);
+		const wrapped = [r.toolName, r.name, r.tool].find((value): value is string => typeof value === "string" && /^[a-z][a-z0-9_]*$/.test(value));
+		if (wrapped === "crm_db_query") {
+			return { name: wrapped, input: { sql: findSqlArgument(args) } };
+		}
+		if (wrapped === "crm_update_from_fs" || wrapped === "crm_compile") {
+			return { name: wrapped, input: {} };
+		}
+		if (wrapped !== undefined) {
+			return { name: wrapped, input: wrappedToolArguments(args) };
+		}
+	}
 	if (/^crm_browser_[a-z_]+$/.test(name)) {
 		return { name, input: record(args) };
 	}
@@ -614,7 +628,7 @@ async function* runCursorAgentQueryUnsafe(options: RunCursorAgentQueryOptions): 
 		const message = options.resume
 			? buildCursorFollowUpMessage(options.prompt)
 			: buildCursorFirstMessage(
-					buildBpmsoftSystemPrompt(knowledgeDir, { dbQuery: Boolean(options.dbTool), crmActions: Boolean(options.crmTools?.length), crmBrowser: Boolean(options.appTools?.some((t) => t.name.startsWith("crm_browser_"))), crmRequest: Boolean(options.appTools?.some((t) => t.name === "crm_request")) }),
+					buildBpmsoftSystemPrompt(knowledgeDir, { dbQuery: Boolean(options.dbTool), crmActions: Boolean(options.crmTools?.length), crmBrowser: Boolean(options.appTools?.some((t) => t.name.startsWith("crm_browser_"))), crmRequest: Boolean(options.appTools?.some((t) => t.name === "crm_request")), gitMr: Boolean(options.appTools?.some((t) => t.name === "git_create_mr")) }),
 					buildCursorSafetyRules(options.readRoot ?? options.cwd, options.cwd, knowledgeDir),
 					options.prompt
 				);

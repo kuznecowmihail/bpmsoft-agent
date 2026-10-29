@@ -119,6 +119,18 @@ export function describeToolCall(name: string, input: unknown): string {
   if (name === 'crm_action') {
     return 'Действие в CRM'
   }
+  if (name === 'git_action') {
+    return 'Действие с git'
+  }
+  if (bare === 'git_branch_status' || name.endsWith('__git_branch_status')) {
+    return 'Смотрит ветки git'
+  }
+  if (bare === 'git_switch_branch' || name.endsWith('__git_switch_branch')) {
+    return `Переключает ветку git на ${String(field(input, 'branch') ?? '')}`.trim()
+  }
+  if (bare === 'git_create_mr' || name.endsWith('__git_create_mr')) {
+    return 'Создаёт ветку и MR'
+  }
   if (bare === 'pkg_lint') {
     return 'Проверяет изменённые схемы (pkg_lint)'
   }
@@ -185,7 +197,7 @@ export function permissionSubject(name: string, input: unknown): string | undefi
     const sql = field(input, 'sql')
     return typeof sql === 'string' ? sql : undefined
   }
-  if (name === 'crm_action' || name === 'crm_browser_click') {
+  if (name === 'crm_action' || name === 'crm_browser_click' || name === 'git_action') {
     const action = field(input, 'action')
     return typeof action === 'string' ? action : undefined
   }
