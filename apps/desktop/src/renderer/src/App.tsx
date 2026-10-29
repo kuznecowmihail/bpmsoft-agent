@@ -322,7 +322,8 @@ function App(): React.JSX.Element {
     }
     const text = await window.api.loadJiraTask(keyOrUrl)
     await handleNewChat()
-    await sendText(`Задача из Jira. Возьми её в работу по обычному порядку: пакет, требования, план.\n\n${text}`, { newChat: true })
+    // the issue key goes first: the chat title in the history is the start of the first message
+    await sendText(text.replace(/^#\s+/, ''), { newChat: true })
   }
 
   const handleChangeProject = async (): Promise<void> => {
