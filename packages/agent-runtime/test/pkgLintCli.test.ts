@@ -193,6 +193,49 @@ describe("runPkgLintCli", () => {
 		expect(result.text).toContain("ОШИБКА");
 	});
 
+	it("--git checks packages with their own repositories when Pkg is not a repo", () => {
+		writeClient("TestA", validMetadata("TestA"));
+		const git = (...args: string[]): string =>
+			execFileSync("git", ["-C", pkg, "-c", "user.email=test@example.com", "-c", "user.name=test", ...args], {
+				encoding: "utf8",
+			});
+		git("init");
+		git("add", "-A");
+		git("commit", "-m", "init");
+		write("Schemas/TestA/metadata.json", '{"a": 1,}');
+		const result = runPkgLintCli(["--git", root], knowledgeDir);
+		expect(result.code).toBe(1);
+		expect(result.text).toContain("ОШИБКА");
+	});
+
+	it("--git without any git repository gives code 2", () => {
+		writeClient("TestA", validMetadata("TestA"));
+		const result = runPkgLintCli(["--git", root], knowledgeDir);
+		expect(result.code).toBe(2);
+		expect(result.text).toContain("не в git");
+	});
+
+	it("--git with --since lints packages outside git by mtime", () => {
+		writeClient("TestA", '{"a": 1,}');
+		const result = runPkgLintCli(["--git", root, "--since", "0"], knowledgeDir);
+		expect(result.code).toBe(1);
+		expect(result.text).toContain("ОШИБКА");
+		expect(result.text).toContain("по времени изменения файлов");
+	});
+
+	it("--since skips files older than the mark", () => {
+		writeClient("TestA", validMetadata("TestA"));
+		const result = runPkgLintCli(["--git", root, "--since", String(Date.now() + 60000)], knowledgeDir);
+		expect(result.code).toBe(0);
+		expect(result.text).toContain("изменённых схем нет");
+	});
+
+	it("--since with a bad value gives usage", () => {
+		const result = runPkgLintCli(["--git", root, "--since", "abc"], knowledgeDir);
+		expect(result.code).toBe(2);
+		expect(result.text).toContain("--since");
+	});
+
 	it("empty package reports nothing to check", () => {
 		fs.mkdirSync(path.join(pkg, "Schemas"), { recursive: true });
 		const result = runPkgLintCli([pkg], knowledgeDir);

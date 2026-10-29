@@ -28,7 +28,7 @@ export function createBpmsoftMcpServer(options: BpmsoftMcpOptions): McpServer {
 	const crm = config.crm;
 	if (crm) {
 		server.registerTool("crm_update_from_fs", {
-			description: "«Обновить из файловой системы» в CRM. Сначала pkg-lint по изменённым в git схемам; при ошибках в CRM ничего не отправляется.",
+			description: "«Обновить из файловой системы» в CRM. Сначала pkg-lint по изменённым схемам (git status, а вне git — по времени изменения файлов); при ошибках в CRM ничего не отправляется.",
 		}, async () => toolResult(await standUpdate(crm, deps)));
 		server.registerTool("crm_compile", {
 			description: "Обновление из файловой системы, затем компиляция и перезапуск приложения с ожиданием запуска (до нескольких минут). При ошибке обновления компиляция не запускается.",

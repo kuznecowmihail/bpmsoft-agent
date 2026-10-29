@@ -1,16 +1,21 @@
 import * as fs from "fs";
 import * as path from "path";
-import { execFileSync } from "child_process";
 import { lintSchemas } from "./pkgLint";
-import { schemaDirsOf, sqlScriptDirsOf } from "./changedFiles";
+import { listChangedFiles, schemaDirsOf, sqlScriptDirsOf } from "./changedFiles";
+import { findPkgGitRepos } from "./pkgGitRepos";
+import type { PkgGitLayout } from "./pkgGitRepos";
 
 /** Usage text printed by the standalone pkg-lint.js bundle. */
 const USAGE = [
-	"Использование: pkg-lint.js [--knowledge <папка знаний>] [--git <папка Pkg>] <путь>...",
+	"Использование: pkg-lint.js [--knowledge <папка знаний>] [--git <папка Pkg>] [--since <мс>] <путь>...",
 	"  <путь> — папка схемы (с descriptor.json), папка SqlScripts/<скрипт>, папка набора данных Data/<набор> или папка пакета (с Schemas, SqlScripts или Data).",
-	"  --git <папка Pkg> — проверить схемы, скрипты и наборы данных, которые git status показывает как изменённые или новые.",
+	"  --git <папка Pkg> — проверить схемы, скрипты и наборы данных, которые git status показывает как изменённые или новые: в репозитории Pkg (или выше) и в репозиториях отдельных пакетов.",
+	"  --since <мс> — вместе с --git: в пакетах вне git (и если git недоступен) проверить файлы, изменённые с этого момента (мс от 1970-01-01).",
 	"  --knowledge <папка> — папка знаний с scripts/ (по умолчанию — папка bpm-knowledge рядом с бандлом).",
 ].join("\n");
+
+/** Note prepended to the report when packages were checked by file modification time, not by git. */
+const BY_TIME_NOTE = "pkg-lint.js: пакеты вне git проверены по времени изменения файлов.";
 
 /** Result of the CLI run: exit code and text for stdout. */
 export interface PkgLintCliResult {
@@ -91,37 +96,6 @@ function addPath(target: string, schemaDirs: Set<string>, sqlDirs: Set<string>, 
 	return false;
 }
 
-/**
- * Returns absolute paths of files under the Pkg folder that git status lists as changed or new; git runs without a shell.
- * git status prints paths relative to the repository root with "/", so the Pkg prefix is compared as text, not as a file path.
- */
-function gitChangedFiles(pkgDir: string): string[] {
-	const pkgRoot = path.resolve(pkgDir);
-	// --show-prefix: the Pkg folder relative to the repository root, "/"-separated with a trailing slash; empty at the root.
-	const prefix = execFileSync("git", ["-C", pkgRoot, "rev-parse", "--show-prefix"], { encoding: "utf8" }).replace(/\r?\n$/, "");
-	// -z: paths are not quoted, and a rename or copy is followed by its source path, which is skipped.
-	const status = execFileSync("git", ["-C", pkgRoot, "status", "--porcelain", "-z", "--untracked-files=all"], {
-		encoding: "utf8",
-	});
-	const entries = status.split("\0");
-	const files: string[] = [];
-	for (let i = 0; i < entries.length; i++) {
-		const entry = entries[i];
-		if (entry.length < 4) {
-			continue;
-		}
-		if (entry.slice(0, 2).includes("R") || entry.slice(0, 2).includes("C")) {
-			i++;
-		}
-		const repoPath = entry.slice(3);
-		if (!repoPath.startsWith(prefix)) {
-			continue;
-		}
-		files.push(path.join(pkgRoot, ...repoPath.slice(prefix.length).split("/")));
-	}
-	return files;
-}
-
 /** Returns the data set folders (<pkg>/Data/<набор>) that contain the given changed files. */
 function dataDirsOfChanged(pkgRoot: string, files: string[]): string[] {
 	const dirs = new Set<string>();
@@ -143,10 +117,11 @@ function dataDirsOfChanged(pkgRoot: string, files: string[]): string[] {
 export function runPkgLintCli(argv: string[], defaultKnowledgeDir: string): PkgLintCliResult {
 	let knowledgeDir = defaultKnowledgeDir;
 	let gitRoot: string | undefined;
+	let sinceMs: number | undefined;
 	const targets: string[] = [];
 	for (let i = 0; i < argv.length; i++) {
 		const arg = argv[i];
-		if (arg === "--knowledge" || arg === "--git") {
+		if (arg === "--knowledge" || arg === "--git" || arg === "--since") {
 			const value = argv[i + 1];
 			if (value === undefined) {
 				return usage(`${arg}: нужно значение`);
@@ -154,8 +129,14 @@ export function runPkgLintCli(argv: string[], defaultKnowledgeDir: string): PkgL
 			i++;
 			if (arg === "--knowledge") {
 				knowledgeDir = path.resolve(value);
-			} else {
+			} else if (arg === "--git") {
 				gitRoot = path.resolve(value);
+			} else {
+				const ms = value.trim() === "" ? NaN : Number(value);
+				if (!Number.isInteger(ms) || ms < 0) {
+					return usage("--since: нужно число миллисекунд");
+				}
+				sinceMs = ms;
 			}
 		} else {
 			targets.push(arg);
@@ -179,28 +160,52 @@ export function runPkgLintCli(argv: string[], defaultKnowledgeDir: string): PkgL
 		);
 	}
 	let extraFiles: string[] = [];
+	let byTime = false;
 	if (gitRoot !== undefined) {
+		const pkgRoot = path.resolve(gitRoot);
+		let layout: PkgGitLayout | undefined;
+		let gitError: unknown;
 		try {
-			const pkgRoot = path.resolve(gitRoot);
-			extraFiles = gitChangedFiles(pkgRoot);
-			for (const dir of schemaDirsOf(pkgRoot, extraFiles)) {
-				schemaDirs.add(dir);
-			}
-			for (const dir of sqlScriptDirsOf(pkgRoot, extraFiles)) {
-				sqlDirs.add(dir);
-			}
-			for (const dir of dataDirsOfChanged(pkgRoot, extraFiles)) {
-				dataDirs.add(dir);
-			}
+			layout = findPkgGitRepos(pkgRoot);
 		} catch (e) {
-			return { code: 2, text: `pkg-lint.js: не удалось прочитать git status: ${errorMessage(e)}` };
+			gitError = e;
+		}
+		if (layout !== undefined) {
+			extraFiles = layout.repos.flatMap((repo) => repo.files);
+			if (sinceMs !== undefined && layout.withoutGit.length > 0) {
+				const outside = new Set(layout.withoutGit);
+				extraFiles.push(...listChangedFiles(pkgRoot, sinceMs).filter((file) => outside.has(path.relative(pkgRoot, file).split(path.sep)[0])));
+				byTime = true;
+			} else if (layout.repos.length === 0) {
+				return {
+					code: 2,
+					text: "pkg-lint.js: ни папка Pkg, ни пакеты в ней не в git — изменённые схемы не найти; передай папки схем или пакета.",
+				};
+			}
+		} else if (sinceMs !== undefined) {
+			extraFiles = listChangedFiles(pkgRoot, sinceMs);
+			byTime = true;
+		} else {
+			return { code: 2, text: `pkg-lint.js: не удалось прочитать git: ${errorMessage(gitError)}` };
+		}
+		extraFiles = [...new Set(extraFiles)].sort();
+		for (const dir of schemaDirsOf(pkgRoot, extraFiles)) {
+			schemaDirs.add(dir);
+		}
+		for (const dir of sqlScriptDirsOf(pkgRoot, extraFiles)) {
+			sqlDirs.add(dir);
+		}
+		for (const dir of dataDirsOfChanged(pkgRoot, extraFiles)) {
+			dataDirs.add(dir);
 		}
 	}
+	/** Prepends the by-time note to the report when packages were checked by modification time. */
+	const withNote = (text: string): string => (byTime ? `${BY_TIME_NOTE}\n${text}` : text);
 	if (schemaDirs.size === 0 && sqlDirs.size === 0 && dataDirs.size === 0) {
 		if (gitRoot !== undefined && targets.length === 0) {
-			return { code: 0, text: "pkg-lint.js: изменённых схем нет." };
+			return { code: 0, text: withNote("pkg-lint.js: изменённых схем нет.") };
 		}
-		return { code: 0, text: "pkg-lint.js: в указанных папках нет схем, наборов данных и SQL-скриптов." };
+		return { code: 0, text: withNote("pkg-lint.js: в указанных папках нет схем, наборов данных и SQL-скриптов.") };
 	}
 	const dataList = [...dataDirs].sort();
 	const report = lintSchemas([...schemaDirs].sort(), {
@@ -211,5 +216,5 @@ export function runPkgLintCli(argv: string[], defaultKnowledgeDir: string): PkgL
 		dataDirs: dataList,
 		title: "pkg-lint.js",
 	});
-	return { code: report.ok ? 0 : 1, text: report.text };
+	return { code: report.ok ? 0 : 1, text: withNote(report.text) };
 }
