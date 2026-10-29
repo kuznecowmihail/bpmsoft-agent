@@ -8,9 +8,10 @@ import { createCrmDbTool } from "../db/crmDbTool";
 import type { DbClient, DbClientConfig } from "../db/crmDbTool";
 import { createGitTools } from "../git/gitTools";
 import { appToolZodShape } from "../tools/appToolZod";
+import { createTrackerTools } from "../tracker/trackerTools";
 
 export const MCP_SERVER_NAME = "bpmsoft";
-export const MCP_TOOL_NAMES = ["crm_update_from_fs", "crm_compile", "crm_restart", "crm_request", "crm_browser_login", "crm_db_query", "git_branch_status", "git_switch_branch", "git_create_mr"] as const;
+export const MCP_TOOL_NAMES = ["crm_update_from_fs", "crm_compile", "crm_restart", "crm_request", "crm_browser_login", "crm_db_query", "git_branch_status", "git_switch_branch", "git_create_mr", "jira_get_issue", "jira_add_comment", "confluence_get_page"] as const;
 
 export interface BpmsoftMcpOptions extends StandDeps {
 	config: StandConfig;
@@ -79,6 +80,12 @@ export function createBpmsoftMcpServer(options: BpmsoftMcpOptions): McpServer {
 	for (const gitTool of createGitTools({ pkgRoot })) {
 		server.registerTool(gitTool.name, { description: gitTool.description, inputSchema: appToolZodShape(gitTool) }, async (args) => {
 			const result = await gitTool.execute(args as Record<string, unknown>);
+			return { content: [{ type: "text" as const, text: result.text }], isError: result.isError };
+		});
+	}
+	for (const trackerTool of createTrackerTools({ jira: config.jira, confluence: config.confluence })) {
+		server.registerTool(trackerTool.name, { description: trackerTool.description, inputSchema: appToolZodShape(trackerTool) }, async (args) => {
+			const result = await trackerTool.execute(args as Record<string, unknown>);
 			return { content: [{ type: "text" as const, text: result.text }], isError: result.isError };
 		});
 	}

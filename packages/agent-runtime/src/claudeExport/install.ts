@@ -4,6 +4,7 @@ import { ExportSources, MCP_BUNDLE_REL, fileSha256, textSha256 } from "./sources
 import { StandIntegrationResult, writeStandIntegration } from "./standIntegration";
 import { CrmConnection } from "../crm/crmSession";
 import { StandDbConfig } from "../mcp/standConfig";
+import type { AtlassianConnection, JiraConnection } from "../tracker/atlassianHttp";
 import { isInsideRoots } from "../safety/sandboxGuard";
 
 /** First line of a root file (AGENTS.md or CLAUDE.md) that the app wrote itself. */
@@ -210,7 +211,7 @@ export function claudeSkillsStatus(appRoot: string, sources: ExportSources): Cla
 export function installClaudeSkills(
 	appRoot: string,
 	sources: ExportSources,
-	options: { appVersion: string; claudeMd?: ClaudeMdChoice; overwriteModified?: boolean; now?: () => Date; crm?: CrmConnection; db?: StandDbConfig },
+	options: { appVersion: string; claudeMd?: ClaudeMdChoice; overwriteModified?: boolean; now?: () => Date; crm?: CrmConnection; db?: StandDbConfig; jira?: JiraConnection; confluence?: AtlassianConnection },
 ): InstallOutcome {
 	const old = readManifest(appRoot);
 	const agentsForeign = isForeign(appRoot, AGENTS_MD);
@@ -296,7 +297,7 @@ export function installClaudeSkills(
 	fs.mkdirSync(path.dirname(manifestPath), { recursive: true });
 	fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + "\n");
 
-	const integration = writeStandIntegration(appRoot, { crm: options.crm, db: options.db, mcpBundle: toDisk(appRoot, MCP_BUNDLE_REL) });
+	const integration = writeStandIntegration(appRoot, { crm: options.crm, db: options.db, jira: options.jira, confluence: options.confluence, mcpBundle: toDisk(appRoot, MCP_BUNDLE_REL) });
 
 	return { kind: "installed", written: written.length, removed, target: path.join(appRoot, ".claude"), integration };
 }

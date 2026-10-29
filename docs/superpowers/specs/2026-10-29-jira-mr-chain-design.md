@@ -28,7 +28,7 @@
 
 ## Настройки
 
-Настройки проекта (desktop — `ProjectConnection` в `appSettings.ts`; экспорт — блоки в `.claude/bpmsoft-agent.local.json`, их пишет установка скиллов, как `crm` и `db`):
+Настройки Jira и Confluence в desktop общие для всех проектов (`StoredSettings`), токены — в secureStore; в экспорте — блоки `jira` и `confluence` в `.claude/bpmsoft-agent.local.json`, их пишет установка скиллов, как `crm` и `db`:
 
 - `jira`: `url`, `email` (необязательно), токен; `acceptanceField` — id поля критериев приёмки (`customfield_…`, необязательно).
 - `confluence`: `url` (у Cloud — с `/wiki`), `email`, токен. Если не задан, а Jira — Cloud того же сайта, берём учётку Jira.
@@ -129,5 +129,5 @@ Jira — REST API v2 (`/rest/api/2/issue/{key}`, `/remotelink`, `/comment`): т�
 
 ## Открытые вопросы
 
-- ❓ Описание MR при создании push-опциями (этап 0) — нужен ли токен GitLab.
+- ✅ Описание MR при создании push-опциями берётся из тела коммита (проверено на GitLab, 29.10.2026): токен GitLab не нужен.
 - ❓ Поле критериев приёмки в Jira проекта — есть ли отдельное поле или критерии в описании.

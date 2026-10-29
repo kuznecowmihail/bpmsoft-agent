@@ -52,6 +52,13 @@ describe("bpmsoft MCP server", () => {
 		const client = await connect({ config: { version: 1, db: {} } });
 		expect((await client.listTools()).tools.map((t) => t.name).sort()).toEqual(["crm_db_query", "git_branch_status", "git_create_mr", "git_switch_branch"]);
 	});
+	it("has the Jira tools when Jira is configured, without Confluence", async () => {
+		const client = await connect({ config: { version: 1, jira: { url: "https://jira.test", token: "t" } } });
+		const names = (await client.listTools()).tools.map((t) => t.name);
+		expect(names).toContain("jira_get_issue");
+		expect(names).toContain("jira_add_comment");
+		expect(names).not.toContain("confluence_get_page");
+	});
 	it("crm_request returns the stand answer as text", async () => {
 		const { fetchImpl } = fakeFetch(() => new Response("{\"value\":5}", { status: 200 }));
 		const client = await connect({ config: { version: 1, crm }, fetchImpl });

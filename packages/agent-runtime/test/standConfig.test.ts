@@ -33,4 +33,20 @@ describe("standConfig", () => {
 		expect(readStandConfig(root)).toEqual({ version: 1, db: {} });
 		fs.rmSync(root, { recursive: true, force: true });
 	});
+	it("reads jira and confluence", () => {
+		const text = JSON.stringify({
+			version: 1,
+			jira: { url: "https://jira.test", token: "jt", email: "a@test", acceptanceField: "customfield_10100" },
+			confluence: { url: "https://wiki.test", token: "ct" },
+		});
+		expect(parseStandConfig(text)).toEqual({
+			version: 1,
+			jira: { url: "https://jira.test", token: "jt", email: "a@test", acceptanceField: "customfield_10100" },
+			confluence: { url: "https://wiki.test", token: "ct" },
+		});
+	});
+	it("a jira block without token is an error", () => {
+		const result = parseStandConfig(JSON.stringify({ version: 1, jira: { url: "https://jira.test" } }));
+		expect(result).toEqual({ error: "В файле доступов неполный блок jira" });
+	});
 });

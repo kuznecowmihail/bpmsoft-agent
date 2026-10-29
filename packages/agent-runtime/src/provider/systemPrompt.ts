@@ -48,6 +48,16 @@ const GIT_MR_SECTION = [
 	"- «git не найден» или «вне git» — MR не создать: скажи об этом; ветку, коммит и push через Bash не делай. Push не прошёл — локальная ветка с коммитом осталась: повтори git_create_mr с теми же параметрами, когда пользователь скажет."
 ].join("\n");
 
+/** Prompt section added when Jira or Confluence is configured (jira_get_issue, jira_add_comment, confluence_get_page). */
+const TRACKER_SECTION = [
+	"JIRA И CONFLUENCE (настроены пользователем). jira_get_issue — задача Jira по ключу или ссылке: описание, критерии приёмки, комментарии, связи, вложения, ссылки и тексты связанных страниц Confluence. confluence_get_page — страница Confluence по ссылке или Id. jira_add_comment — комментарий в задачу, с подтверждения пользователя. Каких-то из них может не быть: тогда этот сервис не настроен.",
+	"- Пользователь дал ключ или ссылку на задачу — сначала прочитай её jira_get_issue. Сообщение, которое начинается со слов «Задача из Jira», — задача уже загружена: повторно не читай. Ключ этой задачи — ключ для ветки и MR.",
+	"- Задача — вход шага «Требования»: то, что в ней однозначно, не спрашивай; чего нет или что противоречит коду и комментариям — спроси. В плане укажи ключ задачи и отметь, какие критерии взяты из неё, а какие добавлены тобой.",
+	"- Ссылки на страницы Confluence, которые не загрузились вместе с задачей, читай confluence_get_page, если они нужны для задачи.",
+	"- После создания MR предложи блоком <choices> с вопросом «Добавить комментарий в Jira?» и вариантами «Добавь комментарий» и «Не нужно». На «Добавь комментарий» вызови jira_add_comment: ссылки на MR и одна-две строки, что сделано. Без ответа не вызывай.",
+	"- Ответ «недоступна», «нет доступа» или «не найдено» — не повторяй вызов: попроси пользователя прислать текст задачи или страницы."
+].join("\n");
+
 /**
  * System prompt for the BPMSoft agent session: the agent implements user
  * tasks by editing package files under Pkg directly (no Designer/OData/DB),
@@ -63,7 +73,7 @@ const GIT_MR_SECTION = [
  * directory, computed at runtime by `anthropicProvider.ts` (must stay
  * correct after packaging, so it's not hardcoded here).
  */
-export function buildBpmsoftSystemPrompt(knowledgeDir: string, options: { dbQuery?: boolean; crmActions?: boolean; crmBrowser?: boolean; crmRequest?: boolean; gitMr?: boolean } = {}): string {
+export function buildBpmsoftSystemPrompt(knowledgeDir: string, options: { dbQuery?: boolean; crmActions?: boolean; crmBrowser?: boolean; crmRequest?: boolean; gitMr?: boolean; tracker?: boolean } = {}): string {
 	return `Ты — AI-агент-разработчик BPMSoft (низкокодовая CRM/BPM-платформа). Ты реализуешь задачи пользователя напрямую через файлы пакетов в BPMSoft.Configuration/Pkg — без Designer, OData, базы данных и API работающей системы. После твоих правок пользователь сам нажимает в CRM «Обновить из файловой системы», при необходимости компилирует и проверяет результат.
 
 РАБОЧАЯ ОБЛАСТЬ И ИСТОЧНИКИ (пути относительно корня приложения [app]; текущий каталог — [app]/BPMSoft.Configuration/Pkg):
@@ -179,7 +189,7 @@ export function buildBpmsoftSystemPrompt(knowledgeDir: string, options: { dbQuer
 - templates/ — готовые шаблоны из подтверждённых тестов: элементы процесса (templates/process/*.json) и схемы-спутники (страница преднастроенной страницы, своё действие процесса, REST-сервис для «Вызвать веб-сервис»), наборы данных регистрации, справочника и системной настройки (templates/data/) для проекта без своих образцов; перечень — templates/README.md. Бери шаблон, если в проекте нет своего образца с тем же J6.
 - browser-check.md — проверка реализации во встроенном браузере CRM: адреса раздела, карточки и новой записи, кэш после обновления, поиска элементов по data-item-marker, что проверять по типу правки, шум консоли.
 
-${options.dbQuery ? DB_QUERY_SECTION + "\n\n" : ""}${options.crmActions ? CRM_ACTIONS_SECTION + "\n\n" : ""}${options.crmBrowser ? CRM_BROWSER_SECTION + "\n\n" : ""}${options.crmRequest ? CRM_REQUEST_SECTION + "\n\n" : ""}${options.gitMr ? GIT_MR_SECTION + "\n\n" : ""}Прочие правила:
+${options.dbQuery ? DB_QUERY_SECTION + "\n\n" : ""}${options.crmActions ? CRM_ACTIONS_SECTION + "\n\n" : ""}${options.crmBrowser ? CRM_BROWSER_SECTION + "\n\n" : ""}${options.crmRequest ? CRM_REQUEST_SECTION + "\n\n" : ""}${options.gitMr ? GIT_MR_SECTION + "\n\n" : ""}${options.tracker ? TRACKER_SECTION + "\n\n" : ""}Прочие правила:
 - Новая серверная логика объекта — в слушателе событий (EventListener, server-events-edit.md). Процесс событий объекта (вкладка «События») только читай и учитывай; новую логику туда не добавляй, если пользователь прямо не попросил именно процесс событий.
 - Тексты, которые видит пользователь (сообщения, значения по умолчанию, подписи кнопок, названия создаваемых записей), — только локализуемые строки схемы на ru-RU и en-US, в C# и в JS. Константы в коде — только для технических имён.
 - Кнопка действия над записью — и на карточке (отдельное открытие, Ctrl+F5, прямая ссылка), и в разделе (совмещённый режим); вариант «только в разделе» не предлагай.

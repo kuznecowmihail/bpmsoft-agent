@@ -4,9 +4,10 @@ import type { CrmConnection } from "../crm/crmSession";
 import { MCP_SERVER_NAME } from "../mcp/bpmsoftMcpServer";
 import { STAND_CONFIG_REL, type StandDbConfig } from "../mcp/standConfig";
 import { isInsideRoots } from "../safety/sandboxGuard";
+import type { AtlassianConnection, JiraConnection } from "../tracker/atlassianHttp";
 
 /** Permissions that Claude Code allows for the tools of the bpmsoft server. */
-export const MCP_PERMISSIONS = ["mcp__bpmsoft__crm_db_query", "mcp__bpmsoft__crm_update_from_fs", "mcp__bpmsoft__crm_browser_login", "mcp__bpmsoft__git_branch_status"];
+export const MCP_PERMISSIONS = ["mcp__bpmsoft__crm_db_query", "mcp__bpmsoft__crm_update_from_fs", "mcp__bpmsoft__crm_browser_login", "mcp__bpmsoft__git_branch_status", "mcp__bpmsoft__jira_get_issue", "mcp__bpmsoft__confluence_get_page"];
 
 /** MCP config files that list the server, relative to the stand root. */
 const MCP_FILES_REL = [".mcp.json", ".cursor/mcp.json"];
@@ -21,6 +22,8 @@ const LEGACY_ENV = ["BPMSOFT_CRM_URL", "BPMSOFT_CRM_USER", "BPMSOFT_CRM_PASSWORD
 export interface StandIntegrationOptions {
 	crm?: CrmConnection;
 	db?: StandDbConfig;
+	jira?: JiraConnection;
+	confluence?: AtlassianConnection;
 	/** Absolute path to the bundle in the stand. */
 	mcpBundle: string;
 }
@@ -112,7 +115,7 @@ function settingsShapeOk(value: Record<string, unknown>): boolean {
 
 /** Registers the bpmsoft server in the MCP files and settings, and writes the access file; removes them when nothing is configured. */
 export function writeStandIntegration(appRoot: string, options: StandIntegrationOptions): StandIntegrationResult {
-	const register = Boolean(options.crm || options.db);
+	const register = Boolean(options.crm || options.db || options.jira || options.confluence);
 	const invalid: string[] = [];
 	const entry = { command: "node", args: [options.mcpBundle, "--root", appRoot] };
 
@@ -173,7 +176,7 @@ export function writeStandIntegration(appRoot: string, options: StandIntegration
 	const accessDest = toDisk(appRoot, STAND_CONFIG_REL);
 	if (register) {
 		assertInsideStand(appRoot, accessDest);
-		writeJson(accessDest, { version: 1, ...(options.crm && { crm: options.crm }), ...(options.db && { db: options.db }) }, undefined, 0o600);
+		writeJson(accessDest, { version: 1, ...(options.crm && { crm: options.crm }), ...(options.db && { db: options.db }), ...(options.jira && { jira: options.jira }), ...(options.confluence && { confluence: options.confluence }) }, undefined, 0o600);
 		fs.chmodSync(accessDest, 0o600);
 	} else if (fs.existsSync(accessDest)) {
 		assertInsideStand(appRoot, accessDest);

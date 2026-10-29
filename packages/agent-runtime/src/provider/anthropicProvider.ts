@@ -234,7 +234,7 @@ export async function* runBpmsoftAgentQuery(
 		resume: options.resume,
 		abortController,
 		env: agentEnv(options.apiKey),
-		systemPrompt: { type: "custom", prompt: buildBpmsoftSystemPrompt(knowledgeDir, { dbQuery: Boolean(options.dbTool), crmActions: Boolean(options.crmTools?.length), crmBrowser: Boolean(options.appTools?.some((t) => t.name.startsWith("crm_browser_"))), crmRequest: Boolean(options.appTools?.some((t) => t.name === "crm_request")), gitMr: Boolean(options.appTools?.some((t) => t.name === "git_create_mr")) }) },
+		systemPrompt: { type: "custom", prompt: buildBpmsoftSystemPrompt(knowledgeDir, { dbQuery: Boolean(options.dbTool), crmActions: Boolean(options.crmTools?.length), crmBrowser: Boolean(options.appTools?.some((t) => t.name.startsWith("crm_browser_"))), crmRequest: Boolean(options.appTools?.some((t) => t.name === "crm_request")), gitMr: Boolean(options.appTools?.some((t) => t.name === "git_create_mr")), tracker: Boolean(options.appTools?.some((t) => t.name === "jira_get_issue" || t.name === "confluence_get_page")) }) },
 		// Isolation from the developer's own Claude Code setup: without these the
 		// SDK loads ~/.claude settings (plugins, SessionStart hooks) and personal
 		// skills into the BPMSoft agent. Our behaviour comes only from the system
