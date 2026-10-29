@@ -107,6 +107,21 @@ describe('chatFormat', () => {
       expect(describeToolCall('crm_action', { action: 'update' })).toBe('Действие в CRM')
       expect(describeToolCall('mcp__app__crm_request', { method: 'post', path: '/rest/S/M' })).toBe('REST-запрос к CRM POST /rest/S/M')
     })
+
+    it('describes the Jira and Confluence tools under both names', () => {
+      expect(describeToolCall('tracker_action', { action: 'Комментарий в PRJ-1' })).toBe('Действие в Jira')
+      expect(describeToolCall('jira_get_issue', { key: 'PRJ-1' })).toBe('Читает задачу Jira PRJ-1')
+      expect(describeToolCall('mcp__app__jira_get_issue', { key: 'PRJ-1' })).toBe('Читает задачу Jira PRJ-1')
+      expect(describeToolCall('mcp__app__jira_get_issue', {})).toBe('Читает задачу Jira')
+      expect(describeToolCall('jira_add_comment', { key: 'PRJ-2' })).toBe('Пишет комментарий в Jira PRJ-2')
+      expect(describeToolCall('mcp__app__jira_add_comment', {})).toBe('Пишет комментарий в Jira')
+      expect(describeToolCall('confluence_get_page', { url: 'https://wiki/x' })).toBe('Читает страницу Confluence')
+      expect(describeToolCall('mcp__app__confluence_get_page', {})).toBe('Читает страницу Confluence')
+    })
+
+    it('tracker actions ask for permission with the action text as subject', () => {
+      expect(permissionSubject('tracker_action', { action: 'Комментарий в PRJ-1' })).toBe('Комментарий в PRJ-1')
+    })
   })
 
   describe('CRM browser tools', () => {

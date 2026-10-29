@@ -826,3 +826,6 @@ button, input, textarea { font: inherit; color: inherit; }
 .fdm-steps { margin: 10px 0 0; padding-left: 20px; font-size: 12.5px; line-height: 1.5; color: var(--text-secondary); }
 .fdm-steps li + li { margin-top: 2px; }
 .fdm-card .btn-block { margin-top: 12px; }
+
+.jira-task-bar { display: flex; flex-direction: column; gap: 6px; padding: 0 16px 8px; }
+.jira-task-bar-row { display: flex; gap: 8px; align-items: center; }

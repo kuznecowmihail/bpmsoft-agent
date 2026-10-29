@@ -1,6 +1,6 @@
 import type { BrowserWindow } from 'electron'
-import { runBpmsoftAgentQuery, runCursorAgentQuery, createCrmDbTool, testCrmDbConnection, createCrmTools, testCrmConnection, createPkgLintTool, createGitTools, createCrmRequestTool, lintChanged, changedSchemaNames, hasChangedFiles } from '@bpmsoft-agent/agent-runtime'
-import type { AgentEvent, ToolPermissionRequest, CrmDbToolOptions, CrmConnection, StandDbConfig } from '@bpmsoft-agent/agent-runtime'
+import { runBpmsoftAgentQuery, runCursorAgentQuery, createCrmDbTool, testCrmDbConnection, createCrmTools, testCrmConnection, createPkgLintTool, createGitTools, createCrmRequestTool, lintChanged, changedSchemaNames, hasChangedFiles, createTrackerTools, loadJiraTask, testJira, testConfluence } from '@bpmsoft-agent/agent-runtime'
+import type { AgentEvent, ToolPermissionRequest, CrmDbToolOptions, CrmConnection, StandDbConfig, TrackerConfig } from '@bpmsoft-agent/agent-runtime'
 import { join, resolve } from 'path'
 import { saveSecret, loadSecret, clearSecret } from './secureStore'
 import { startChatLogIfNeeded, endChatLog, logChatRecord, reopenChatLog, getCurrentChatId } from './chatLog'
@@ -239,6 +239,108 @@ export async function testCrm(): Promise<string> {
     throw new Error('Укажите адрес CRM, пользователя и пароль')
   }
   return testCrmConnection(connection)
+}
+
+const JIRA_TOKEN_SECRET = 'jira-token'
+const CONFLUENCE_TOKEN_SECRET = 'confluence-token'
+
+/** Jira API token (Cloud or personal access token of Server), kept in the OS keychain; shared by all projects. */
+export function setJiraToken(token: string): void {
+  const value = token.trim()
+  if (!value) {
+    throw new Error('Токен пустой')
+  }
+  saveSecret(JIRA_TOKEN_SECRET, value)
+}
+
+export function hasJiraToken(): boolean {
+  return Boolean(loadSecret(JIRA_TOKEN_SECRET))
+}
+
+export function clearJiraToken(): void {
+  clearSecret(JIRA_TOKEN_SECRET)
+}
+
+/** Confluence API token (Cloud or personal access token of Server), kept in the OS keychain; shared by all projects. */
+export function setConfluenceToken(token: string): void {
+  const value = token.trim()
+  if (!value) {
+    throw new Error('Токен пустой')
+  }
+  saveSecret(CONFLUENCE_TOKEN_SECRET, value)
+}
+
+export function hasConfluenceToken(): boolean {
+  return Boolean(loadSecret(CONFLUENCE_TOKEN_SECRET))
+}
+
+export function clearConfluenceToken(): void {
+  clearSecret(CONFLUENCE_TOKEN_SECRET)
+}
+
+/** True when both addresses parse as URLs and name the same host. */
+function sameHost(a: string, b: string): boolean {
+  try {
+    return new URL(a).host === new URL(b).host
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Jira and Confluence connections for the tracker tools. Jira needs its address and token; Confluence
+ * uses its own token, or the Jira token when both sites are the same Atlassian host.
+ */
+export function trackerConfig(): TrackerConfig {
+  const { jiraUrl, jiraEmail, jiraAcceptanceField, confluenceUrl, confluenceEmail } = getAppSettings()
+  const jiraToken = loadSecret(JIRA_TOKEN_SECRET)
+  const confluenceToken = loadSecret(CONFLUENCE_TOKEN_SECRET)
+  const config: TrackerConfig = {}
+  if (jiraUrl && jiraToken) {
+    config.jira = {
+      url: jiraUrl,
+      token: jiraToken,
+      ...(jiraEmail ? { email: jiraEmail } : {}),
+      ...(jiraAcceptanceField ? { acceptanceField: jiraAcceptanceField } : {})
+    }
+  }
+  if (confluenceUrl) {
+    if (confluenceToken) {
+      config.confluence = {
+        url: confluenceUrl,
+        token: confluenceToken,
+        ...(confluenceEmail ? { email: confluenceEmail } : {})
+      }
+    } else if (jiraUrl && jiraToken && sameHost(confluenceUrl, jiraUrl)) {
+      config.confluence = { url: confluenceUrl, token: jiraToken, ...(jiraEmail ? { email: jiraEmail } : {}) }
+    }
+  }
+  return config
+}
+
+export async function testJiraConnection(): Promise<string> {
+  const { jira } = trackerConfig()
+  if (!jira) {
+    throw new Error('Укажите адрес Jira и токен')
+  }
+  return testJira(jira)
+}
+
+export async function testConfluenceConnection(): Promise<string> {
+  const { confluence } = trackerConfig()
+  if (!confluence) {
+    throw new Error('Укажите адрес Confluence и токен')
+  }
+  return testConfluence(confluence)
+}
+
+/** Text of a Jira issue (with its linked Confluence pages) for the chat; throws with the user-facing reason on failure. */
+export async function loadJiraTaskText(keyOrUrl: string): Promise<string> {
+  const result = await loadJiraTask(trackerConfig(), keyOrUrl)
+  if (result.isError) {
+    throw new Error(result.text)
+  }
+  return result.text
 }
 
 /**
@@ -490,6 +592,7 @@ export async function sendAgentMessage(
       ...(requestTool ? [requestTool] : []),
       createPkgLintTool({ pkgRoot: projectPath, since: chatSince }),
       ...createGitTools({ pkgRoot: projectPath, confirm: (text) => requestToolPermission({ toolName: 'git_action', input: { action: text } }) }),
+      ...createTrackerTools({ ...trackerConfig(), confirm: (text) => requestToolPermission({ toolName: 'tracker_action', input: { action: text } }) }),
     ]
 
     startChatLogIfNeeded({ projectPath, readRoot })

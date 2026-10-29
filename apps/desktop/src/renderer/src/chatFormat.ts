@@ -131,6 +131,18 @@ export function describeToolCall(name: string, input: unknown): string {
   if (bare === 'git_create_mr' || name.endsWith('__git_create_mr')) {
     return 'Создаёт ветку и MR'
   }
+  if (name === 'tracker_action') {
+    return 'Действие в Jira'
+  }
+  if (bare === 'jira_get_issue' || name.endsWith('__jira_get_issue')) {
+    return `Читает задачу Jira ${String(field(input, 'key') ?? '')}`.trim()
+  }
+  if (bare === 'jira_add_comment' || name.endsWith('__jira_add_comment')) {
+    return `Пишет комментарий в Jira ${String(field(input, 'key') ?? '')}`.trim()
+  }
+  if (bare === 'confluence_get_page' || name.endsWith('__confluence_get_page')) {
+    return 'Читает страницу Confluence'
+  }
   if (bare === 'pkg_lint') {
     return 'Проверяет изменённые схемы (pkg_lint)'
   }
@@ -197,7 +209,7 @@ export function permissionSubject(name: string, input: unknown): string | undefi
     const sql = field(input, 'sql')
     return typeof sql === 'string' ? sql : undefined
   }
-  if (name === 'crm_action' || name === 'crm_browser_click' || name === 'git_action') {
+  if (name === 'crm_action' || name === 'crm_browser_click' || name === 'git_action' || name === 'tracker_action') {
     const action = field(input, 'action')
     return typeof action === 'string' ? action : undefined
   }

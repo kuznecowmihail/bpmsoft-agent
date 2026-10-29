@@ -35,11 +35,11 @@ describe('appSettings', () => {
 
     // Verify file was written
     const written = JSON.parse(fs.readFileSync(filePath, 'utf-8'))
-    expect(written).toEqual({ provider: 'cursor', cursorModel: 'composer-2.6', cursorModelParams: [{ id: 'thinking', value: 'on' }], cursorModelName: 'Composer with Thinking', claudeModel: '', claudeEffort: '', claudeModelName: '', dbAccessEnabled: false, dbConfirmQueries: false, crmActionsEnabled: false, crmConfirmActions: false, crmBrowserEnabled: false, recentProjects: [], projectConnections: {} })
+    expect(written).toEqual({ provider: 'cursor', cursorModel: 'composer-2.6', cursorModelParams: [{ id: 'thinking', value: 'on' }], cursorModelName: 'Composer with Thinking', claudeModel: '', claudeEffort: '', claudeModelName: '', dbAccessEnabled: false, dbConfirmQueries: false, crmActionsEnabled: false, crmConfirmActions: false, crmBrowserEnabled: false, jiraUrl: '', jiraEmail: '', jiraAcceptanceField: '', confluenceUrl: '', confluenceEmail: '', recentProjects: [], projectConnections: {} })
 
     // Verify reading the file again loads the same settings
     initAppSettings(filePath)
-    expect(getAppSettings()).toEqual({ provider: 'cursor', cursorModel: 'composer-2.6', cursorModelParams: [{ id: 'thinking', value: 'on' }], cursorModelName: 'Composer with Thinking', claudeModel: '', claudeEffort: '', claudeModelName: '', dbAccessEnabled: false, dbConfirmQueries: false, crmActionsEnabled: false, crmConfirmActions: false, crmBrowserEnabled: false, recentProjects: [], projectConnections: {} })
+    expect(getAppSettings()).toEqual({ provider: 'cursor', cursorModel: 'composer-2.6', cursorModelParams: [{ id: 'thinking', value: 'on' }], cursorModelName: 'Composer with Thinking', claudeModel: '', claudeEffort: '', claudeModelName: '', dbAccessEnabled: false, dbConfirmQueries: false, crmActionsEnabled: false, crmConfirmActions: false, crmBrowserEnabled: false, jiraUrl: '', jiraEmail: '', jiraAcceptanceField: '', confluenceUrl: '', confluenceEmail: '', recentProjects: [], projectConnections: {} })
   })
 
   it('broken JSON loads defaults', () => {
@@ -258,6 +258,47 @@ describe('appSettings', () => {
     initAppSettings(filePath)
     expect(getProjectConnection('/p').dbHost).toBe('')
     expect(getProjectConnection('/p').crmUser).toBe('')
+  })
+
+  it('jira and confluence urls are trimmed, lose trailing slashes and invalid values become empty', () => {
+    const filePath = path.join(tempDir, 'settings.json')
+    fs.writeFileSync(filePath, JSON.stringify({ jiraUrl: '  https://jira.company.ru//  ', confluenceUrl: 'HTTPS://company.atlassian.net/wiki/' }))
+    initAppSettings(filePath)
+    expect(getAppSettings().jiraUrl).toBe('https://jira.company.ru')
+    expect(getAppSettings().confluenceUrl).toBe('HTTPS://company.atlassian.net/wiki')
+
+    for (const invalid of ['jira.company.ru', 'ftp://jira', 'https://', 'https://ji ra', 42, null]) {
+      fs.writeFileSync(filePath, JSON.stringify({ jiraUrl: invalid, confluenceUrl: invalid }))
+      initAppSettings(filePath)
+      expect(getAppSettings().jiraUrl).toBe('')
+      expect(getAppSettings().confluenceUrl).toBe('')
+    }
+  })
+
+  it('jira and confluence emails are trimmed, non-strings become empty', () => {
+    const filePath = path.join(tempDir, 'settings.json')
+    fs.writeFileSync(filePath, JSON.stringify({ jiraEmail: ' bob@company.ru ', confluenceEmail: '  wiki@company.ru' }))
+    initAppSettings(filePath)
+    expect(getAppSettings().jiraEmail).toBe('bob@company.ru')
+    expect(getAppSettings().confluenceEmail).toBe('wiki@company.ru')
+
+    fs.writeFileSync(filePath, JSON.stringify({ jiraEmail: 7, confluenceEmail: null }))
+    initAppSettings(filePath)
+    expect(getAppSettings().jiraEmail).toBe('')
+    expect(getAppSettings().confluenceEmail).toBe('')
+  })
+
+  it('jira acceptance field is kept only in the customfield_<number> form', () => {
+    const filePath = path.join(tempDir, 'settings.json')
+    fs.writeFileSync(filePath, JSON.stringify({ jiraAcceptanceField: ' customfield_10010 ' }))
+    initAppSettings(filePath)
+    expect(getAppSettings().jiraAcceptanceField).toBe('customfield_10010')
+
+    for (const invalid of ['10010', 'customfield_', 'customfield_10a', 'Customfield_1', 'customfield_1 2', 5]) {
+      fs.writeFileSync(filePath, JSON.stringify({ jiraAcceptanceField: invalid }))
+      initAppSettings(filePath)
+      expect(getAppSettings().jiraAcceptanceField).toBe('')
+    }
   })
 
   it('addRecentProject moves an existing path to the top without duplicates', () => {

@@ -92,6 +92,14 @@ export interface AgentSettings {
 	crmUrl: string
 	crmUser: string
 	hasCrmPassword: boolean
+	/** Jira и Confluence — общие для всех проектов; токены в Keychain/DPAPI. */
+	jiraUrl: string
+	jiraEmail: string
+	jiraAcceptanceField: string
+	confluenceUrl: string
+	confluenceEmail: string
+	hasJiraToken: boolean
+	hasConfluenceToken: boolean
 }
 
 /** State of the CRM page shown in the browser panel of the main window. */
@@ -116,6 +124,15 @@ export interface CrmSettingsPatch {
 	crmBrowserEnabled?: boolean
 	crmUrl?: string
 	crmUser?: string
+}
+
+/** Global Jira and Confluence settings; tokens are set separately. */
+export interface TrackerSettingsPatch {
+	jiraUrl?: string
+	jiraEmail?: string
+	jiraAcceptanceField?: string
+	confluenceUrl?: string
+	confluenceEmail?: string
 }
 
 /** One entry of the chat replay: a user message or an agent event, in log order. */

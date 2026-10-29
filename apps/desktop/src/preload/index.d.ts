@@ -1,4 +1,4 @@
-import type { ProjectValidationResult, AgentProvider, AgentSettings, CursorModelOption, ClaudeModelOption, CursorModelParam, ClaudeEffort, DbSettingsPatch, CrmSettingsPatch, CrmBrowserState, RecentProject, ChatSummary, OpenedChat, EnvironmentReport } from '../shared/types'
+import type { ProjectValidationResult, AgentProvider, AgentSettings, CursorModelOption, ClaudeModelOption, CursorModelParam, ClaudeEffort, DbSettingsPatch, CrmSettingsPatch, CrmBrowserState, TrackerSettingsPatch, RecentProject, ChatSummary, OpenedChat, EnvironmentReport } from '../shared/types'
 import type { AgentEvent, ClaudeSkillsStatus, ClaudeMdChoice, InstallOutcome } from '@bpmsoft-agent/agent-runtime'
 
 export interface AgentPermissionRequest {
@@ -39,6 +39,14 @@ export interface BpmsoftDesktopApi {
   setCrmPassword: (password: string) => Promise<void>
   clearCrmPassword: () => Promise<void>
   testCrmConnection: () => Promise<string>
+  setTrackerSettings: (patch: TrackerSettingsPatch) => Promise<void>
+  setJiraToken: (token: string) => Promise<void>
+  clearJiraToken: () => Promise<void>
+  setConfluenceToken: (token: string) => Promise<void>
+  clearConfluenceToken: () => Promise<void>
+  testJiraConnection: () => Promise<string>
+  testConfluenceConnection: () => Promise<string>
+  loadJiraTask: (keyOrUrl: string) => Promise<string>
   claudeSkillsStatus: (appRoot: string) => Promise<ClaudeSkillsStatus>
   installClaudeSkills: (appRoot: string, options: { claudeMd?: ClaudeMdChoice; overwriteModified?: boolean }) => Promise<InstallOutcome>
   onCrmBrowserActivity: (callback: () => void) => () => void
