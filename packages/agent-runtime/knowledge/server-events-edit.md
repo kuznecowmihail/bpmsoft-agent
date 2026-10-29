@@ -64,7 +64,8 @@ namespace BPMSoft.Configuration
 
 ✅ **Запрет изменения и удаления, значение по умолчанию** (06.10.2026, `TestTicketCommentEventListener`, объект `TestTicketComment`):
 - `OnUpdating` / `OnDeleting(object sender, EntityBeforeEventArgs e)` — исключение отменяет операцию, пользователь видит его текст: `throw new InvalidOperationException(message);`. Сначала `base.OnUpdating(sender, e)`.
-- `OnInserting` — заполнение колонки, если пусто: `entity.SetColumnValue("AuthorId", entity.UserConnection.CurrentUser.ContactId)`.
+- `OnInserting` — заполнение колонки, если пусто: `entity.SetColumnValue("AuthorId", entity.UserConnection.CurrentUser.ContactId)`
+- ✅ Обязательную колонку (`E2: 1`) в `OnInserting` не заполнить при вставке через `DataService` (`InsertQuery`): запрос отклоняется с `RequiredColumnsEmptyValuesException` раньше слушателя (подтверждено записью в CRM, 29.10.2026). Значение при создании для такой колонки задавай значением по умолчанию (`E12`, `entity-columns-edit.md`, «Значение по умолчанию у унаследованной колонки в замещении»)..
 - Текст ошибки — локализуемая строка самой схемы исходного кода (ресурсы `Resources/<Схема>.SourceCode/resource.<культура>.xml`): `new LocalizableString(userConnection.Workspace.ResourceStorage, "<Схема>", "LocalizableStrings.<Имя>.Value").ToString()`.
 - Значение из БД до изменения читается запросом: `new Select(userConnection).Column("AuthorId").From("<Объект>").Where("Id").IsEqual(Column.Parameter(entity.PrimaryColumnValue)) as Select`, затем `ExecuteScalar<Guid>()` (`using BPMSoft.Core.DB;`).
 

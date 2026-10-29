@@ -45,6 +45,12 @@ export const PKG_LINT_TOOL_PATTERN = /^(mcp__app__)?pkg_lint$/;
 /** REST request tool: asks the user itself before requests that may change data. */
 export const CRM_REQUEST_TOOL_PATTERN = /^(mcp__app__)?crm_request$/;
 
+/** Git tools of the app: read-only status, or changes they confirm with the user themselves. */
+export const GIT_TOOL_PATTERN = /^(mcp__app__)?git_(branch_status|switch_branch|create_mr)$/;
+
+/** Jira and Confluence tools: reads, and a comment that asks the user itself. */
+export const TRACKER_TOOL_PATTERN = /^(mcp__app__)?(jira_get_issue|jira_add_comment|confluence_get_page)$/;
+
 /** True when file path contains secrets (credentials, certificates, private keys). */
 export function isSecretFile(p: string): boolean {
 	return SECRET_FILE_PATTERN.test(p.trim());
@@ -258,6 +264,8 @@ export function isAutoApprovedToolCall(toolName: string, input: Record<string, u
 	if (CRM_BROWSER_TOOL_PATTERN.test(toolName)) { return true; }
 	if (PKG_LINT_TOOL_PATTERN.test(toolName)) { return true; }
 	if (CRM_REQUEST_TOOL_PATTERN.test(toolName)) { return true; }
+	if (GIT_TOOL_PATTERN.test(toolName)) { return true; }
+	if (TRACKER_TOOL_PATTERN.test(toolName)) { return true; }
 	// Bash commands need special handling: check for destructive/risky operations BEFORE
 	// isReadOnlyToolCall, which doesn't know about -delete or git state changes.
 	if (toolName === "Bash") {

@@ -28,12 +28,18 @@ export interface StoredSettings {
   crmActionsEnabled: boolean
   crmConfirmActions: boolean
   crmBrowserEnabled: boolean
+  /** Jira and Confluence are shared by all projects; their tokens live in secureStore. */
+  jiraUrl: string
+  jiraEmail: string
+  jiraAcceptanceField: string
+  confluenceUrl: string
+  confluenceEmail: string
   recentProjects: string[]
   /** Connection settings keyed by the opened project's application root (or Pkg folder). */
   projectConnections: Record<string, ProjectConnection>
 }
 
-export const DEFAULT_SETTINGS: StoredSettings = { provider: 'claude', cursorModel: 'composer-2.5', cursorModelParams: [], cursorModelName: '', claudeModel: '', claudeEffort: '', claudeModelName: '', dbAccessEnabled: false, dbConfirmQueries: false, crmActionsEnabled: false, crmConfirmActions: false, crmBrowserEnabled: false, recentProjects: [], projectConnections: {} }
+export const DEFAULT_SETTINGS: StoredSettings = { provider: 'claude', cursorModel: 'composer-2.5', cursorModelParams: [], cursorModelName: '', claudeModel: '', claudeEffort: '', claudeModelName: '', dbAccessEnabled: false, dbConfirmQueries: false, crmActionsEnabled: false, crmConfirmActions: false, crmBrowserEnabled: false, jiraUrl: '', jiraEmail: '', jiraAcceptanceField: '', confluenceUrl: '', confluenceEmail: '', recentProjects: [], projectConnections: {} }
 
 let settingsPath: string | undefined
 let cache: StoredSettings = { ...DEFAULT_SETTINGS }
@@ -50,6 +56,12 @@ function normalizeConnection(value: unknown): ProjectConnection {
     crmUrl: /^https?:\/\/[^\s]+$/i.test(crmUrl) ? crmUrl : '',
     crmUser: typeof raw.crmUser === 'string' ? raw.crmUser.trim() : ''
   }
+}
+
+/** Address of Jira or Confluence: trimmed, without trailing slashes; kept only when it is an http(s) URL. */
+function normalizeTrackerUrl(value: unknown): string {
+  const url = typeof value === 'string' ? value.trim().replace(/\/+$/, '') : ''
+  return /^https?:\/\/[^\s]+$/i.test(url) ? url : ''
 }
 
 function normalizeProjectConnections(value: unknown): Record<string, ProjectConnection> {
@@ -89,6 +101,11 @@ function normalize(value: unknown): StoredSettings {
     crmActionsEnabled: raw.crmActionsEnabled === true,
     crmConfirmActions: raw.crmConfirmActions === true,
     crmBrowserEnabled: raw.crmBrowserEnabled === true,
+    jiraUrl: normalizeTrackerUrl(raw.jiraUrl),
+    jiraEmail: typeof raw.jiraEmail === 'string' ? raw.jiraEmail.trim() : '',
+    jiraAcceptanceField: typeof raw.jiraAcceptanceField === 'string' && /^customfield_\d+$/.test(raw.jiraAcceptanceField.trim()) ? raw.jiraAcceptanceField.trim() : '',
+    confluenceUrl: normalizeTrackerUrl(raw.confluenceUrl),
+    confluenceEmail: typeof raw.confluenceEmail === 'string' ? raw.confluenceEmail.trim() : '',
     recentProjects: Array.isArray(raw.recentProjects)
       ? [...new Set(raw.recentProjects.filter((p): p is string => typeof p === 'string' && p.trim() !== ''))].slice(0, MAX_RECENT_PROJECTS)
       : [],

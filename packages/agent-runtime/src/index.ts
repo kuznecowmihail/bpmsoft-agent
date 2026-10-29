@@ -10,6 +10,8 @@ export * from "./crm";
 export * from "./tools";
 export * from "./tools/localTools";
 export * from "./tools/gitBash";
+export * from "./git";
+export * from "./tracker";
 export * from "./tools/stagingCleanup";
 export * from "./lint";
 export * from "./mcp";

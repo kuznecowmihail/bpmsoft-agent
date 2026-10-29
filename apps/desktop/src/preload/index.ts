@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { IpcRendererEvent } from 'electron'
-import type { ProjectValidationResult, AgentProvider, AgentSettings, CursorModelOption, ClaudeModelOption, CursorModelParam, ClaudeEffort, DbSettingsPatch, CrmSettingsPatch, CrmBrowserState, RecentProject, ChatSummary, OpenedChat, EnvironmentReport } from '../shared/types'
+import type { ProjectValidationResult, AgentProvider, AgentSettings, CursorModelOption, ClaudeModelOption, CursorModelParam, ClaudeEffort, DbSettingsPatch, CrmSettingsPatch, CrmBrowserState, TrackerSettingsPatch, RecentProject, ChatSummary, OpenedChat, EnvironmentReport } from '../shared/types'
 import type { AgentEvent, ClaudeSkillsStatus, ClaudeMdChoice, InstallOutcome } from '@bpmsoft-agent/agent-runtime'
 
 export interface AgentPermissionRequest {
@@ -52,6 +52,14 @@ const api = {
   setCrmPassword: (password: string): Promise<void> => ipcRenderer.invoke('crm:setPassword', password),
   clearCrmPassword: (): Promise<void> => ipcRenderer.invoke('crm:clearPassword'),
   testCrmConnection: (): Promise<string> => ipcRenderer.invoke('crm:test'),
+  setTrackerSettings: (patch: TrackerSettingsPatch): Promise<void> => ipcRenderer.invoke('settings:setTracker', patch),
+  setJiraToken: (token: string): Promise<void> => ipcRenderer.invoke('jira:setToken', token),
+  clearJiraToken: (): Promise<void> => ipcRenderer.invoke('jira:clearToken'),
+  setConfluenceToken: (token: string): Promise<void> => ipcRenderer.invoke('confluence:setToken', token),
+  clearConfluenceToken: (): Promise<void> => ipcRenderer.invoke('confluence:clearToken'),
+  testJiraConnection: (): Promise<string> => ipcRenderer.invoke('jira:test'),
+  testConfluenceConnection: (): Promise<string> => ipcRenderer.invoke('confluence:test'),
+  loadJiraTask: (keyOrUrl: string): Promise<string> => ipcRenderer.invoke('jira:loadTask', keyOrUrl),
   claudeSkillsStatus: (appRoot: string): Promise<ClaudeSkillsStatus> => ipcRenderer.invoke('claudeSkills:status', appRoot),
   installClaudeSkills: (appRoot: string, options: { claudeMd?: ClaudeMdChoice; overwriteModified?: boolean }): Promise<InstallOutcome> =>
     ipcRenderer.invoke('claudeSkills:install', appRoot, options),

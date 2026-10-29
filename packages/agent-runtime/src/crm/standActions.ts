@@ -18,6 +18,8 @@ export interface StandDeps {
 	restartLimitMs?: number;
 	/** How long the browser login waits for the page (default 120000). */
 	browserLoginTimeoutMs?: number;
+	/** Files changed at or after this time are linted when git cannot tell what changed (packages outside git, no git); the MCP server passes its start time. */
+	sinceMs?: number;
 }
 
 /** Result of a stand action: success flag and text for the user. */
@@ -72,7 +74,11 @@ async function runTool(name: string, connection: CrmConnection, deps: StandDeps)
 /** Update: pkg-lint of the changed files, then the CRM update from the file system. */
 export async function standUpdate(connection: CrmConnection, deps: StandDeps): Promise<StandResult> {
 	const pkgDir = path.join(deps.root, "BPMSoft.Configuration", "Pkg");
-	const lint = runPkgLintCli(["--git", pkgDir], deps.knowledgeDir);
+	const args = ["--git", pkgDir];
+	if (deps.sinceMs !== undefined) {
+		args.push("--since", String(deps.sinceMs));
+	}
+	const lint = runPkgLintCli(args, deps.knowledgeDir);
 	if (lint.code === 1) {
 		return { ok: false, text: `${lint.text}\nОбновление не выполнено: исправь ошибки pkg-lint.` };
 	}

@@ -39,18 +39,25 @@ async function connect(options: Partial<BpmsoftMcpOptions> & Pick<BpmsoftMcpOpti
 const crm = { url: "http://crm.test/", user: "tester", password: "s3cret-pass" };
 
 describe("bpmsoft MCP server", () => {
-	it("has no tools when nothing is configured", async () => {
+	it("has only the git tools when nothing is configured", async () => {
 		const client = await connect({ config: { version: 1 } });
-		expect((await client.listTools()).tools).toEqual([]);
+		expect((await client.listTools()).tools.map((t) => t.name).sort()).toEqual(["git_branch_status", "git_create_mr", "git_switch_branch"]);
 	});
 	it("has CRM tools without the database tool", async () => {
 		const client = await connect({ config: { version: 1, crm } });
 		const names = (await client.listTools()).tools.map((t) => t.name).sort();
-		expect(names).toEqual(["crm_browser_login", "crm_compile", "crm_request", "crm_restart", "crm_update_from_fs"]);
+		expect(names).toEqual(["crm_browser_login", "crm_compile", "crm_request", "crm_restart", "crm_update_from_fs", "git_branch_status", "git_create_mr", "git_switch_branch"]);
 	});
-	it("has only the database tool when only db is configured", async () => {
+	it("has the database tool and the git tools when only db is configured", async () => {
 		const client = await connect({ config: { version: 1, db: {} } });
-		expect((await client.listTools()).tools.map((t) => t.name)).toEqual(["crm_db_query"]);
+		expect((await client.listTools()).tools.map((t) => t.name).sort()).toEqual(["crm_db_query", "git_branch_status", "git_create_mr", "git_switch_branch"]);
+	});
+	it("has the Jira tools when Jira is configured, without Confluence", async () => {
+		const client = await connect({ config: { version: 1, jira: { url: "https://jira.test", token: "t" } } });
+		const names = (await client.listTools()).tools.map((t) => t.name);
+		expect(names).toContain("jira_get_issue");
+		expect(names).toContain("jira_add_comment");
+		expect(names).not.toContain("confluence_get_page");
 	});
 	it("crm_request returns the stand answer as text", async () => {
 		const { fetchImpl } = fakeFetch(() => new Response("{\"value\":5}", { status: 200 }));

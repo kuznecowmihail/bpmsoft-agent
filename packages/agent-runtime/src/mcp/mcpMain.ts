@@ -3,6 +3,8 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { createBpmsoftMcpServer } from "./bpmsoftMcpServer";
 import { readStandConfig } from "./standConfig";
 
+/** Start of the server; pkg-lint checks files outside git changed since then. */
+const startedAtMs = Date.now();
 /** Entry of the bpmsoft-mcp.js bundle: stand root from --root, CLAUDE_PROJECT_DIR or the current folder. */
 const args = process.argv.slice(2);
 const rootIndex = args.indexOf("--root");
@@ -11,7 +13,7 @@ const read = readStandConfig(root);
 if ("error" in read) {
 	process.stderr.write(`${read.error}\n`);
 }
-const server = createBpmsoftMcpServer({ root, knowledgeDir: path.join(__dirname, ".."), config: "error" in read ? { version: 1 } : read });
+const server = createBpmsoftMcpServer({ root, knowledgeDir: path.join(__dirname, ".."), config: "error" in read ? { version: 1 } : read, sinceMs: startedAtMs });
 server.connect(new StdioServerTransport()).catch((e: unknown) => {
 	process.stderr.write(`${e instanceof Error ? e.message : String(e)}\n`);
 	process.exit(1);

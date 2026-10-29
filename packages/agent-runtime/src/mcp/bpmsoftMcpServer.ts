@@ -1,15 +1,17 @@
 import * as path from "path";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import type { StandConfig } from "./standConfig";
 import { standCompile, standRequest, standRestart, standUpdate, startBrowserLogin } from "../crm/standActions";
 import type { BrowserLoginHandle, StandDeps, StandResult } from "../crm/standActions";
 import { createCrmDbTool } from "../db/crmDbTool";
 import type { DbClient, DbClientConfig } from "../db/crmDbTool";
+import { createGitTools } from "../git/gitTools";
+import { appToolZodShape } from "../tools/appToolZod";
+import { createTrackerTools } from "../tracker/trackerTools";
 
 export const MCP_SERVER_NAME = "bpmsoft";
-export const MCP_TOOL_NAMES = ["crm_update_from_fs", "crm_compile", "crm_restart", "crm_request", "crm_browser_login", "crm_db_query"] as const;
+export const MCP_TOOL_NAMES = ["crm_update_from_fs", "crm_compile", "crm_restart", "crm_request", "crm_browser_login", "crm_db_query", "git_branch_status", "git_switch_branch", "git_create_mr", "jira_get_issue", "jira_add_comment", "confluence_get_page"] as const;
 
 export interface BpmsoftMcpOptions extends StandDeps {
 	config: StandConfig;
@@ -28,7 +30,7 @@ export function createBpmsoftMcpServer(options: BpmsoftMcpOptions): McpServer {
 	const crm = config.crm;
 	if (crm) {
 		server.registerTool("crm_update_from_fs", {
-			description: "«Обновить из файловой системы» в CRM. Сначала pkg-lint по изменённым в git схемам; при ошибках в CRM ничего не отправляется.",
+			description: "«Обновить из файловой системы» в CRM. Сначала pkg-lint по изменённым схемам (git status, а вне git — по времени изменения файлов); при ошибках в CRM ничего не отправляется.",
 		}, async () => toolResult(await standUpdate(crm, deps)));
 		server.registerTool("crm_compile", {
 			description: "Обновление из файловой системы, затем компиляция и перезапуск приложения с ожиданием запуска (до нескольких минут). При ошибке обновления компиляция не запускается.",
@@ -73,9 +75,13 @@ export function createBpmsoftMcpServer(options: BpmsoftMcpOptions): McpServer {
 			return { content: [{ type: "text" as const, text: result.text }], isError: result.isError };
 		});
 	}
-	if (!crm && !config.db) {
-		// McpServer registers tools/list only with the first tool; answer an empty list explicitly.
-		server.server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: [] }));
+	const pkgRoot = path.join(deps.root, "BPMSoft.Configuration", "Pkg");
+	// Changing git tools are confirmed by the host (Claude Code / Cursor permissions), so no confirm here.
+	for (const appTool of [...createGitTools({ pkgRoot }), ...createTrackerTools({ jira: config.jira, confluence: config.confluence })]) {
+		server.registerTool(appTool.name, { description: appTool.description, inputSchema: appToolZodShape(appTool) }, async (args) => {
+			const result = await appTool.execute(args as Record<string, unknown>);
+			return { content: [{ type: "text" as const, text: result.text }], isError: result.isError };
+		});
 	}
 	return server;
 }

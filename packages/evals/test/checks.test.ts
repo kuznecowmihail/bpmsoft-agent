@@ -445,6 +445,45 @@ describe("DEFAULT_DISCOVERY_PATTERN", () => {
 	});
 });
 
+describe("tool_input_excludes", () => {
+	const call = (name: string, input: unknown) => ({ turn: 0, kind: "tool" as const, name, input });
+
+	it("passes when the tool is called and no call input matches the pattern", async () => {
+		const results = await runChecks(
+			[{ type: "tool_input_excludes", name: "git_branch_status", pattern: "PRJ-300" }],
+			baseContext({ timeline: [call("git_branch_status", { packages: ["P"] })] }),
+		);
+		expect(results[0].passed).toBe(true);
+		expect(results[0].detail).toBe("вызовов: 1, без PRJ-300");
+	});
+
+	it("fails when a call input matches the pattern", async () => {
+		const results = await runChecks(
+			[{ type: "tool_input_excludes", name: "git_branch_status", pattern: "PRJ-300" }],
+			baseContext({ timeline: [call("git_branch_status", { issueKey: "PRJ-300" })] }),
+		);
+		expect(results[0].passed).toBe(false);
+		expect(results[0].detail).toBe('вызов с PRJ-300: {"issueKey":"PRJ-300"}');
+	});
+
+	it("fails when the tool was not called", async () => {
+		const results = await runChecks(
+			[{ type: "tool_input_excludes", name: "git_branch_status", pattern: "PRJ-300" }],
+			baseContext({ timeline: [call("Read", { file_path: "a.cs" })] }),
+		);
+		expect(results[0].passed).toBe(false);
+		expect(results[0].detail).toBe("инструмент не вызван: git_branch_status");
+	});
+
+	it("matches the name with an MCP prefix in the timeline", async () => {
+		const results = await runChecks(
+			[{ type: "tool_input_excludes", name: "git_branch_status", pattern: "PRJ-300" }],
+			baseContext({ timeline: [call("mcp__app__git_branch_status", { packages: ["P"] })] }),
+		);
+		expect(results[0].passed).toBe(true);
+	});
+});
+
 describe("mentioned_before_write", () => {
 	const pattern = "дубл|две записи|лишн[а-яё]* запис";
 	const editTool = (turn: number) => ({ turn, kind: "tool" as const, name: "Edit", input: { file_path: "a.cs" } });

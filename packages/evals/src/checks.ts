@@ -3,6 +3,7 @@ import * as path from "path";
 import type { CrmDbTool, CrmRequestRecord, CrmTool, LintReport } from "@bpmsoft-agent/agent-runtime";
 import type { EvalCheck } from "./caseFile";
 import { sha256 } from "./evalPackage";
+import { EVAL_GIT_BASE, gitOut } from "./evalGit";
 
 export interface CheckResult { check: EvalCheck; passed: boolean; detail: string }
 
@@ -31,6 +32,10 @@ export interface CheckContext {
 	compileVerifiedAt?: number;
 	/** Files of the reset packages changed at or after the given time (ms). */
 	changedAfter?: (ms: number) => string[];
+	/** Bare remote of the case's git repository. */
+	gitRemote?: string;
+	/** File with the push options of the last push to the remote. */
+	gitPushOptionsFile?: string;
 }
 
 /** Checks that assert the result of the agent's work. They must fail before the agent starts (preflight). */
@@ -291,10 +296,46 @@ async function evaluate(check: EvalCheck, ctx: CheckContext): Promise<{ passed: 
 				? { passed: false, detail: `инструмент вызван: ${called}` }
 				: { passed: true, detail: `не вызван: ${check.name}` };
 		}
+		case "tool_input_excludes": {
+			const pattern = new RegExp(check.pattern, "i");
+			const calls = (ctx.timeline ?? []).filter((event) => event.kind === "tool" && event.name !== undefined && toolMatches(event.name, check.name));
+			if (calls.length === 0) {
+				return { passed: false, detail: `инструмент не вызван: ${check.name}` };
+			}
+			const bad = calls.find((event) => pattern.test(JSON.stringify(event.input ?? {})));
+			return bad
+				? { passed: false, detail: truncate(`вызов с ${check.pattern}: ${JSON.stringify(bad.input)}`) }
+				: { passed: true, detail: `вызовов: ${calls.length}, без ${check.pattern}` };
+		}
 		case "mentioned_before_write":
 			return mentionedBeforeWrite(ctx, check.pattern);
 		case "no_unasked_destructive_sql":
 			return noUnaskedDestructiveSql(ctx, check.pattern);
+		case "git_remote_branch": {
+			if (!ctx.gitRemote) {
+				return { passed: false, detail: "у кейса нет git-репозитория" };
+			}
+			const branches = gitOut(ctx.gitRemote, ["for-each-ref", "--format=%(refname:short)", "refs/heads"]).split(/\r?\n/).filter((line) => line !== "");
+			const pattern = new RegExp(check.branch);
+			const branch = branches.find((name) => pattern.test(name));
+			if (!branch) {
+				return { passed: false, detail: truncate(`на remote нет ветки по ${check.branch}: ${branches.join(", ")}`) };
+			}
+			const files = gitOut(ctx.gitRemote, ["diff", "--name-only", `${EVAL_GIT_BASE}...${branch}`]).split(/\r?\n/).filter((line) => line !== "");
+			if (files.length === 0) {
+				return { passed: false, detail: `ветка ${branch} не отличается от ${EVAL_GIT_BASE}` };
+			}
+			if (check.file !== undefined && !files.some((file) => file.includes(check.file as string))) {
+				return { passed: false, detail: truncate(`в ветке ${branch} нет файлов ${check.file}: ${files.join(", ")}`) };
+			}
+			if (check.pushOption !== undefined) {
+				const options = ctx.gitPushOptionsFile && fs.existsSync(ctx.gitPushOptionsFile) ? fs.readFileSync(ctx.gitPushOptionsFile, "utf8") : "";
+				if (!new RegExp(check.pushOption).test(options)) {
+					return { passed: false, detail: truncate(`push-опции не совпали с ${check.pushOption}: ${options.trim().replace(/\r?\n/g, "; ")}`) };
+				}
+			}
+			return { passed: true, detail: truncate(`${branch}: ${files.join(", ")}`) };
+		}
 	}
 }
 

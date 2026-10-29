@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { AgentProvider, AgentSettings, CursorModelOption, ClaudeModelOption, DbSettingsPatch, CrmSettingsPatch, EnvironmentReport } from '../../../shared/types'
+import type { AgentProvider, AgentSettings, CursorModelOption, ClaudeModelOption, DbSettingsPatch, CrmSettingsPatch, TrackerSettingsPatch, EnvironmentReport } from '../../../shared/types'
 import type { ClaudeMdChoice, ClaudeSkillsStatus } from '@bpmsoft-agent/agent-runtime'
 import { IconAlert, IconExternal, IconTrash } from './icons'
 import { Toggle } from './Toggle'
@@ -89,6 +89,21 @@ export function SettingsMenu({
   const [crmTestResult, setCrmTestResult] = useState<{ ok: boolean; text: string } | null>(null)
   const [isTestingCrm, setIsTestingCrm] = useState(false)
   const [crmError, setCrmError] = useState<string | null>(null)
+  const [jiraUrl, setJiraUrl] = useState(settings?.jiraUrl ?? '')
+  const [jiraEmail, setJiraEmail] = useState(settings?.jiraEmail ?? '')
+  const [jiraAcceptanceField, setJiraAcceptanceField] = useState(settings?.jiraAcceptanceField ?? '')
+  const [jiraTokenInput, setJiraTokenInput] = useState('')
+  const [editingJiraToken, setEditingJiraToken] = useState(false)
+  const [jiraTestResult, setJiraTestResult] = useState<{ ok: boolean; text: string } | null>(null)
+  const [isTestingJira, setIsTestingJira] = useState(false)
+  const [jiraError, setJiraError] = useState<string | null>(null)
+  const [confluenceUrl, setConfluenceUrl] = useState(settings?.confluenceUrl ?? '')
+  const [confluenceEmail, setConfluenceEmail] = useState(settings?.confluenceEmail ?? '')
+  const [confluenceTokenInput, setConfluenceTokenInput] = useState('')
+  const [editingConfluenceToken, setEditingConfluenceToken] = useState(false)
+  const [confluenceTestResult, setConfluenceTestResult] = useState<{ ok: boolean; text: string } | null>(null)
+  const [isTestingConfluence, setIsTestingConfluence] = useState(false)
+  const [confluenceError, setConfluenceError] = useState<string | null>(null)
   const [claudeSkills, setClaudeSkills] = useState<ClaudeSkillsStatus | null>(null)
   const [isBusySkills, setIsBusySkills] = useState(false)
   const [skillsPending, setSkillsPending] = useState<'claude-md' | { modified: string[] } | null>(null)
@@ -122,6 +137,17 @@ export function SettingsMenu({
     setCrmUrl(settings?.crmUrl ?? '')
     setCrmUser(settings?.crmUser ?? '')
   }, [settings?.crmUrl, settings?.crmUser])
+
+  useEffect(() => {
+    setJiraUrl(settings?.jiraUrl ?? '')
+    setJiraEmail(settings?.jiraEmail ?? '')
+    setJiraAcceptanceField(settings?.jiraAcceptanceField ?? '')
+  }, [settings?.jiraUrl, settings?.jiraEmail, settings?.jiraAcceptanceField])
+
+  useEffect(() => {
+    setConfluenceUrl(settings?.confluenceUrl ?? '')
+    setConfluenceEmail(settings?.confluenceEmail ?? '')
+  }, [settings?.confluenceUrl, settings?.confluenceEmail])
 
   const provider = settings?.provider ?? 'claude'
   const hasCursorKey = Boolean(settings?.hasCursorKey)
@@ -403,6 +429,102 @@ export function SettingsMenu({
       setCrmTestResult({ ok: false, text: errorText(error) })
     } finally {
       setIsTestingCrm(false)
+    }
+  }
+
+  const saveTrackerSettings = async (patch: TrackerSettingsPatch, setError: (text: string | null) => void): Promise<void> => {
+    setError(null)
+    try {
+      await window.api.setTrackerSettings(patch)
+      onSettingsChanged()
+    } catch (error) {
+      setError(errorText(error))
+    }
+  }
+
+  const handleSaveJiraToken = async (): Promise<void> => {
+    const token = jiraTokenInput.trim()
+    if (!token) {
+      return
+    }
+    setIsSaving(true)
+    setJiraError(null)
+    try {
+      await window.api.setJiraToken(token)
+      setJiraTokenInput('')
+      setEditingJiraToken(false)
+      onSettingsChanged()
+    } catch (error) {
+      setJiraError(errorText(error))
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleClearJiraToken = async (): Promise<void> => {
+    setJiraError(null)
+    try {
+      await window.api.clearJiraToken()
+      setEditingJiraToken(false)
+      onSettingsChanged()
+    } catch (error) {
+      setJiraError(errorText(error))
+    }
+  }
+
+  const handleTestJira = async (): Promise<void> => {
+    setIsTestingJira(true)
+    setJiraTestResult(null)
+    try {
+      const text = await window.api.testJiraConnection()
+      setJiraTestResult({ ok: true, text })
+    } catch (error) {
+      setJiraTestResult({ ok: false, text: errorText(error) })
+    } finally {
+      setIsTestingJira(false)
+    }
+  }
+
+  const handleSaveConfluenceToken = async (): Promise<void> => {
+    const token = confluenceTokenInput.trim()
+    if (!token) {
+      return
+    }
+    setIsSaving(true)
+    setConfluenceError(null)
+    try {
+      await window.api.setConfluenceToken(token)
+      setConfluenceTokenInput('')
+      setEditingConfluenceToken(false)
+      onSettingsChanged()
+    } catch (error) {
+      setConfluenceError(errorText(error))
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleClearConfluenceToken = async (): Promise<void> => {
+    setConfluenceError(null)
+    try {
+      await window.api.clearConfluenceToken()
+      setEditingConfluenceToken(false)
+      onSettingsChanged()
+    } catch (error) {
+      setConfluenceError(errorText(error))
+    }
+  }
+
+  const handleTestConfluence = async (): Promise<void> => {
+    setIsTestingConfluence(true)
+    setConfluenceTestResult(null)
+    try {
+      const text = await window.api.testConfluenceConnection()
+      setConfluenceTestResult({ ok: true, text })
+    } catch (error) {
+      setConfluenceTestResult({ ok: false, text: errorText(error) })
+    } finally {
+      setIsTestingConfluence(false)
     }
   }
 
@@ -877,6 +999,175 @@ export function SettingsMenu({
             </div>
           </>
         )}
+      </div>
+      <div className="popover-divider" />
+      <div className="popover-section">
+        <div className="popover-row">
+          <div>
+            <div className="popover-row-title">Jira и Confluence</div>
+            <div className="popover-row-hint">Агент читает задачи и страницы, комментарий в задачу пишет с вашего разрешения. Общие для всех проектов</div>
+          </div>
+        </div>
+        <div className="popover-field">
+          <div className="popover-field-label">Jira: адрес и email</div>
+          <div className="popover-inline popover-inline-2">
+            <input
+              className="input"
+              placeholder="https://jira.company.ru или https://company.atlassian.net"
+              value={jiraUrl}
+              onChange={(event) => setJiraUrl(event.target.value)}
+              onBlur={() => saveTrackerSettings({ jiraUrl: jiraUrl.trim() }, setJiraError)}
+            />
+            <input
+              className="input"
+              placeholder="Email (только Jira Cloud)"
+              value={jiraEmail}
+              onChange={(event) => setJiraEmail(event.target.value)}
+              onBlur={() => saveTrackerSettings({ jiraEmail: jiraEmail.trim() }, setJiraError)}
+            />
+          </div>
+        </div>
+        <div className="popover-field">
+          {settings?.hasJiraToken && !editingJiraToken ? (
+            <div className="popover-row">
+              <span className="key-status">Токен в Keychain</span>
+              <div className="popover-inline">
+                <button type="button" className="btn btn-secondary btn-sm" disabled={isRunning} onClick={() => setEditingJiraToken(true)}>
+                  Сменить
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm btn-icon"
+                  disabled={isRunning}
+                  onClick={handleClearJiraToken}
+                  title="Удалить токен"
+                  aria-label="Удалить токен"
+                >
+                  <IconTrash size={15} />
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="popover-inline">
+              <input
+                className="input"
+                type="password"
+                placeholder="Токен"
+                value={jiraTokenInput}
+                onChange={(event) => setJiraTokenInput(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    handleSaveJiraToken()
+                  }
+                }}
+              />
+              <button type="button" className="btn btn-primary btn-sm" disabled={isSaving || !jiraTokenInput.trim()} onClick={handleSaveJiraToken}>
+                Сохранить
+              </button>
+            </div>
+          )}
+        </div>
+        <div className="popover-field">
+          <div className="popover-field-label">Поле критериев приёмки</div>
+          <input
+            className="input"
+            placeholder="customfield_10010, необязательно"
+            value={jiraAcceptanceField}
+            onChange={(event) => setJiraAcceptanceField(event.target.value)}
+            onBlur={() => saveTrackerSettings({ jiraAcceptanceField: jiraAcceptanceField.trim() }, setJiraError)}
+          />
+        </div>
+        <div className="popover-field">
+          <button type="button" className="btn btn-secondary btn-sm" disabled={isTestingJira} onClick={handleTestJira}>
+            Проверить Jira
+          </button>
+          {jiraTestResult &&
+            (jiraTestResult.ok ? (
+              <div className="popover-note">{jiraTestResult.text}</div>
+            ) : (
+              <div className="popover-error">{jiraTestResult.text}</div>
+            ))}
+        </div>
+        {jiraError && <div className="popover-error">{jiraError}</div>}
+        <div className="popover-field">
+          <div className="popover-field-label">Confluence: адрес и email</div>
+          <div className="popover-inline popover-inline-2">
+            <input
+              className="input"
+              placeholder="https://wiki.company.ru или https://company.atlassian.net/wiki"
+              value={confluenceUrl}
+              onChange={(event) => setConfluenceUrl(event.target.value)}
+              onBlur={() => saveTrackerSettings({ confluenceUrl: confluenceUrl.trim() }, setConfluenceError)}
+            />
+            <input
+              className="input"
+              placeholder="Email (только Confluence Cloud)"
+              value={confluenceEmail}
+              onChange={(event) => setConfluenceEmail(event.target.value)}
+              onBlur={() => saveTrackerSettings({ confluenceEmail: confluenceEmail.trim() }, setConfluenceError)}
+            />
+          </div>
+        </div>
+        <div className="popover-field">
+          {settings?.hasConfluenceToken && !editingConfluenceToken ? (
+            <div className="popover-row">
+              <span className="key-status">Токен в Keychain</span>
+              <div className="popover-inline">
+                <button type="button" className="btn btn-secondary btn-sm" disabled={isRunning} onClick={() => setEditingConfluenceToken(true)}>
+                  Сменить
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm btn-icon"
+                  disabled={isRunning}
+                  onClick={handleClearConfluenceToken}
+                  title="Удалить токен"
+                  aria-label="Удалить токен"
+                >
+                  <IconTrash size={15} />
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="popover-inline">
+              <input
+                className="input"
+                type="password"
+                placeholder="Токен"
+                value={confluenceTokenInput}
+                onChange={(event) => setConfluenceTokenInput(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    handleSaveConfluenceToken()
+                  }
+                }}
+              />
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                disabled={isSaving || !confluenceTokenInput.trim()}
+                onClick={handleSaveConfluenceToken}
+              >
+                Сохранить
+              </button>
+            </div>
+          )}
+        </div>
+        <div className="popover-field">
+          <button type="button" className="btn btn-secondary btn-sm" disabled={isTestingConfluence} onClick={handleTestConfluence}>
+            Проверить Confluence
+          </button>
+          {confluenceTestResult &&
+            (confluenceTestResult.ok ? (
+              <div className="popover-note">{confluenceTestResult.text}</div>
+            ) : (
+              <div className="popover-error">{confluenceTestResult.text}</div>
+            ))}
+        </div>
+        {confluenceError && <div className="popover-error">{confluenceError}</div>}
+        <div className="popover-note">
+          Jira Cloud — email и API-токен; Server/Data Center — personal access token, email пустой. Если у Confluence на том же сайте Atlassian нет своего токена, берётся токен Jira.
+        </div>
       </div>
       <div className="popover-divider" />
       <div className="popover-section">

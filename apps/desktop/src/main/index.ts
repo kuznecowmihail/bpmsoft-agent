@@ -32,6 +32,16 @@ import {
   clearCrmPassword,
   testCrm,
   crmConnection,
+  setJiraToken,
+  hasJiraToken,
+  clearJiraToken,
+  setConfluenceToken,
+  hasConfluenceToken,
+  clearConfluenceToken,
+  trackerConfig,
+  testJiraConnection,
+  testConfluenceConnection,
+  loadJiraTaskText,
   setActiveProject,
   getActiveProject,
   dropLegacyConnectionSecrets,
@@ -54,7 +64,7 @@ import { loadLoginShellPath } from './shellPath'
 import { isExternalWebUrl } from './urlPolicy'
 import { listCursorModels, listClaudeModels, claudeSkillsStatus, installClaudeSkills, defaultExportSources } from '@bpmsoft-agent/agent-runtime'
 import type { ClaudeMdChoice } from '@bpmsoft-agent/agent-runtime'
-import type { AgentProvider, CursorModelParam, ClaudeEffort, DbSettingsPatch, CrmSettingsPatch, RecentProject, ProjectValidationResult, DeviceInfo, EnvironmentReport, FileDesignModeCheck } from '../shared/types'
+import type { AgentProvider, CursorModelParam, ClaudeEffort, DbSettingsPatch, CrmSettingsPatch, TrackerSettingsPatch, RecentProject, ProjectValidationResult, DeviceInfo, EnvironmentReport, FileDesignModeCheck } from '../shared/types'
 
 if (app.isPackaged) loadLoginShellPath()
 
@@ -347,7 +357,9 @@ app.whenReady().then(() => {
       hasClaudeKey: hasApiKey(),
       hasCursorKey: hasCursorApiKey(),
       hasDbPassword: hasDbPassword(),
-      hasCrmPassword: hasCrmPassword()
+      hasCrmPassword: hasCrmPassword(),
+      hasJiraToken: hasJiraToken(),
+      hasConfluenceToken: hasConfluenceToken()
     }
   })
 
@@ -412,6 +424,38 @@ app.whenReady().then(() => {
   })
 
   ipcMain.handle('crm:test', () => testCrm())
+
+  // Jira and Confluence: global addresses and emails in settings, tokens in the keychain.
+  ipcMain.handle('settings:setTracker', (_event, patch: TrackerSettingsPatch) => {
+    const values: TrackerSettingsPatch = {}
+    for (const key of ['jiraUrl', 'jiraEmail', 'jiraAcceptanceField', 'confluenceUrl', 'confluenceEmail'] as const) {
+      const value = patch?.[key]
+      if (typeof value === 'string') values[key] = value
+    }
+    updateAppSettings(values)
+  })
+
+  ipcMain.handle('jira:setToken', (_event, token: string) => {
+    setJiraToken(token)
+  })
+
+  ipcMain.handle('jira:clearToken', () => {
+    clearJiraToken()
+  })
+
+  ipcMain.handle('confluence:setToken', (_event, token: string) => {
+    setConfluenceToken(token)
+  })
+
+  ipcMain.handle('confluence:clearToken', () => {
+    clearConfluenceToken()
+  })
+
+  ipcMain.handle('jira:test', () => testJiraConnection())
+
+  ipcMain.handle('confluence:test', () => testConfluenceConnection())
+
+  ipcMain.handle('jira:loadTask', (_event, keyOrUrl: string) => loadJiraTaskText(String(keyOrUrl ?? '')))
 
   // CRM browser panel: bounds of the placeholder in the renderer, visibility, the user's home button, reload.
   ipcMain.handle('crmBrowser:setBounds', (_event, b: { x: number; y: number; width: number; height: number }) => {
@@ -500,7 +544,8 @@ app.whenReady().then(() => {
       overwriteModified: options?.overwriteModified === true,
       appVersion: app.getVersion(),
       crm: crmConnection(),
-      db: dbExportOptions()
+      db: dbExportOptions(),
+      ...trackerConfig()
     })
   )
 

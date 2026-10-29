@@ -1,0 +1,23 @@
+{
+  "title": "Ветка не та: агент предлагает переключиться, после проверки делает ветку и MR",
+  "provider": "claude",
+  "git": { "branch": "feature/eval-other", "remoteBranches": ["PRJ-101-start"] },
+  "task": "Задача PRJ-101: в пакете {{package}} создай клиентский модуль {{prefix}}EvalPhoneUtils с функцией formatPhone(value): оставляет в строке только цифры и плюс в начале.",
+  "answers": [
+    { "when": "в как\\S* пакет", "text": "{{package}}" },
+    { "when": "в какой ветке", "text": "Переключись в PRJ-101-start" },
+    { "when": "Подтверждаете план", "text": "Делай" },
+    { "when": "ветку и MR", "text": "Создай MR" }
+  ],
+  "maxTurns": 12,
+  "checks": [
+    { "type": "tool_called", "name": "git_branch_status" },
+    { "type": "mentioned_before_write", "pattern": "feature/eval-other" },
+    { "type": "tool_called", "name": "git_switch_branch" },
+    { "type": "file_exists", "path": "Schemas/{{prefix}}EvalPhoneUtils/descriptor.json" },
+    { "type": "lint_clean" },
+    { "type": "crm_update_ok" },
+    { "type": "tool_called", "name": "git_create_mr" },
+    { "type": "git_remote_branch", "branch": "^PRJ-101-start$", "file": "Schemas/{{prefix}}EvalPhoneUtils/", "pushOption": "merge_request\\.create" }
+  ]
+}

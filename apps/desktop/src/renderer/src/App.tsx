@@ -22,6 +22,7 @@ import { EmptyState } from './components/EmptyState'
 import { EnvironmentPanel } from './components/EnvironmentPanel'
 import { FileDesignModeCard } from './components/FileDesignModeCard'
 import { Header } from './components/Header'
+import { JiraTaskBar } from './components/JiraTaskBar'
 import { LogsDrawer } from './components/LogsDrawer'
 import { MessageList } from './components/MessageList'
 import type { PermissionRequestEntry } from './components/MessageList'
@@ -180,7 +181,7 @@ function App(): React.JSX.Element {
     stickToBottomRef.current = feed.scrollHeight - feed.scrollTop - feed.clientHeight < 40
   }
 
-  const sendText = async (text: string): Promise<void> => {
+  const sendText = async (text: string, options?: { newChat?: boolean }): Promise<void> => {
     if (!text || !validation?.pkgRoot || isRunning || isOpeningChat || readOnlyReason) {
       return
     }
@@ -212,7 +213,7 @@ function App(): React.JSX.Element {
       if (validation?.pkgRoot) {
         const previousIds = new Set(chats.map((chat) => chat.id))
         const refreshed = await loadChats(validation.pkgRoot)
-        if (activeChatId === null && refreshed[0] && !previousIds.has(refreshed[0].id)) {
+        if ((options?.newChat || activeChatId === null) && refreshed[0] && !previousIds.has(refreshed[0].id)) {
           setActiveChatId(refreshed[0].id)
         }
       }
@@ -313,6 +314,16 @@ function App(): React.JSX.Element {
     if (validation?.pkgRoot) {
       await loadChats(validation.pkgRoot)
     }
+  }
+
+  const handleTakeJiraTask = async (keyOrUrl: string): Promise<void> => {
+    if (isRunning) {
+      return
+    }
+    const text = await window.api.loadJiraTask(keyOrUrl)
+    await handleNewChat()
+    // the issue key goes first: the chat title in the history is the start of the first message
+    await sendText(text.replace(/^#\s+/, ''), { newChat: true })
   }
 
   const handleChangeProject = async (): Promise<void> => {
@@ -516,6 +527,9 @@ function App(): React.JSX.Element {
               />
             )}
           </div>
+          {agentSettings?.jiraUrl && agentSettings?.hasJiraToken && validation?.pkgRoot && !readOnlyReason && (
+            <JiraTaskBar disabled={isRunning || isOpeningChat} onTake={handleTakeJiraTask} />
+          )}
           <Composer
             value={prompt}
             onChange={setPrompt}

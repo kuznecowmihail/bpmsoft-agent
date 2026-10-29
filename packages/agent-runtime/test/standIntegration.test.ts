@@ -92,6 +92,12 @@ describe("standIntegration", () => {
 		expect(read(".cursor", "mcp.json")).toBe("{ broken");
 	});
 
+	it("registers the server with only Jira and writes the Jira block to the access file", () => {
+		const jira = { url: "https://jira.test", token: "t" };
+		expect(writeStandIntegration(root, { jira, mcpBundle: bundle() })).toEqual({ state: "registered", invalid: [] });
+		expect(JSON.parse(read(".claude", "bpmsoft-agent.local.json"))).toEqual({ version: 1, jira });
+	});
+
 	it("keeps BOM and CRLF of an existing file", () => {
 		put(".mcp.json", "\uFEFF{\r\n  \"mcpServers\": {}\r\n}\r\n");
 		writeStandIntegration(root, { crm, mcpBundle: bundle() });
