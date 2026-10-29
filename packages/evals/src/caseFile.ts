@@ -1,5 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
+import type { EvalGitSetup } from "./evalGit";
 
 /** Package the runner creates and resets when local.json has no "package". */
 export const DEFAULT_PACKAGE = "EvalPackage";
@@ -47,8 +48,12 @@ export type EvalCheck =
 	| { type: "crm_request_ok"; pathPattern?: string }
 	| { type: "tool_called"; name: string }
 	| { type: "tool_not_called"; name: string }
+	/** Every call of the tool has input without a match of `pattern` (regex, case-insensitive); fails when the tool was not called. */
+	| { type: "tool_input_excludes"; name: string; pattern: string }
 	| { type: "mentioned_before_write"; pattern: string }
-	| { type: "no_unasked_destructive_sql"; pattern?: string };
+	| { type: "no_unasked_destructive_sql"; pattern?: string }
+	/** Branch of the case's bare remote matching `branch` (regex); `file` is a substring of a changed path, `pushOption` a regex over the last push options. */
+	| { type: "git_remote_branch"; branch: string; file?: string; pushOption?: string };
 
 export interface EvalSetup { type: "replace_in_file"; path: string; find: string; replace: string }
 
@@ -71,6 +76,8 @@ export interface EvalCase {
 	setupSql?: string;
 	/** Names of folders in packages/evals/fixtures/ copied into the eval package before the agent starts. */
 	fixtures?: string[];
+	/** Git repository in the eval package for the case (see evalGit.ts); only such cases get the git tools. */
+	git?: EvalGitSetup;
 }
 
 /** Reads a JSON file, dropping a leading BOM. */

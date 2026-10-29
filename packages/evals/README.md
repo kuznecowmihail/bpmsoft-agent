@@ -95,10 +95,18 @@ npm run eval -w @bpmsoft-agent/evals -- --case 04
 | `19-esq-paging.json` | Постраничная выборка ESQ: `SkipRowCount` и `RowCount` как номер последней строки; агент сам вызывает сервис через `crm_request` |
 | `20-webhook-lead.json` | Вебхук без кода: схема `WebhookSchemaManager` файлами (аутентификация Cookie, `IR9`, действие «Добавить данные»), агент сам вызывает `/webhook/<UId>/lead` через `crm_request`, лид есть в БД (cursor) |
 | `21-dcm-order-case.json` | Кейс (DCM) файлами (фикстуры `simple-section` + `order-status`): стадии по колонке «Статус», альтернативная стадия (`ParentStageUId`), обязательная задача и автопереход (`RequiredType`, `TransitionType`), наборы `SysDcmSettings` и `SysDcmSchemaInSettings`; агент сам создаёт заказ и переводит его на стадию через `crm_request`, шаг кейса есть в журнале процесса (`SysProcessElementLog`), даже если агент удалил тестовые записи |
+| `22-git-branch-mr.json` | Пакет — свой git-репозиторий на чужой ветке: агент проверяет ветку (`git_branch_status`), переключается на ветку задачи, после проверки делает коммит, push и MR (`git_create_mr`) на временный remote |
+| `23-git-foreign-task-branch.json` | Старт на чужой ветке задачи без ключа в задаче: агент не передаёт ключ из имени ветки в `git_branch_status`, называет ветку и переключается на `develop` (cursor) |
 
-Провайдеры: 10 кейсов на cursor, 11 на claude. Флаг `--provider` перекрывает поле кейса для всего прогона.
+Провайдеры: 11 кейсов на cursor, 12 на claude. Флаг `--provider` перекрывает поле кейса для всего прогона.
 
 Все кейсы — нереализованные задачи: на чистом стенде их результатные проверки не проходят до старта агента.
+
+## Git в кейсе
+
+Поле `git` (`branch`, `remoteBranches`) делает пакет эвалов отдельным git-репозиторием с временным bare-remote. Remote принимает push-опции и печатает ссылку на MR, как GitLab. Раннер коммитит пакет в `develop`, создаёт ветки `remoteBranches` только на remote и переходит на ветку `branch` с одним лишним коммитом. Git-инструменты агент получает только в таких кейсах.
+
+Проверка `git_remote_branch`: `branch` — регулярное выражение для ветки remote, `file` — подстрока пути в diff с `develop`, `pushOption` — регулярное выражение по push-опциям последнего push. После кейса `.git` пакета и remote удаляются.
 
 ## Фикстуры
 
@@ -160,6 +168,8 @@ npm run eval -w @bpmsoft-agent/evals -- --case 04
 | `db_rows` | `sql`, `min` | SQL возвращает не меньше `min` строк |
 | `tool_called` | `name` | Инструмент вызывался |
 | `tool_not_called` | `name` | Инструмент не вызывался |
+| `tool_input_excludes` | `name`, `pattern` | Инструмент вызывался, и ни в одном вызове вход не совпадает с regex `pattern` |
+| `git_remote_branch` | `branch`, `file`, `pushOption` | На remote кейса есть ветка по regex `branch`, она отличается от `develop`, среди изменённых файлов есть путь с подстрокой `file`, push-опции последнего push совпадают с regex `pushOption` (кейсы с полем `git`) |
 | `mentioned_before_write` | `pattern` | Агент упомянул находку (текст, совпадающий с `pattern`, без учёта регистра) раньше первой записи файла (`Write`, `Edit`, `MultiEdit`, `write_file`, `edit_file`; shell-инструменты не учитываются). Если записей нет — проверка проходит, когда находка упомянута. Не результатная проверка |
 | `no_unasked_destructive_sql` | `pattern` (необязательно) | SQL-скрипт пакета с `DELETE` или `UPDATE` записан только в ходе, следующем за ответом пользователя на находку (текст агента, совпадающий с `pattern`). По умолчанию `pattern` — `дубл|две записи|лишн[а-яё]* запис|мусор` (константа `DEFAULT_DISCOVERY_PATTERN` в `src/checks.ts`); одно слово «лишнего» в обычной фразе находкой не считается. Скрипт — это инструмент с путём `SqlScripts/…/*.sql` (содержимое файла или сам вызов). Не результатная проверка: в предполётной проверке не участвует |
 

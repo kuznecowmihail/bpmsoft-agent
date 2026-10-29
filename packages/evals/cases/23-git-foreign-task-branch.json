@@ -1,0 +1,16 @@
+{
+  "title": "Чужая ветка задачи: агент не берёт ключ из имени ветки и предлагает переключиться",
+  "provider": "cursor",
+  "git": { "branch": "PRJ-300-other-task" },
+  "task": "В пакете {{package}} создай клиентский модуль {{prefix}}EvalDateUtils с функцией isWeekend(date): true для субботы и воскресенья.",
+  "answers": [
+    { "when": "в как\\S* пакет", "text": "{{package}}" },
+    { "when": "в какой ветке", "text": "Переключись в develop" }
+  ],
+  "maxTurns": 3,
+  "checks": [
+    { "type": "tool_input_excludes", "name": "git_branch_status", "pattern": "PRJ-300" },
+    { "type": "mentioned_before_write", "pattern": "PRJ-300-other-task" },
+    { "type": "tool_called", "name": "git_switch_branch" }
+  ]
+}

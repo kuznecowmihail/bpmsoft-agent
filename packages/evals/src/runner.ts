@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import {
+	createGitTools,
 	createPkgLintTool,
 	listChangedFiles,
 	lintChanged,
@@ -23,6 +24,9 @@ import { chooseAnswer } from "./answers";
 import type { EvalCase, EvalConfig } from "./caseFile";
 import { RESULT_CHECK_TYPES, runChecks } from "./checks";
 import type { CheckContext, CheckResult, TimelineEvent } from "./checks";
+import { isEvalPackageOnly } from "./evalGitGuard";
+import { setupEvalGit } from "./evalGit";
+import type { EvalGitRepo } from "./evalGit";
 import {
 	PRODUCT_CORE,
 	applyFixtures,
@@ -235,6 +239,7 @@ export async function runCase(
 	let passed = false;
 	let error: string | undefined;
 	let crmTools: CrmTool[] | undefined;
+	let gitRepo: EvalGitRepo | undefined;
 
 	fs.mkdirSync(deps.resultsDir, { recursive: true });
 	const log = (kind: string, data: object): void => {
@@ -314,6 +319,11 @@ export async function runCase(
 			fs.writeFileSync(file, updated, "utf8");
 		}
 
+		if (evalCase.git) {
+			gitRepo = setupEvalGit(packageDir, evalCase.git);
+			log("git_setup", { branch: evalCase.git.branch, remote: gitRepo.remote });
+		}
+
 		if (crmTools) {
 			const update = crmTools.find((tool) => tool.name === "crm_update_from_fs");
 			if (update) {
@@ -343,6 +353,8 @@ export async function runCase(
 			},
 			changedAfter: (ms: number) =>
 				listChangedFiles(pkgRoot, ms + 1).filter((file) => file.startsWith(packageDir + path.sep)),
+			gitRemote: gitRepo?.remote,
+			gitPushOptionsFile: gitRepo?.pushOptionsFile,
 		};
 
 		// Preflight: the case is an unimplemented task. A result check that already passes means the task is done on the stand.
@@ -362,7 +374,20 @@ export async function runCase(
 			crmRequests.push(record);
 			log("crm_request", { record });
 		});
-		const appTools: AppTool[] = [...(requestTool ? [requestTool] : []), createPkgLintTool({ pkgRoot, since: () => since })];
+		const appTools: AppTool[] = [
+			...(requestTool ? [requestTool] : []),
+			createPkgLintTool({ pkgRoot, since: () => since }),
+			...(gitRepo
+				? createGitTools({
+						pkgRoot,
+						confirm: async (text) => {
+							const approved = isEvalPackageOnly(text, config.package);
+							log("git_confirm", { text, approved });
+							return approved;
+						},
+					})
+				: []),
+		];
 		let prompt = evalCase.task;
 		inTurns = true;
 		for (;;) {
@@ -448,6 +473,13 @@ export async function runCase(
 	} catch (e) {
 		const message = e instanceof Error ? e.message : String(e);
 		log("final_reset_error", { message });
+		error = error ? `${error}; уборка: ${message}` : `уборка: ${message}`;
+	}
+	try {
+		gitRepo?.cleanup();
+	} catch (e) {
+		const message = e instanceof Error ? e.message : String(e);
+		log("git_cleanup_error", { message });
 		error = error ? `${error}; уборка: ${message}` : `уборка: ${message}`;
 	}
 	try {
