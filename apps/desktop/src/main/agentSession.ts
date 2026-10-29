@@ -244,13 +244,18 @@ export async function testCrm(): Promise<string> {
 const JIRA_TOKEN_SECRET = 'jira-token'
 const CONFLUENCE_TOKEN_SECRET = 'confluence-token'
 
-/** Jira API token (Cloud or personal access token of Server), kept in the OS keychain; shared by all projects. */
-export function setJiraToken(token: string): void {
+/** Saves a non-empty trimmed token to the OS keychain. */
+function saveToken(secret: string, token: string): void {
   const value = token.trim()
   if (!value) {
     throw new Error('Токен пустой')
   }
-  saveSecret(JIRA_TOKEN_SECRET, value)
+  saveSecret(secret, value)
+}
+
+/** Jira API token (Cloud or personal access token of Server), kept in the OS keychain; shared by all projects. */
+export function setJiraToken(token: string): void {
+  saveToken(JIRA_TOKEN_SECRET, token)
 }
 
 export function hasJiraToken(): boolean {
@@ -263,11 +268,7 @@ export function clearJiraToken(): void {
 
 /** Confluence API token (Cloud or personal access token of Server), kept in the OS keychain; shared by all projects. */
 export function setConfluenceToken(token: string): void {
-  const value = token.trim()
-  if (!value) {
-    throw new Error('Токен пустой')
-  }
-  saveSecret(CONFLUENCE_TOKEN_SECRET, value)
+  saveToken(CONFLUENCE_TOKEN_SECRET, token)
 }
 
 export function hasConfluenceToken(): boolean {

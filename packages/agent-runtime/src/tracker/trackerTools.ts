@@ -1,6 +1,7 @@
 import type { FetchLike } from "../crm/crmSession";
 import type { AppTool, AppToolResult } from "../tools/appTool";
-import { errorText, TrackerConfig } from "./atlassianHttp";
+import { errorText } from "../tools/errorText";
+import { TrackerConfig } from "./atlassianHttp";
 import { fetchConfluencePage, isConfluenceLink } from "./confluenceClient";
 import { fetchJiraIssue, jiraAddComment, parseIssueKey } from "./jiraClient";
 

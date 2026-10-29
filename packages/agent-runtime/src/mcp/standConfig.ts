@@ -21,6 +21,17 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/** Atlassian connection block: url and token required, email optional; undefined when the block is malformed. */
+function parseAtlassian(value: unknown): AtlassianConnection | undefined {
+	if (!isRecord(value)
+		|| typeof value.url !== "string" || value.url === ""
+		|| typeof value.token !== "string" || value.token === ""
+		|| (value.email !== undefined && typeof value.email !== "string")) {
+		return undefined;
+	}
+	return { url: value.url, token: value.token, ...(value.email ? { email: value.email as string } : {}) };
+}
+
 /** Parse the stand access file text; errors never include the file text. */
 export function parseStandConfig(text: string): StandConfig | { error: string } {
 	let raw: unknown;
@@ -55,29 +66,20 @@ export function parseStandConfig(text: string): StandConfig | { error: string } 
 
 	let jira: JiraConnection | undefined;
 	if (raw.jira !== undefined) {
-		const j = raw.jira;
-		if (!isRecord(j)
-			|| typeof j.url !== "string" || j.url === ""
-			|| typeof j.token !== "string" || j.token === ""
-			|| (j.email !== undefined && typeof j.email !== "string")
-			|| (j.acceptanceField !== undefined && typeof j.acceptanceField !== "string")) {
+		const base = parseAtlassian(raw.jira);
+		const acceptanceField = isRecord(raw.jira) ? raw.jira.acceptanceField : undefined;
+		if (!base || (acceptanceField !== undefined && typeof acceptanceField !== "string")) {
 			return { error: INCOMPLETE_JIRA_ERROR };
 		}
-		const { url, token, email, acceptanceField } = j as { url: string; token: string; email?: string; acceptanceField?: string };
-		jira = { url, token, ...(email ? { email } : {}), ...(acceptanceField ? { acceptanceField } : {}) };
+		jira = { ...base, ...(typeof acceptanceField === "string" && acceptanceField ? { acceptanceField } : {}) };
 	}
 
 	let confluence: AtlassianConnection | undefined;
 	if (raw.confluence !== undefined) {
-		const c = raw.confluence;
-		if (!isRecord(c)
-			|| typeof c.url !== "string" || c.url === ""
-			|| typeof c.token !== "string" || c.token === ""
-			|| (c.email !== undefined && typeof c.email !== "string")) {
+		confluence = parseAtlassian(raw.confluence);
+		if (!confluence) {
 			return { error: INCOMPLETE_CONFLUENCE_ERROR };
 		}
-		const { url, token, email } = c as { url: string; token: string; email?: string };
-		confluence = { url, token, ...(email ? { email } : {}) };
 	}
 
 	return {

@@ -77,15 +77,9 @@ export function createBpmsoftMcpServer(options: BpmsoftMcpOptions): McpServer {
 	}
 	const pkgRoot = path.join(deps.root, "BPMSoft.Configuration", "Pkg");
 	// Changing git tools are confirmed by the host (Claude Code / Cursor permissions), so no confirm here.
-	for (const gitTool of createGitTools({ pkgRoot })) {
-		server.registerTool(gitTool.name, { description: gitTool.description, inputSchema: appToolZodShape(gitTool) }, async (args) => {
-			const result = await gitTool.execute(args as Record<string, unknown>);
-			return { content: [{ type: "text" as const, text: result.text }], isError: result.isError };
-		});
-	}
-	for (const trackerTool of createTrackerTools({ jira: config.jira, confluence: config.confluence })) {
-		server.registerTool(trackerTool.name, { description: trackerTool.description, inputSchema: appToolZodShape(trackerTool) }, async (args) => {
-			const result = await trackerTool.execute(args as Record<string, unknown>);
+	for (const appTool of [...createGitTools({ pkgRoot }), ...createTrackerTools({ jira: config.jira, confluence: config.confluence })]) {
+		server.registerTool(appTool.name, { description: appTool.description, inputSchema: appToolZodShape(appTool) }, async (args) => {
+			const result = await appTool.execute(args as Record<string, unknown>);
 			return { content: [{ type: "text" as const, text: result.text }], isError: result.isError };
 		});
 	}

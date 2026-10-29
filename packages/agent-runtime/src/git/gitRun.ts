@@ -52,13 +52,13 @@ export async function gitMissing(cwd: string): Promise<boolean> {
 	return (await runGit(cwd, ["--version"])).code === -1;
 }
 
-/** Last non-empty line of git output, for short error messages. */
-export function lastLine(text: string): string {
-	const lines = text.split(/\r?\n/).map((line) => line.trim()).filter((line) => line !== "");
-	return lines[lines.length - 1] ?? "";
+/** Non-empty trimmed lines of git output. */
+export function nonEmptyLines(text: string): string[] {
+	return text.split(/\r?\n/).map((line) => line.trim()).filter((line) => line !== "");
 }
 
-/** Message of an unknown thrown value. */
-export function errorText(e: unknown): string {
-	return e instanceof Error ? e.message : String(e);
+/** Last non-empty line of git output, for short error messages. */
+export function lastLine(text: string): string {
+	const lines = nonEmptyLines(text);
+	return lines[lines.length - 1] ?? "";
 }

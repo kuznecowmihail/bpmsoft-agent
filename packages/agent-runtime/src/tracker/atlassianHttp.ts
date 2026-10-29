@@ -1,4 +1,5 @@
 import type { FetchLike } from "../crm/crmSession";
+import { errorText } from "../tools/errorText";
 
 /** Connection to Jira or Confluence: base URL, email for Cloud (Basic with an API token), token. */
 export interface AtlassianConnection {
@@ -32,11 +33,6 @@ export function authHeader(conn: AtlassianConnection): string {
 /** Base URL without trailing slashes. */
 export function baseUrl(conn: AtlassianConnection): string {
 	return conn.url.trim().replace(/\/+$/, "");
-}
-
-/** Message of an unknown thrown value. */
-export function errorText(e: unknown): string {
-	return e instanceof Error ? e.message : String(e);
 }
 
 /** Sends one REST request and returns the parsed JSON; throws AtlassianError with a text for the user. */

@@ -1,5 +1,6 @@
 import type { FetchLike } from "../crm/crmSession";
 import { atlassianJson, baseUrl, JiraConnection } from "./atlassianHttp";
+import { field, textOf } from "./json";
 
 /** Limit of the issue text given to the agent. */
 export const JIRA_ISSUE_MAX_CHARS = 40000;
@@ -10,19 +11,6 @@ const ISSUE_FIELDS = ["summary", "description", "status", "issuetype", "priority
 const KEY_IN_LINK = /(?:\/browse\/|selectedIssue=|\/issues\/)([A-Za-z][A-Za-z0-9_]+-\d+)/;
 const BARE_KEY = /^[A-Za-z][A-Za-z0-9_]+-\d+$/;
 const URL_PATTERN = /https?:\/\/[^\s|\]\)"'<>]+/g;
-
-/** Untyped access to a property of a JSON value. */
-function field(obj: unknown, key: string): unknown {
-	return obj !== null && typeof obj === "object" ? (obj as Record<string, unknown>)[key] : undefined;
-}
-
-/** Non-empty text of a string or number; otherwise undefined. */
-function textOf(value: unknown): string | undefined {
-	if (typeof value === "string") {
-		return value.trim() === "" ? undefined : value;
-	}
-	return typeof value === "number" ? String(value) : undefined;
-}
 
 /** The value as an array, or an empty one. */
 function asArray(value: unknown): unknown[] {

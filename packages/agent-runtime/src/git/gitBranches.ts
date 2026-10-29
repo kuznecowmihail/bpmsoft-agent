@@ -3,7 +3,8 @@ import * as path from "path";
 import type { AppToolResult } from "../tools/appTool";
 import { findPkgGitRepos } from "../lint/pkgGitRepos";
 import type { PkgGitLayout } from "../lint/pkgGitRepos";
-import { GIT_MISSING, GIT_REMOTE_TIMEOUT_MS, errorText, gitMissing, lastLine, runGit } from "./gitRun";
+import { GIT_MISSING, GIT_REMOTE_TIMEOUT_MS, gitMissing, lastLine, nonEmptyLines, runGit } from "./gitRun";
+import { errorText } from "../tools/errorText";
 
 /** Options of the branch status: packages of the task, issue key and target branch. */
 export interface BranchStatusOptions {
@@ -21,11 +22,6 @@ export function repoDirOfPackage(layout: PkgGitLayout, pkgRoot: string, name: st
 /** Short label of a repository folder for messages: "Pkg" or the package name. */
 export function repoLabel(pkgRoot: string, dir: string): string {
 	return dir === pkgRoot ? "Pkg" : path.relative(pkgRoot, dir);
-}
-
-/** Non-empty trimmed lines of git output. */
-function lines(text: string): string[] {
-	return text.split(/\r?\n/).map((line) => line.trim()).filter((line) => line !== "");
 }
 
 /** Current branch name, or "HEAD" when detached; throws when git fails. */
@@ -98,9 +94,8 @@ export async function targetRef(dir: string, target: string): Promise<string | u
 
 /** Commits of HEAD that the ref does not have: total count and at most 10 one-line entries. */
 export async function aheadOf(dir: string, ref: string): Promise<{ count: number; commits: string[] }> {
-	const count = await runGit(dir, ["rev-list", "--count", `${ref}..HEAD`]);
 	const log = await runGit(dir, ["log", "--oneline", "-10", `${ref}..HEAD`]);
-	return { count: Number(count.stdout.trim()) || 0, commits: lines(log.stdout) };
+	return { count: await countCommits(dir, `${ref}..HEAD`), commits: nonEmptyLines(log.stdout) };
 }
 
 /** Fetches origin; returns the error line or undefined on success. */
@@ -120,7 +115,7 @@ async function candidates(dir: string, current: string, target: string | undefin
 	};
 	if (issueKey) {
 		const refs = await runGit(dir, ["for-each-ref", "--format=%(refname:short)", "refs/heads", "refs/remotes/origin"]);
-		for (const name of lines(refs.stdout)) {
+		for (const name of nonEmptyLines(refs.stdout)) {
 			if (name.toLowerCase().includes(issueKey.toLowerCase())) {
 				add(name);
 			}
@@ -130,7 +125,7 @@ async function candidates(dir: string, current: string, target: string | undefin
 		add(target);
 	}
 	const recent = await runGit(dir, ["for-each-ref", "--sort=-committerdate", "--count=10", "--format=%(refname:short)", "refs/remotes/origin"]);
-	for (const name of lines(recent.stdout)) {
+	for (const name of nonEmptyLines(recent.stdout)) {
 		add(name);
 	}
 	return out.slice(0, 3);
@@ -280,7 +275,7 @@ export async function gitSwitchBranch(
 		return fastForward(pkgRoot, dir, name, confirm);
 	}
 	const status = await runGit(dir, ["status", "--porcelain"]);
-	const dirty = lines(status.stdout);
+	const dirty = nonEmptyLines(status.stdout);
 	if (dirty.length > 0) {
 		return {
 			text: [`В репозитории ${repoLabel(pkgRoot, dir)} есть незакоммиченные правки, переключение не делаю:`, ...dirty.slice(0, 30).map((line) => `  ${line}`), "Переключи ветку сам или закоммить правки."].join("\n"),

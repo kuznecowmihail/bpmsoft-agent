@@ -1,23 +1,11 @@
 import type { FetchLike } from "../crm/crmSession";
 import { AtlassianConnection, AtlassianError, atlassianJson, baseUrl } from "./atlassianHttp";
+import { field, textOf } from "./json";
 
 /** Limit of the page text given to the agent. */
 export const CONFLUENCE_PAGE_MAX_CHARS = 40000;
 
 const EXPAND = "expand=body.storage,version,space";
-
-/** Untyped access to a property of a JSON value. */
-function field(obj: unknown, key: string): unknown {
-	return obj !== null && typeof obj === "object" ? (obj as Record<string, unknown>)[key] : undefined;
-}
-
-/** Non-empty text of a string or number; otherwise undefined. */
-function textOf(value: unknown): string | undefined {
-	if (typeof value === "string") {
-		return value.trim() === "" ? undefined : value;
-	}
-	return typeof value === "number" ? String(value) : undefined;
-}
 
 /** Decodes a URL segment; the raw text when it is not valid percent-encoding. */
 function decodeSegment(value: string): string {

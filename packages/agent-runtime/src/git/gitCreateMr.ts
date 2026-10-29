@@ -3,7 +3,8 @@ import type { AppToolResult } from "../tools/appTool";
 import { findPkgGitRepos } from "../lint/pkgGitRepos";
 import type { PkgGitLayout } from "../lint/pkgGitRepos";
 import { aheadOf, countCommits, currentBranch, defaultTarget, fetchOrigin, mrTargetKey, refExists, repoDirOfPackage, repoLabel, targetRef } from "./gitBranches";
-import { GIT_MISSING, GIT_REMOTE_TIMEOUT_MS, errorText, gitMissing, lastLine, runGit } from "./gitRun";
+import { GIT_MISSING, GIT_REMOTE_TIMEOUT_MS, gitMissing, lastLine, runGit } from "./gitRun";
+import { errorText } from "../tools/errorText";
 
 /** Input of git_create_mr. */
 export interface CreateMrInput {
@@ -176,7 +177,7 @@ export async function gitCreateMr(pkgDir: string, input: CreateMrInput, confirm?
 			continue;
 		}
 		const ref = onBranch ? undefined : await targetRef(repo.dir, target);
-		const ahead = ref && !onBranch ? await aheadOf(repo.dir, ref) : { count: 0, commits: [] };
+		const ahead = ref ? await aheadOf(repo.dir, ref) : { count: 0, commits: [] };
 		const behindTarget = ref ? await countCommits(repo.dir, `HEAD..${ref}`) : 0;
 		plans.push({ dir: repo.dir, branch, files, current, target, ahead: ahead.commits, aheadCount: ahead.count, behindTarget, fetchError });
 	}
