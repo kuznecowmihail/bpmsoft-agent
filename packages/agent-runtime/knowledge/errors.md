@@ -65,3 +65,4 @@
 | `NotSupportedException` в `addMacrosColumn` | макросы дат и пользователя (`CURRENT_USER`, `TODAY`) как колонка | колонкой — только `PRIMARY_COLUMN` и `PRIMARY_DISPLAY_COLUMN`; макросы — в фильтрах | `client-logic-edit.md` |
 | `AppEventDispatcher OnAppEvent - Error creating an instance of the <Класс> type` в `Error.log` на каждом старте | абстрактный базовый класс от `AppEventListenerBase` | не делай общий абстрактный базовый класс | `source-code-edit.md` |
 | «Недостаточно прав для изменения значения колонки "<Колонка>" объекта "<Объект>"» (в OData — HTTP 500) | уровень доступа колонки 0 или 1 | проверь права на колонку; значение в БД не меняется | `rights.md` |
+| `2BP01: cannot drop table "<Таблица>" because other objects depend on it` | на таблицу ссылается внешний ключ; для объекта — его таблица переводов `Sys<Объект>Lcz` | сначала удали зависимую таблицу, потом основную (`entity.md`, «Удаление объекта оставляет таблицы») | `sql-script.md`, «Выполнение» |

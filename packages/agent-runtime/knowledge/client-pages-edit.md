@@ -48,7 +48,7 @@ define("<Имя>", ["BusinessRuleModule", "<Имя>Resources"], function(Busines
 
 **Вёрстка у наследника `BaseModulePageV2`** (✅): поля шапки — `insert` в `"parentName": "Header"`, `"propertyName": "items"`, `layout` без `layoutName`; вкладка — `insert` в `"parentName": "Tabs"`, `"propertyName": "tabs"`, `values: {caption: {bindTo: "Resources.Strings.<Ключ>"}, items: [], order: 0}`; группа — `itemType: 15` в `items` вкладки; сетка — `itemType: 0` в `items` группы; поля сетки — `layout` с `"layoutName": "<имя сетки>"`, `bindTo` = имя колонки; кнопка — `insert` в `"parentName": "LeftContainer"` с `itemType: BPMSoft.ViewItemType.BUTTON`, `caption`, `click: {bindTo: "<метод>"}`. Заголовки полей колонок объекта берутся из объекта; у виртуального атрибута задай `caption: {bindTo: "Resources.Strings.<Ключ>"}`.
 
-**Проверить без регистрации**: `<адрес CRM>/0/Nui/ViewModule.aspx#CardModuleV2/<Имя>/add` (или `/edit/<Id записи>`). Чтобы карточка открывалась из раздела и по ссылкам — `registration-edit.md`.
+**Проверить без регистрации**: `<адрес CRM>/Nui/ViewModule.aspx#CardModuleV2/<Имя>/add` (или `/edit/<Id записи>`). Чтобы карточка открывалась из раздела и по ссылкам — `registration-edit.md`. Адреса страниц — `browser-check.md`, «Адреса страниц».
 
 ## ✅ Атрибуты, методы, правила, валидация и кнопка на карточке
 **Подтверждено** на `TestColumnsPage`:

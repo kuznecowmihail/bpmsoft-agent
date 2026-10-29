@@ -161,7 +161,7 @@
    - `select "Name" from "SysSchema" where "UId" = '<UId кейса>'`; `select * from "SysDcmSettings" where "Id" = '<Id настройки>'`; `select * from "SysDcmSchemaInSettings" where "SysDcmSchemaUId" = '<UId кейса>'`.
    - Новая запись объекта (карточкой или `InsertQuery`) → `select * from "SysEntityCommonPrcEl" where "RecordId" = '<Id записи>'` — строка с `ChangedColumns` = колонка стадии; в `SysProcessLog` — строка с именем = заголовок кейса.
    - Карточка, открытая из раздела (`browser-check.md`): контейнер `DcmActionsDashboardContainer`, стадии — элементы `.stage-item`, текущая — с классом `stage-current`. Во вкладке без фокуса читай `textContent`, не `innerText` (`browser-check.md`, «Как найти элемент»).
-   - Дизайнер: `/Nui/ViewModule.html?vm=DcmDesigner#case/<UId кейса>` — стадии, шаги, «Условие запуска кейса».
+   - Дизайнер: (адрес — `browser-check.md`, «Адреса страниц») — стадии, шаги, «Условие запуска кейса».
 
 ## ✅ Шаг «Выполнить задачу» на стадии
 Подтверждено: шаг, добавленный в дизайнере, с поправкой связи файлом — при входе в стадию создалась задача, связанная с записью (`Activity.<Колонка связи>Id` = запись), карточка показала её в «Следующих шагах» с кнопкой «Завершить».

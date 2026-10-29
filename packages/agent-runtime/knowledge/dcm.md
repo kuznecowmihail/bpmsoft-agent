@@ -7,7 +7,7 @@
 ## ✅ Где лежит и как открыть
 - Схема с `"ManagerName": "DcmSchemaManager"`: `Schemas/<Имя>/` (`descriptor.json`, `metadata.json`, `properties.json`) и `Resources/<Имя>.Dcm/resource.<culture>.xml`; `.cs` нет. Кейсы проекта: grep `"DcmSchemaManager"` в `Pkg/*/Schemas/*/descriptor.json` (✅ на реальных схемах проекта).
 - Платформенные кейсы (`LeadCase`, `OpportunityCase`, `CaseCase`, `ProblemCase`, `OmniChatCase`) есть только в БД (`SysSchema`), в `Pkg` их нет; шагов на стадиях у них нет.
-- Дизайнер кейсов: `<CRM>/Nui/ViewModule.html?vm=DcmDesigner#case/<UId схемы>` (.NET 8); адреса страниц — `browser-check.md`, «Адреса страниц».
+- Дизайнер кейсов открывается по адресу с `#case/<UId схемы>`: адреса страниц — `browser-check.md`, «Адреса страниц».
 - Дизайнер сохраняет кейс в БД и сразу в файлы пакета (`Schemas/<Имя>/`, `Resources/<Имя>.Dcm/`); при этом убирает `DependsOn` из `descriptor.json` и ставит в `properties.json` свой `CreatedInVersion`.
 - Кейс работает после «Обновить из файловой системы», компиляция не нужна.
 
