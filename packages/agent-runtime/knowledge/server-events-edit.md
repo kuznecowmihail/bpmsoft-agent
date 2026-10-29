@@ -33,13 +33,13 @@ namespace BPMSoft.Configuration
 	}
 }
 ```
-- Файлы схемы — как у любой схемы исходного кода (выше), `B2: []`, если строк нет.
+- Файлы схемы — как у любой схемы исходного кода (`source-code-edit.md`), `B2: []`, если строк нет.
 - `BaseEntityEventListener` и атрибут `EntityEventListener` — пространство имён `BPMSoft.Core.Entities.Events`. Переопределяемые методы: `OnSaving`, `OnSaved`, `OnInserting`, `OnInserted`, `OnUpdating`, `OnUpdated`, `OnDeleting`, `OnDeleted` (до события — `EntityBeforeEventArgs`, после — `EntityAfterEventArgs`); всегда вызывай `base.<Метод>(sender, e)`.
 - ✅ **Порядок событий** (подтверждено пользователем, 11.10.2026; одинаков для слушателя и процесса событий объекта): изменение — `OnSaving` → `OnUpdating` → `OnUpdated` → `OnSaved`; добавление — `OnSaving` → `OnInserting` → `OnInserted` → `OnSaved`.
 - ✅ **Где запрещать.** Запрет — исключение в событии «до»: в `OnSaving`, если проверка нужна при любом сохранении (и добавлении, и изменении); в `OnUpdating` — только при изменении; в `OnInserting` — только при добавлении. Исключение отменяет сохранение. Журнал изменений пиши в событиях «после» (`OnUpdated`, `OnInserted`, `OnSaved`), чтобы при отменённом сохранении он не появлялся.
 - Не ветвись по `StoringState` внутри `OnSaving`, если правило касается одного случая: проверку только при изменении пиши в `OnUpdating`, значение по умолчанию только для новой записи — в `OnInserting`. `OnSaving` оставь для правил «при любом сохранении».
 - Изменение колонки в `OnSaving`/`OnInserting` попадает в ту же запись без отдельного `Save()`.
-- В `OnSaved`/`OnInserted`/`OnUpdated` запись уже записана: `SetColumnValue` в БД не попадёт (по опыту пользователя; для скрипта события объекта ✅ проверено 05.10.2026). Дообновить — запросом `Update` по `Id` или заново получить запись и вызвать `Save()` (повторно запустит события — не допускай рекурсии).
+- В `OnSaved`/`OnInserted`/`OnUpdated` запись уже записана: `SetColumnValue` в БД не попадёт (по опыту пользователя; для скрипта события объекта ✅ проверено 05.10.2026). Дообновить — запросом `Update` по `Id` (⚠️ он обходит слушатели и журнал изменений, `server-data-api.md`, «Запросы `Select`, `Insert`, `Update`, `Delete` (`BPMSoft.Core.DB`)») или заново получить запись и вызвать `Save()` (повторно запустит события — не допускай рекурсии).
 - Слушатель срабатывает на сохранение через приложение (`Entity.Save()`, карточка, процесс), не на прямой SQL.
 - В проекте может быть свой базовый слушатель с типизированным `Entity` — поищи наследников `BaseEntityEventListener` в `Pkg`; стандартный `BaseEntityEventListener` работает без зависимостей от проектного кода.
 - ✅ **Подпроцесс событий объекта раньше слушателя** (подтверждено записью в CRM, 21.10.2026): скрипт события «Перед сохранением» отрабатывает до `OnSaving` слушателя — слушатель уже видит значение, проставленное скриптом. Значит, финальное слово в событии «до» — за слушателем.
@@ -65,7 +65,7 @@ namespace BPMSoft.Configuration
 ✅ **Запрет изменения и удаления, значение по умолчанию** (06.10.2026, `TestTicketCommentEventListener`, объект `TestTicketComment`):
 - `OnUpdating` / `OnDeleting(object sender, EntityBeforeEventArgs e)` — исключение отменяет операцию, пользователь видит его текст: `throw new InvalidOperationException(message);`. Сначала `base.OnUpdating(sender, e)`.
 - `OnInserting` — заполнение колонки, если пусто: `entity.SetColumnValue("AuthorId", entity.UserConnection.CurrentUser.ContactId)`
-- ✅ Обязательную колонку (`E2: 1`) в `OnInserting` не заполнить при вставке через `DataService` (`InsertQuery`): запрос отклоняется с `RequiredColumnsEmptyValuesException` раньше слушателя (подтверждено записью в CRM, 29.10.2026). Значение при создании для такой колонки задавай значением по умолчанию (`E12`, `entity-columns-edit.md`, «Значение по умолчанию у унаследованной колонки в замещении»)..
+- ✅ Обязательную колонку (`E2: 1`) в `OnInserting` не заполнить при вставке через `DataService` (`InsertQuery`): запрос отклоняется с `RequiredColumnsEmptyValuesException` раньше слушателя (подтверждено записью в CRM, 29.10.2026). Значение при создании для такой колонки задавай значением по умолчанию (`E12`, `entity-columns-edit.md`, «Значение по умолчанию у унаследованной колонки в замещении».
 - Текст ошибки — локализуемая строка самой схемы исходного кода (ресурсы `Resources/<Схема>.SourceCode/resource.<культура>.xml`): `new LocalizableString(userConnection.Workspace.ResourceStorage, "<Схема>", "LocalizableStrings.<Имя>.Value").ToString()`.
 - Значение из БД до изменения читается запросом: `new Select(userConnection).Column("AuthorId").From("<Объект>").Where("Id").IsEqual(Column.Parameter(entity.PrimaryColumnValue)) as Select`, затем `ExecuteScalar<Guid>()` (`using BPMSoft.Core.DB;`).
 

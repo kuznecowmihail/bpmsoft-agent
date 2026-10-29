@@ -10,8 +10,6 @@
 
 Плюс ресурсы: `Pkg/<Пакет>/Resources/<ИмяДействия>.ProcessUserTask/resource.ru-RU.xml`, `resource.en-US.xml` и т.д.
 
-**Не забывай про 2 обязательных правила из `metadata-editing.md`**: (1) обе локали `ru-RU`+`en-US` для ресурсов, (2) актуальный `ModifiedOnUtc` при каждом изменении `descriptor.json`.
-
 ## ✅ Создать своё действие процесса с нуля
 **Шаблон**: папка `templates/process/user-task-schema/` — схема действия из подтверждённого теста: `descriptor.json`, `metadata.json`, `properties.json`, `.cs`, ресурсы с иконками на двух языках (плейсхолдеры `<UId схемы действия>`, `<UId пакета>`).
 
@@ -44,7 +42,7 @@
   }
 }
 ```
-`CreatedInVersion` возьми из соседней схемы пакета; `IsInteractive` — как у образца.
+`CreatedInVersion` возьми из соседней схемы пакета; `IsInteractive` — как у образца (в `metadata.json` то же свойство — `FK17`, `metadata-codes.md`).
 
 ### `metadata.json` (плоский JSON)
 ```json
@@ -58,7 +56,7 @@
       "B1": [],
       "B2": [],
       "B3": [],
-      "B6": "266d6d8e-0a6a-e14b-801c-1378a5199ba7",
+      "B6": "<UId пакета>",
       "B8": "1.9.0.17103",
       "FJ1": [
         {
@@ -104,7 +102,7 @@
 - `L1` — тип: текст `ddb3a1ee-07e8-4d62-b7a9-d0e618b00fbd`, целое `6b6b74e2-820d-490e-a017-2b73d4ccf2b0` (остальные типы — `processes.md`, `metadata-codes.md`).
 - `L12` — направление: `0` вход (Designer рисует →), `1` выход (←). Без `L12` параметр и вход, и выход — так у старых действий проекта.
 - `L6: true` — обязательный (в Designer красная звёздочка).
-- `FK12`, `FK16` — как у образца.
+- `FK12` (`Color`), `FK16` (`HasUserDefinedCode`) — как у образца (`metadata-codes.md`).
 
 ### `<Имя>.cs`
 ```csharp
@@ -136,6 +134,7 @@ namespace BPMSoft.Core.Process.Configuration
 - `resource.ru-RU.xml`: `Caption`, `Description`, `Parameters.<Имя>.Caption` для каждого параметра и три картинки `LargeSvgImage`, `SmallSvgImage`, `TitleSvgImage`. Картинки скопируй целыми строками `<Item ... Type="Image" .../>` из `templates/process/user-task-schema/resource.ru-RU.xml` или из любого действия процесса проекта (`Pkg/*/Resources/*.ProcessUserTask/`).
 - `resource.en-US.xml`: те же строки без картинок (у образца картинки только в ru-RU; так и подтверждено).
 - `Parameters.<Имя>.Caption` — подпись параметра в Designer процесса.
+- ✅ Картинки (`LargeSvgImage`, `SmallSvgImage`, `TitleSvgImage`) в `resource.ru-RU.xml` действия лежат внутри `<Group Type="String">` — так действие загружается (10.10.2026).
 
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
@@ -196,7 +195,7 @@ public override void CancelExecuting(params object[] parameters)
   "A2": "UserTask1",
   "A3": "677a2fc8-69af-4dc1-aff1-743edab22fbd",
   "A4": "677a2fc8-69af-4dc1-aff1-743edab22fbd",
-  "A5": "266d6d8e-0a6a-e14b-801c-1378a5199ba7",
+  "A5": "<UId пакета>",
   "IL2": "ebac201e-f46b-499a-a7d2-7e19f927b810",
   "BL3": "150;172",
   "BL7": "1418e61a-82c3-403e-8221-01088f52c125",

@@ -5,6 +5,7 @@ import { describe, it, expect } from "vitest";
 const knowledgeDir = path.join(__dirname, "..", "knowledge");
 const promptFile = path.join(__dirname, "..", "src", "provider", "systemPrompt.ts");
 const maxBytes = 50 * 1024;
+const normalizeRef = (value: string) => value.toLowerCase().replace(/[`*]/g, "");
 
 const knowledgeFiles = fs.readdirSync(knowledgeDir).filter((name) => name.endsWith(".md")).sort();
 
@@ -38,6 +39,26 @@ describe("knowledge files", () => {
 			for (const match of text.matchAll(/`([a-z0-9]+(?:-[a-z0-9]+)*\.md)`/g)) {
 				if (!known.has(match[1])) {
 					broken.push(`${name}: ${match[1]}`);
+				}
+			}
+		}
+		expect(broken).toEqual([]);
+	});
+
+	it("section references point to an existing heading or bold label", () => {
+		const broken: string[] = [];
+		for (const name of knowledgeFiles) {
+			const text = fs.readFileSync(path.join(knowledgeDir, name), "utf8");
+			for (const match of text.matchAll(/`([a-z0-9]+(?:-[a-z0-9]+)*\.md)`,?\s*(?:раздел\s*)?«([^»]{3,120})»/g)) {
+				const target = match[1];
+				const targetPath = path.join(knowledgeDir, target);
+				if (!fs.existsSync(targetPath)) {
+					continue;
+				}
+				const section = normalizeRef(match[2]);
+				const targetText = normalizeRef(fs.readFileSync(targetPath, "utf8"));
+				if (!targetText.includes(section)) {
+					broken.push(`${name}: ${target} «${match[2]}»`);
 				}
 			}
 		}
