@@ -2,12 +2,11 @@
 'use strict';
 
 // CLI for reviewing a CRM stand: stand info, read-only DB queries, stand logs,
-// REST requests and (with explicit user consent) update/compile/restart via crm.js.
+// REST requests and (with explicit user consent) update/compile/restart via the agent-runtime library.
 // Passwords are read from .claude/stands.env or evals config and are never printed.
 
 const fs = require('fs');
 const path = require('path');
-const { spawnSync } = require('child_process');
 const cfg = require('./stand-config');
 
 const REPO = path.resolve(__dirname, '..', '..', '..');
@@ -189,9 +188,102 @@ function cmdLogs(stand, args) {
 	process.stdout.write(text + (text ? '\n' : ''));
 }
 
-function cmdCrm(stand, cmd, rest) {
-	const crmJs = path.join(REPO, 'packages', 'agent-runtime', 'dist', 'claude-export', 'crm.js');
-	if (!fs.existsSync(crmJs)) {
+const CRM_REQUEST_TIMEOUT_MS = 120000;
+const CRM_DEFAULT_MAX_CHARS = 4000;
+
+/** Failure text of login or request; the messages never contain the password. */
+function crmFailureText(lib, error) {
+	const message = lib.errorMessage(error).replace(/[.\s]+$/, '');
+	const prefix = error instanceof lib.CrmLoginError ? 'Вход в CRM не выполнен' : 'CRM недоступна';
+	return `${prefix}: ${message}.`;
+}
+
+/** Runs one CRM tool (update or compile) against the stand root. */
+async function runCrmTool(lib, stand, connection, name) {
+	const tool = lib.createCrmTools({ connection, appRoot: stand.appRoot }).find((item) => item.name === name);
+	if (!tool) throw new Error(`нет инструмента ${name}`);
+	return tool.execute();
+}
+
+/** request: one REST request to the stand after login; prints the status and the (truncated) body. */
+async function cmdCrmRequest(lib, connection, args) {
+	const positional = [];
+	let maxChars = CRM_DEFAULT_MAX_CHARS;
+	for (let i = 0; i < args.length; i++) {
+		if (args[i] === '--max') {
+			const value = Number(args[i + 1]);
+			if (!Number.isInteger(value) || value < 0) return fail('--max: нужно неотрицательное целое число', 2);
+			maxChars = value;
+			i++;
+		} else {
+			positional.push(args[i]);
+		}
+	}
+	if (positional.length < 2 || positional.length > 3) {
+		return fail('request: нужны метод, путь и для POST — тело (JSON или @файл)', 2);
+	}
+	const method = positional[0].toUpperCase();
+	if (method !== 'GET' && method !== 'POST') return fail(`Метод должен быть GET или POST: ${positional[0]}`, 2);
+	const requestPath = positional[1];
+	if (!lib.isStandPath(requestPath)) return fail('Путь должен начинаться с / и вести на стенд CRM', 2);
+
+	let body = null;
+	if (method === 'POST') {
+		body = positional[2] ?? '{}';
+		if (body.startsWith('@')) {
+			try {
+				body = fs.readFileSync(path.resolve(process.cwd(), body.slice(1)), 'utf8').replace(/^﻿/, '');
+			} catch (error) {
+				return fail(`Не удалось прочитать файл тела: ${lib.errorMessage(error)}`, 2);
+			}
+		}
+	} else if (positional[2] !== undefined) {
+		return fail('У GET-запроса не бывает тела', 2);
+	}
+
+	const session = new lib.CrmSession(connection);
+	let response;
+	try {
+		await session.login();
+		response = await session.request(method, requestPath, body, CRM_REQUEST_TIMEOUT_MS);
+	} catch (error) {
+		return fail(crmFailureText(lib, error));
+	}
+	process.stdout.write(lib.formatCrmResponse(response.status, response.text, maxChars) + '\n');
+	process.exitCode = response.status < 400 ? 0 : 1;
+}
+
+/** update: «Обновить из файловой системы» in the CRM (pkg-lint is not run here). */
+async function cmdCrmUpdate(lib, stand, connection) {
+	const result = await runCrmTool(lib, stand, connection, lib.CRM_UPDATE_TOOL);
+	process.stdout.write(result.text + '\n');
+	process.exitCode = result.isError ? 1 : 0;
+	return result;
+}
+
+/** compile: update first (Build deletes schemas not loaded to the DB yet), then CRM compilation and restart. */
+async function cmdCrmCompile(lib, stand, connection) {
+	const update = await runCrmTool(lib, stand, connection, lib.CRM_UPDATE_TOOL);
+	if (update.isError) {
+		process.stderr.write(`Компиляция не запускалась: перед ней нужно обновление из файловой системы, а оно не прошло.\n${update.text}\n`);
+		process.exitCode = 1;
+		return;
+	}
+	const result = await runCrmTool(lib, stand, connection, lib.CRM_COMPILE_TOOL);
+	process.stdout.write(`${update.text}\n${result.text}\n`);
+	process.exitCode = result.isError ? 1 : 0;
+}
+
+/** restart: restart of the application and waiting for it to answer. */
+async function cmdCrmRestart(lib, stand, connection) {
+	const result = await lib.restartCrm({ connection, appRoot: stand.appRoot });
+	process.stdout.write(result.text + '\n');
+	process.exitCode = result.success ? 0 : 1;
+}
+
+async function cmdCrm(stand, cmd, rest) {
+	const distPath = path.join(REPO, 'packages', 'agent-runtime', 'dist');
+	if (!fs.existsSync(distPath)) {
 		return fail('Соберите agent-runtime: npm run build -w @bpmsoft-agent/agent-runtime');
 	}
 	const missing = [];
@@ -202,21 +294,19 @@ function cmdCrm(stand, cmd, rest) {
 		return fail(`Для стенда «${stand.name}» не хватает: ${missing.join('; ')}.`);
 	}
 
-	const args = [...rest];
-	if (cmd === 'update' && !args.includes('--no-lint')) args.push('--no-lint');
+	const lib = require(distPath);
+	const connection = { url: stand.crm.url, user: stand.crm.user, password: stand.crm.password };
 
-	const result = spawnSync(process.execPath, [crmJs, cmd, ...args], {
-		cwd: stand.appRoot,
-		env: {
-			...process.env,
-			BPMSOFT_CRM_URL: stand.crm.url,
-			BPMSOFT_CRM_USER: stand.crm.user,
-			BPMSOFT_CRM_PASSWORD: stand.crm.password,
-		},
-		stdio: 'inherit',
-	});
-	if (result.error) return fail(`Не удалось запустить crm.js: ${result.error.message}`);
-	process.exitCode = result.status === null ? 1 : result.status;
+	if (cmd === 'request') return cmdCrmRequest(lib, connection, rest);
+	if (cmd === 'restart') {
+		if (rest.length > 0) return fail(`restart: лишние аргументы: ${rest.join(' ')}`, 2);
+		return cmdCrmRestart(lib, stand, connection);
+	}
+	// --no-lint is accepted silently: pkg-lint is not run by this script.
+	const extra = rest.filter((arg) => arg !== '--no-lint');
+	if (extra.length > 0) return fail(`${cmd}: лишние аргументы: ${extra.join(' ')}`, 2);
+	if (cmd === 'update') return cmdCrmUpdate(lib, stand, connection);
+	return cmdCrmCompile(lib, stand, connection);
 }
 
 async function main(argv) {

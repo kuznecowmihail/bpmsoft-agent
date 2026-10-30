@@ -21,7 +21,7 @@ description: Use when the user asks to review the desktop app's agent logs or kn
 - `info` — что найдено для стенда (без паролей). Нет пароля — попроси пользователя дописать ключ в `.claude/stands.env`, сам пароли не спрашивай и не записывай.
 - `db "<SELECT…>"` — запрос только на чтение, те же ограничения, что у агента (`SELECT`/`WITH`, без колонок с паролями и хешами, до 200 строк).
 - `logs [дата] [--file Error|Common|PackagesSynchronization…] [--grep …] [--tail N]` — журналы стенда за день (`Logs/<дата>/`), записи целиком со стеком; `--tail` — последние N записей (по умолчанию 50).
-- `request GET|POST <путь> [тело]` — REST от пользователя CRM: чтение — `POST /0/DataService/json/SyncReply/SelectQuery`, свой сервис — `/0/rest/<Сервис>/<Метод>`. Изменяющие запросы — только на тестовых записях и с согласия пользователя.
+- `request GET|POST <путь> [тело]` — REST от пользователя CRM; путь от корня стенда. На .NET 8 без `/0/`: чтение — `POST /DataService/json/SyncReply/SelectQuery`, свой сервис — `/rest/<Сервис>/<Метод>`. На .NET Framework — с `/0/`: `POST /0/DataService/json/SyncReply/SelectQuery`, `/0/rest/<Сервис>/<Метод>`. Изменяющие запросы — только на тестовых записях и с согласия пользователя.
 - `update`, `compile`, `restart` — только на стенде эвалов, в тестовом пакете и после вопроса пользователю: стенд общий, перезапуск прерывает работу всех.
 
 ## Порядок

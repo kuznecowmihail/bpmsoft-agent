@@ -12,7 +12,7 @@
   - `Localization/` — опциональная подпапка, есть только если в наборе есть локализуемые колонки (`Name`, `Description`); содержит `data.<culture>.json`.
 - Папки `Resources/` у Data нет: локализация идёт через `Localization/` внутри Data-схемы, а не через `resource.xml` (как у Entity/Process/ClientUnitSchema).
 - ✅ Пример с локализацией: набор справочника с колонками `Name`/`Description` (локализуемы), в `Localization/` три файла культур.
-- 🧪 `Lookup_NotificationTemplate` записан как набор без локализуемых колонок и без `Localization/`. Колонки набора не сверены, на этот пример не опираться.
+- ✅ подтверждено на реальных схемах проекта (30.10.2026): набор `Lookup_<Объект>` может содержать только `Id`, `SysEntitySchemaUId`, `SysPageSchemaUId` — без локализуемых колонок и без `Localization/`; такой набор загружается. У большинства наборов `Lookup_*` есть `Name`/`Description` и `Localization/`.
 
 ## Data или SQL-скрипт
 

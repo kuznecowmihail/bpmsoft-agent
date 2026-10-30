@@ -88,7 +88,7 @@ Pkg/<Пакет>/SqlScripts/<ИмяСкрипта>/
 Сырой SQL-текст.
 
 - Простой `UPDATE` с подзапросом — пример в `sql-script.md`, «.sql-файл».
-- PL/pgSQL-блок (🧪 шаблон с плейсхолдерами, в таком виде не выполнялся; таблицы и колонки бери из метаданных проекта, `crm-db.md`):
+- PL/pgSQL-блок (✅ подтверждено записью в CRM, 30.10.2026: DO-блок с `SELECT INTO` и `IF` выполнился на стенде; там DML был `INSERT`, ниже шаблон с `UPDATE`; таблицы и колонки бери из метаданных проекта, `crm-db.md`):
   ```sql
   DO $$
   DECLARE
@@ -101,7 +101,7 @@ Pkg/<Пакет>/SqlScripts/<ИмяСкрипта>/
   END;
   $$ LANGUAGE plpgsql;
   ```
-- Таблица и индекс (🧪):
+- Таблица и индекс (✅ подтверждено записью в CRM, 30.10.2026):
   ```sql
   CREATE TABLE IF NOT EXISTS "MyNewTable" (
       "Id" UUID PRIMARY KEY,
@@ -109,9 +109,9 @@ Pkg/<Пакет>/SqlScripts/<ИмяСкрипта>/
       "CreatedOn" TIMESTAMP DEFAULT NOW()
   );
 
-  CREATE INDEX "IX_MyNewTable_Name" ON "MyNewTable" ("Name");
+  CREATE INDEX IF NOT EXISTS "IX_MyNewTable_Name" ON "MyNewTable" ("Name");
   ```
-  ⚠️ Таблицы объектов создаёт Entity-схема (`entity-edit.md`). `CREATE TABLE` в скрипте — только для служебных таблиц вне объектов.
+  `CREATE INDEX` пиши с `IF NOT EXISTS`: без него повторный запуск падает. ⚠️ Таблицы объектов создаёт Entity-схема (`entity-edit.md`). `CREATE TABLE` в скрипте — только для служебных таблиц вне объектов.
 - MSSql (`DBEngineType: 0`): тот же запрос в диалекте T-SQL, квадратные скобки вместо двойных кавычек.
 
 ### Шаг 4: Обновить в BPMSoft
