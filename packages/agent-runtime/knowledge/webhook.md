@@ -8,7 +8,7 @@
 
 ## ✅ Файлы и адрес
 - Схема с `"ManagerName": "WebhookSchemaManager"`: папка `Schemas/<Имя>/` (`descriptor.json`, `metadata.json`, `properties.json`) и `Resources/<Имя>.Webhook/resource.<culture>.xml`.
-- Дизайнер сохраняет вебхук только в БД (`SysSchema`); в `Pkg` файлы появляются после выгрузки пакетов в файловую систему.
+- Дизайнер сохраняет вебхук только в БД (`SysSchema`); в `Pkg` файлы появляются после выгрузки пакетов в ФС: `metadata-editing.md`, «Что дизайнеры пишут в файлы».
 - Адрес метода: `<CRM>/webhook/<UId схемы>/<Endpoint>` (на .NET 8 без `/0/`; на .NET Framework 🧪). HTTP-метод — из `IR5`.
 - `properties.json`: `CheckClientUrl`, `IsWebhookLoggingEnabled`, `IsBodyWebhookLoggingEnabled` — строки `"False"`/`"True"`, `CreatedInVersion`.
 

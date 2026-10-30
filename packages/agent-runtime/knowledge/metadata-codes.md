@@ -953,13 +953,13 @@
 | `IQ7` | ServiceNamespaces |
 | `IR1` / `IR2` | Request / Response метода |
 | `IR3` | RequestTimeout, мс |
-| `IR5` | SoapAction 🧪 (у REST `"null"`) |
+| `IR5` | SoapAction 🧪 (SOAP-сервисов на проверенном стенде нет; у REST `"null"`) |
 | `IT1` | Uri метода |
 | `IT2` | HttpMethodType (1 GET, 2 POST, 3 PUT, 4 PATCH, 5 DELETE) |
 | `IW1` | Parameters |
 | `IW2` | ContentType (1 JSON, 2 XML) |
 | `IU1` | Path |
-| `IU2` | DataValueTypeName |
+| `IU2` | DataValueTypeName (`Text`, `Integer`, `Float`, `Boolean`, `DateTime`, `Guid`, `Date`, `Time`, `Object`; `web-service.md`, «Параметр») |
 | `IU3` | IsArray |
 | `IU4` | Type (1 тело, 2 сегмент URL, 3 query, 4 заголовок, 5 cookie) |
 | `IU5` | DefValue (`IV1` значение, `IV2` источник: 1 константа, 2 системная настройка) |
