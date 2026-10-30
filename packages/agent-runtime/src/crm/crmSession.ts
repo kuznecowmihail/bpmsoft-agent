@@ -1,5 +1,6 @@
 import { Agent, fetch as undiciFetch } from "undici";
 import { errorMessage } from "../db/crmDbTool";
+import { withCertificateChainRepair } from "../tools/certificateChain";
 
 export interface CrmConnection { url: string; user: string; password: string }
 export interface CrmResponse { status: number; text: string; json: unknown }
@@ -49,7 +50,7 @@ export class CrmSession {
 
 	constructor(private readonly connection: CrmConnection, fetchImpl?: FetchLike) {
 		this.baseUrl = connection.url.replace(/\/+$/, "");
-		this.fetchImpl = fetchImpl ?? ((input, init) => undiciFetch(input as never, { ...(init ?? {}), dispatcher: LONG_REQUESTS } as never) as unknown as Promise<Response>);
+		this.fetchImpl = fetchImpl ?? withCertificateChainRepair((input, init) => undiciFetch(input as never, { ...(init ?? {}), dispatcher: LONG_REQUESTS } as never) as unknown as Promise<Response>);
 	}
 
 	/** Throws CrmLoginError (wrong login, message from the CRM) or CrmUnavailableError (network/HTTP failure). */
