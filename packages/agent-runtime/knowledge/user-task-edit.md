@@ -10,8 +10,6 @@
 
 Плюс ресурсы: `Pkg/<Пакет>/Resources/<ИмяДействия>.ProcessUserTask/resource.ru-RU.xml`, `resource.en-US.xml` и т.д.
 
-**Не забывай про 2 обязательных правила из `metadata-editing.md`**: (1) обе локали `ru-RU`+`en-US` для ресурсов, (2) актуальный `ModifiedOnUtc` при каждом изменении `descriptor.json`.
-
 ## ✅ Создать своё действие процесса с нуля
 **Шаблон**: папка `templates/process/user-task-schema/` — схема действия из подтверждённого теста: `descriptor.json`, `metadata.json`, `properties.json`, `.cs`, ресурсы с иконками на двух языках (плейсхолдеры `<UId схемы действия>`, `<UId пакета>`).
 
@@ -39,12 +37,12 @@
 ```json
 {
   "Properties": {
-    "CreatedInVersion": "1.9.0.17103",
+    "CreatedInVersion": "<версия платформы>",
     "IsInteractive": "True"
   }
 }
 ```
-`CreatedInVersion` возьми из соседней схемы пакета; `IsInteractive` — как у образца.
+`CreatedInVersion` — `<версия платформы>` (`metadata-editing.md`, поле `B8`); `IsInteractive` — как у образца (в `metadata.json` то же свойство — `FK17`, `metadata-codes.md`).
 
 ### `metadata.json` (плоский JSON)
 ```json
@@ -58,8 +56,8 @@
       "B1": [],
       "B2": [],
       "B3": [],
-      "B6": "266d6d8e-0a6a-e14b-801c-1378a5199ba7",
-      "B8": "1.9.0.17103",
+      "B6": "<UId пакета>",
+      "B8": "<версия платформы>",
       "FJ1": [
         {
           "BL1": "BPMSoft.Core.Process.ProcessSchemaParameter",
@@ -99,12 +97,12 @@
   }
 }
 ```
-- `UId` = UId из `descriptor.json`; `A5` — новый GUID; `B6` — UId пакета (как у соседних схем пакета); `B8` — версия из `properties.json`.
+- `UId` = UId из `descriptor.json`; `A5` — `<Id пакета>` (`metadata-editing.md`, поле A5); `B6` — UId пакета из `Pkg/<Пакет>/descriptor.json`; `B8` — версия из `properties.json`.
 - `FJ1` — параметры действия: у каждого новый `UId`, `A3` = `A4` = UId действия.
 - `L1` — тип: текст `ddb3a1ee-07e8-4d62-b7a9-d0e618b00fbd`, целое `6b6b74e2-820d-490e-a017-2b73d4ccf2b0` (остальные типы — `processes.md`, `metadata-codes.md`).
 - `L12` — направление: `0` вход (Designer рисует →), `1` выход (←). Без `L12` параметр и вход, и выход — так у старых действий проекта.
 - `L6: true` — обязательный (в Designer красная звёздочка).
-- `FK12`, `FK16` — как у образца.
+- `FK12` (`Color`) — как у образца (`metadata-codes.md`). `FK16` (`HasUserDefinedCode`) — `true`, только если в действии есть свой код (`<Имя>.cs`); без своего кода поле не пишется (✅ 30.10.2026).
 
 ### `<Имя>.cs`
 ```csharp
@@ -136,6 +134,7 @@ namespace BPMSoft.Core.Process.Configuration
 - `resource.ru-RU.xml`: `Caption`, `Description`, `Parameters.<Имя>.Caption` для каждого параметра и три картинки `LargeSvgImage`, `SmallSvgImage`, `TitleSvgImage`. Картинки скопируй целыми строками `<Item ... Type="Image" .../>` из `templates/process/user-task-schema/resource.ru-RU.xml` или из любого действия процесса проекта (`Pkg/*/Resources/*.ProcessUserTask/`).
 - `resource.en-US.xml`: те же строки без картинок (у образца картинки только в ru-RU; так и подтверждено).
 - `Parameters.<Имя>.Caption` — подпись параметра в Designer процесса.
+- ✅ Картинки (`LargeSvgImage`, `SmallSvgImage`, `TitleSvgImage`) в `resource.ru-RU.xml` действия лежат внутри `<Group Type="String">` — так действие загружается (10.10.2026).
 
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
@@ -196,7 +195,7 @@ public override void CancelExecuting(params object[] parameters)
   "A2": "UserTask1",
   "A3": "677a2fc8-69af-4dc1-aff1-743edab22fbd",
   "A4": "677a2fc8-69af-4dc1-aff1-743edab22fbd",
-  "A5": "266d6d8e-0a6a-e14b-801c-1378a5199ba7",
+  "A5": "<UId пакета>",
   "IL2": "ebac201e-f46b-499a-a7d2-7e19f927b810",
   "BL3": "150;172",
   "BL7": "1418e61a-82c3-403e-8221-01088f52c125",

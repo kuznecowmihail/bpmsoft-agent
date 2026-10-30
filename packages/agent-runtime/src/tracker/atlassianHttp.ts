@@ -1,4 +1,5 @@
 import type { FetchLike } from "../crm/crmSession";
+import { MISSING_CHAIN_CODES, fetchErrorCode, withCertificateChainRepair } from "../tools/certificateChain";
 import { errorText } from "../tools/errorText";
 
 /** Connection to Jira or Confluence: base URL, email for Cloud (Basic with an API token), token. */
@@ -22,6 +23,9 @@ export interface TrackerConfig {
 /** Timeout of one request to Jira or Confluence. */
 export const ATLASSIAN_TIMEOUT_MS = 30000;
 
+/** fetch that downloads an intermediate certificate the server does not send. */
+const DEFAULT_FETCH = withCertificateChainRepair((input, init) => fetch(input, init));
+
 /** Error with a text for the user; never contains the token. */
 export class AtlassianError extends Error {}
 
@@ -42,7 +46,7 @@ export async function atlassianJson(
 	apiPath: string,
 	options: { method?: "GET" | "POST"; body?: unknown; fetchImpl?: FetchLike; timeoutMs?: number } = {},
 ): Promise<unknown> {
-	const fetchImpl = options.fetchImpl ?? fetch;
+	const fetchImpl = options.fetchImpl ?? DEFAULT_FETCH;
 	const timeoutMs = options.timeoutMs ?? ATLASSIAN_TIMEOUT_MS;
 	const controller = new AbortController();
 	const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -64,7 +68,11 @@ export async function atlassianJson(
 			throw new AtlassianError(`${service} не ответила за ${Math.round(timeoutMs / 1000)} с`);
 		}
 		const cause = e instanceof Error && e.cause instanceof Error ? ` (${(e.cause as NodeJS.ErrnoException).code ?? e.cause.message})` : "";
-		throw new AtlassianError(`${service} недоступна: ${errorText(e)}${cause}`);
+		const code = fetchErrorCode(e);
+		const hint = code && MISSING_CHAIN_CODES.includes(code)
+			? " — сервер не присылает промежуточный сертификат, и скачать его не удалось; попросите администратора настроить на сервере полную цепочку сертификатов"
+			: "";
+		throw new AtlassianError(`${service} недоступна: ${errorText(e)}${cause}${hint}`);
 	}
 	clearTimeout(timer);
 	const text = await response.text();

@@ -10,6 +10,7 @@
 - Скачать файл — `GET <CRM>/rest/FileService/GetFile/<UId объекта файлов>/<Id файла>` (ссылка на вкладке «Файлы»), ответ — содержимое.
 
 ## ✅ Записать, прочитать, удалить файл из C#
+Схема C# — `source-code-edit.md`, «Создать схему исходного кода с нуля»; `Entity` и `UserConnection` — `server-data-api.md`, «Запись через `Entity`».
 ```csharp
 // using System.IO; using BPMSoft.File; using BPMSoft.File.Abstractions;
 Guid fileId = Guid.NewGuid();
@@ -31,7 +32,7 @@ existing.Delete();
 - `Write` сохраняет и запись, и содержимое: после него строка `<Объект>File` есть, `Size` — длина, `Version` — 1, `TypeId` — «файл». Ссылка на запись — атрибут с именем колонки с суффиксом `Id`.
 - `Delete` удаляет строку файла; `Exists` после этого — `false`.
 - `using BPMSoft.File;` внутри `namespace BPMSoft.Configuration` компилируется, хотя в конфигурации есть класс объекта `File` (так и в коде платформы).
-- Права: `UserConnection.GetFileFactory()` — фабрика с проверкой прав (`UseRights`), `.WithRightsDisabled()` — без проверки; 🧪 под пользователем с ограниченными правами не проверялось. `Copy`, `Move` у `IFile` — 🧪.
+- Права: `UserConnection.GetFileFactory()` — фабрика с проверкой прав (`UseRights`), `.WithRightsDisabled()` — без проверки (`rights.md`, «Права в серверном коде»); 🧪 под пользователем с ограниченными правами не проверялось. `Copy`, `Move` у `IFile` — 🧪.
 
 ## ✅ Файл через OData
 1. `POST /odata/<Объект>File` с `{"Name": "<имя>", "<Объект>Id": "<Id записи>", "TypeId": "529bc2f8-0ee0-df11-971b-001d60e938c6"}` → 201 и `Id`.
@@ -40,4 +41,4 @@ existing.Delete();
 Вход, cookie и заголовок `BPMCSRF` — `integration-api.md`.
 
 ## Загрузка из интерфейса
-- Клиент грузит файлы модулем `ConfigurationFileApi` (`[app]/conf/content/ConfigurationFileApi.js`) в `FileApiService/UploadFile` (при функциональности `UseOldFileUploadMethod` — `FileApiService/Upload`); параметры: `fileId`, `fileName`, `mimeType`, `totalFileLength`, `entitySchemaName`, `columnName`, `parentColumnName`, `parentColumnValue`. Свой сервис загрузки — `uploadWebServicePath` в конфигурации загрузки. 🧪 Формат запроса вручную не проверялся.
+- Клиент грузит файлы модулем `ConfigurationFileApi` (`conf/content/ConfigurationFileApi.js`) в `FileApiService/UploadFile` (при функциональности `UseOldFileUploadMethod` — `FileApiService/Upload`); параметры: `fileId`, `fileName`, `mimeType`, `totalFileLength`, `entitySchemaName`, `columnName`, `parentColumnName`, `parentColumnValue`. Свой сервис загрузки — `uploadWebServicePath` в конфигурации загрузки. 🧪 Формат запроса вручную не проверялся.

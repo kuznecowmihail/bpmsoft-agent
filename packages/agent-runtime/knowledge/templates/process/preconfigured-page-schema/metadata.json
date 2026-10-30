@@ -1,8 +1,8 @@
 = MetaData.Schema.UId "<UId схемы страницы>"
 = MetaData.Schema.A2 "TestPreconfPage"
-= MetaData.Schema.A5 "77990378-a31d-46d9-aa66-c8d30a506caf"
+= MetaData.Schema.A5 "<Id пакета>"
 = MetaData.Schema.B6 "<UId пакета>"
-= MetaData.Schema.B8 "1.9.0.17103"
+= MetaData.Schema.B8 "<версия платформы>"
 = MetaData.Schema.HD1 "5826ff24-46c6-4169-9223-2aaad9ec2e18"
 = MetaData.Schema.HD11.["c49bd85e-159a-49ee-b10a-3c3bca63d7d5"].L8.GS2 "{\"$type\":\"BPMSoft.Core.Process.LocalizableParameterValuesList, BPMSoft.Core\",\"$values\":[{\"ItemUId\":\"f073e66a-36ec-47d7-9c6a-e5952dbf05a3\",\"Id\":{\"value\":\"f073e66a-36ec-47d7-9c6a-e5952dbf05a3\"},\"Name\":{\"value\":\"Button-be6148b819154a0791eaee8f1635d859\"},\"Tag\":{\"value\":\"SaveData\"},\"Caption\":{\"isLczValue\":true},\"PerformClosePage\":{\"value\":\"True\"},\"PerformSaveData\":{\"value\":\"True\"},\"GenerateSignal\":{\"value\":\"\"}},{\"ItemUId\":\"c4841740-ff8c-406f-8626-1c78f78608bf\",\"Id\":{\"value\":\"c4841740-ff8c-406f-8626-1c78f78608bf\"},\"Name\":{\"value\":\"Button-3a8ac667899d4aa68021a07eb1c7c49c\"},\"Tag\":{\"value\":\"ClosePage\"},\"Caption\":{\"isLczValue\":true},\"PerformClosePage\":{\"value\":\"False\"},\"PerformSaveData\":{\"value\":\"False\"},\"GenerateSignal\":{\"value\":\"\"}}]}"
 + MetaData.Schema.HD11 {

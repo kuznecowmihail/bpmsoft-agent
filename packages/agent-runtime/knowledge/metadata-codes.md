@@ -1,6 +1,6 @@
 # Коды полей metadata.json → свойства классов платформы
 
-**Источник**: методы `WriteMetaData(DataWriter writer)` в классах платформы (сборки `BPMSoft.Core`). Каждая строка `writer.WriteValue("<код>", <свойство>, <значение по умолчанию>)` — это ровно то, как платформа пишет поле в `metadata.json`. Файл сгенерирован скриптом, не вручную.
+**Источник**: методы `WriteMetaData(DataWriter writer)` в классах платформы (сборки `BPMSoft.Core`). Каждая строка `writer.WriteValue("<код>", <свойство>, <значение по умолчанию>)` — это ровно то, как платформа пишет поле в `metadata.json`. Файл сгенерирован скриптом, не вручную. Исключение — раздел «Веб-сервисы (ServiceSchema) — расшифровано по данным» ближе к концу: он заполнен вручную по реальным файлам, не скриптом.
 
 **Как пользоваться:**
 - Ищи код поля (`IJ3`, `L12`, `E6`...) поиском по этому файлу. Если у кода есть свойство — смысл поля известен, угадывать по примерам не нужно.
@@ -98,7 +98,6 @@
 | `A3` | CreatedInSchemaUId | `Guid.Empty` |
 | `A4` | ModifiedInSchemaUId | `Guid.Empty` |
 | `A5` | CreatedInPackageId | `Guid.Empty` |
-| `A2` | Name | `null` |
 
 ### Schema : MetaSchema
 `BPMSoft.Core.Schema`
@@ -954,13 +953,13 @@
 | `IQ7` | ServiceNamespaces |
 | `IR1` / `IR2` | Request / Response метода |
 | `IR3` | RequestTimeout, мс |
-| `IR5` | SoapAction 🧪 (у REST `"null"`) |
+| `IR5` | SoapAction 🧪 (SOAP-сервисов на проверенном стенде нет; у REST `"null"`) |
 | `IT1` | Uri метода |
 | `IT2` | HttpMethodType (1 GET, 2 POST, 3 PUT, 4 PATCH, 5 DELETE) |
 | `IW1` | Parameters |
 | `IW2` | ContentType (1 JSON, 2 XML) |
 | `IU1` | Path |
-| `IU2` | DataValueTypeName |
+| `IU2` | DataValueTypeName (`Text`, `Integer`, `Float`, `Boolean`, `DateTime`, `Guid`, `Date`, `Time`, `Object`; `web-service.md`, «Параметр») |
 | `IU3` | IsArray |
 | `IU4` | Type (1 тело, 2 сегмент URL, 3 query, 4 заголовок, 5 cookie) |
 | `IU5` | DefValue (`IV1` значение, `IV2` источник: 1 константа, 2 системная настройка) |

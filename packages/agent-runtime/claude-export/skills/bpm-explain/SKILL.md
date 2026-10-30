@@ -19,6 +19,7 @@ description: Use when the user asks how something works now in the BPMSoft proje
    - данные, настройки, SQL-скрипты — `data.md`, `sql-script.md`, таблицы БД — `crm-db.md`;
    - регистрация раздела и карточки в интерфейсе — `registration.md`;
    - вебхуки, импорт из Excel, поиск дублей, веб-формы — `webhook.md`, `file-import.md`, `duplicates.md`, `integration-api.md`;
+   - права на объект, колонки и записи — `rights.md`; коды полей `metadata.json` — `metadata-codes.md`;
    - браузер и страницы — `browser-check.md`.
    Факт, помеченный ✅, — готовый ответ: приведи его с фрагментом из знаний и не сверяй с исходниками «для надёжности». ✅ относится к механике платформы. Как устроена логика именно этого проекта — смотри в файлах стенда: знания собраны на другом проекте.
 

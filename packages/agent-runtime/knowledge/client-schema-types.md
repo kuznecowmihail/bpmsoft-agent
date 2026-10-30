@@ -2,6 +2,8 @@
 
 Признаки каждого типа по файлам схемы. Общее для всех типов (`metadata.json`, `SchemaType`, `Parent`/`ExtendParent`, `modules`, `details`, ресурсы) — в `client-schemas.md`; рецепты — в `client-schemas-edit.md`, `client-pages-edit.md`, `client-logic-edit.md`.
 
+`details`, `rules`, `businessRules` и `businessRulesMultiplyActions` генератор применяет только у Page/MiniPage (см. `client-schemas-hierarchy.md`, «Как объединяются секции конфига между слоями»).
+
 ## Section (`SchemaType: ModuleViewModelSchema`)
 - `.js`: `define("<Name>", [зависимости], function(...) { return { entitySchemaName: "<Entity>", attributes: {...}, details: {...}, mixins: {...}, messages: {...}, methods: {...}, diff: [...] }; });`
 - `entitySchemaName` — связывает раздел с объектом (Entity), к которому он относится (например `"Lead"`, `"Contact"`).
@@ -10,7 +12,7 @@
 
 ## Page (`SchemaType: EditViewModelSchema`)
 - `.js`: та же форма, что у Section (`return { entitySchemaName, attributes, mixins, messages, businessRules, methods, dataModels, diff }`).
-- `businessRules` — та же структура бизнес-правил, что уже подтверждена ранее в проекте (`uId`/`enabled`/`removed`/`ruleType`/`property`/`logical`/`conditions`/`comparisonType`) — подтверждено, что для клиентских схем бизнес-правила лежат прямо в `.js`, а не в `metadata.json`.
+- `businessRules` — лежит прямо в `.js`, не в `metadata.json`; формат правил — `client-rules.md`.
 - `diff.values.layout` — `{colSpan, rowSpan, column, row}` — координаты элемента на сетке страницы.
 
 ## MiniPage (тот же `SchemaType`, что и Page — различается только Parent-цепочкой)
@@ -24,13 +26,13 @@
 ## Detail (`SchemaType: GridDetailViewModelSchema`)
 - **Подтверждено на реальных деталях**: у Detail-схем `SchemaType` — ОТДЕЛЬНОЕ, уникальное значение `"GridDetailViewModelSchema"`, не совпадающее ни с одним другим типом — в отличие от Page/MiniPage или Module/Mixin, `SchemaType` один этот факт уже однозначно определяет тип схемы.
 - `.js`: та же базовая форма, что у Section/Page (`return { entitySchemaName, attributes, details, methods, diff }`) — `attributes` не обязателен (встречаются детали без него).
-- `descriptor.json.Parent` указывает на БАЗОВЫЙ ПЛАТФОРМЕННЫЙ класс детали по имени (например `FileDetailV2` или `BaseGridDetailV2`), а не на схему с тем же именем — и поля `ExtendParent` при этом НЕТ. Это тот же паттерн "отдельная схема, наследующая от другой именованной схемы", что и у новых карточек, — подтверждено на реальных деталях.
+- `descriptor.json.Parent` указывает на БАЗОВЫЙ ПЛАТФОРМЕННЫЙ класс детали по имени (например `FileDetailV2` или `BaseGridDetailV2`), а не на схему с тем же именем — для новой детали `ExtendParent` нет; у замещения существующей детали `ExtendParent: true` (`client-pages-edit.md`, «Замещение (override) существующей детали»). Это тот же паттерн "отдельная схема, наследующая от другой именованной схемы", что и у новых карточек, — подтверждено на реальных деталях.
 - `diff` для элементов панели инструментов детали использует `"parentName": "Detail"`, `"propertyName": "tools"` — отличается от `propertyName: "items"`, используемого для элементов карточки/раздела (Section/Page/MiniPage).
 - Комментарии `@inheritdoc` в методах (например `BPMSoft.Configuration.BaseDetailV2#updateDetail`, `BPMSoft.FileDetailV2#onRender`, `BPMSoft.BaseGridDetailV2#onRender`) называют те же базовые классы, что и `descriptor.json.Parent.Name` — подтверждает, что `Parent` в дескрипторе — это реальный класс реализации детали, а не просто справочное поле.
 
 ## Module (`SchemaType: Module`, без `.mixins.` в namespace класса)
 - `.js`: `define("<Name>", [зависимости], function(...) { Ext.define("BPMSoft.configuration.<Name>", { extend: "BPMSoft.BaseModule"` (или `"BPMSoft.BaseNestedModule"`) `, alternateClassName: "BPMSoft.<Name>", ...методы и свойства... }); return BPMSoft.<Name>; });` — **подтверждено на 2 примерах**: класс явно расширяет базовый модуль (`extend`), реализует жизненный цикл (`init`/`render`/`destroy`), и модуль возвращает КЛАСС (не экземпляр) через `return BPMSoft.<Name>;`.
-- Модуль встраивается в другую схему через её блок `modules: {}` — механизм полностью подтверждён отдельным примером, см. раздел «`modules: {}` — встраивание Module-схемы в вёрстку» выше: ключ в `modules: {}` совпадает с `name` diff-элемента `itemType: MODULE`, а `config.schemaName` называет саму Module-схему по имени.
+- Модуль встраивается в другую схему через её блок `modules: {}`: ключ совпадает с `name` diff-элемента `itemType: MODULE` (см. `client-schemas.md`, «`modules: {}` — встраивание Module-схемы в вёрстку»). Но `config.schemaName` работает только для схем с вёрсткой. Для `SchemaType: Module` на `BPMSoft.BaseModule` это 404 — такой модуль грузи через `sandbox.loadModule`, см. `client-logic-edit.md`, «Новый модуль (Module) и встраивание в карточку с обменом сообщениями».
 
 ## Mixin (`SchemaType: Module`, класс в `BPMSoft.configuration.mixins.*`)
 
@@ -40,7 +42,7 @@
 - `alternateClassName` мискина — это ТОЧНО та строка, которую другие схемы указывают в своём блоке `mixins: { <ЛокальноеИмя>: "BPMSoft.<Name>" }` (подтверждено сопоставлением на реальном замещении раздела).
 - Использование методов мискина из хост-схемы — через `this.mixins.<ЛокальноеИмя>.<метод>.call(this, ...)` (подтверждено на нескольких реальных схемах).
 
-- ✅ Слои `z-index` клиентского ядра (подтверждено по коду платформы, `[app]/Resources/ui/combined/all-combined.css`, `[app]/Resources/ui/ExtJs/extjs-base-debug.js`): подсказка `.tip` — 10000, меню `.menu` — 3000, окно сообщения `.ts-messagebox-box` — 2500, маска загрузки `.ts-mask-container` — 1020; плавающие окна ExtJS — от 19000 и выше (`Ext.ZIndexManager.zBase` 9000, каждое новое окно `+= 10000`). Своё модальное окно поверх маски, но под меню и подсказками — между 1020 и 2500.
+- Слои `z-index` клиентского ядра — `client-logic-edit.md`, «Сохранение без закрытия, окна, ModalBox, sandbox».
 
 ## Патч существующего класса (`Ext override`) — отдельный вид схемы, не миксин
 - Схема `SchemaType: Module`, без `Parent`; в `.js` — `Ext.define("<ИмяКлассаПатча>", { override: "<полное имя патчимого класса>", <методы> })`. Методы патча заменяют методы класса на месте (механизм Ext.js `override`); `this.callParent(arguments)` внутри вызывает исходный метод.

@@ -5,8 +5,15 @@ import { describe, it, expect } from "vitest";
 const knowledgeDir = path.join(__dirname, "..", "knowledge");
 const promptFile = path.join(__dirname, "..", "src", "provider", "systemPrompt.ts");
 const maxBytes = 50 * 1024;
+const normalizeRef = (value: string) => value.toLowerCase().replace(/[`*]/g, "");
 
 const knowledgeFiles = fs.readdirSync(knowledgeDir).filter((name) => name.endsWith(".md")).sort();
+
+const listFilesRecursive = (dir: string): string[] =>
+	fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+		const full = path.join(dir, entry.name);
+		return entry.isDirectory() ? listFilesRecursive(full) : [full];
+	});
 
 describe("knowledge files", () => {
 	it("each file is at most 50 KB", () => {
@@ -42,5 +49,39 @@ describe("knowledge files", () => {
 			}
 		}
 		expect(broken).toEqual([]);
+	});
+
+	it("section references point to an existing heading or bold label", () => {
+		const broken: string[] = [];
+		for (const name of knowledgeFiles) {
+			const text = fs.readFileSync(path.join(knowledgeDir, name), "utf8");
+			for (const match of text.matchAll(/`([a-z0-9]+(?:-[a-z0-9]+)*\.md)`,?\s*(?:раздел\s*)?«([^»]{3,120})»/g)) {
+				const target = match[1];
+				const targetPath = path.join(knowledgeDir, target);
+				if (!fs.existsSync(targetPath)) {
+					continue;
+				}
+				const section = normalizeRef(match[2]);
+				const targetText = normalizeRef(fs.readFileSync(targetPath, "utf8"));
+				if (!targetText.includes(section)) {
+					broken.push(`${name}: ${target} «${match[2]}»`);
+				}
+			}
+		}
+		expect(broken).toEqual([]);
+	});
+
+	it("placeholders do not depend on existing schemas of the package", () => {
+		// On an empty stand there are no neighbour schemas to copy a value from.
+		const found: string[] = [];
+		for (const file of listFilesRecursive(knowledgeDir)) {
+			const text = fs.readFileSync(file, "utf8");
+			text.split(/\r?\n/).forEach((line, index) => {
+				if (/соседн\S* схем/i.test(line)) {
+					found.push(`${path.relative(knowledgeDir, file)}:${index + 1}`);
+				}
+			});
+		}
+		expect(found).toEqual([]);
 	});
 });

@@ -6,17 +6,17 @@
 **Подтверждено**: карточка `TestColumnsPage` (наследник `BaseModulePageV2`, объект `TestColumns`), написанная вручную, после «Обновить из файловой системы» и Ctrl+F5 открылась в CRM без ошибок, все поля, вкладка, группа, строки и значения по умолчанию на месте. Перед записью выполни «Обязательный шаг» из `client-schemas-edit.md` — имена контейнеров родителя берутся из модели вёрстки.
 
 **Файлы** (`Pkg/<Пакет>/`):
-1. `Schemas/<Имя>/descriptor.json`: `UId` (новый GUID), `Name`, `ModifiedOnUtc`, `Parent` = `{UId, Name}` родителя (канонический UId, см. правило 7 выше; `BaseModulePageV2` = `d62293c0-7f14-44b1-b547-735fb40499cd`), `ManagerName: "ClientUnitSchemaManager"`, `Caption`, `DependsOn: []`. Без `ExtendParent`.
-2. `Schemas/<Имя>/properties.json`: `{"Properties": {"CreatedInVersion": "7.18.5.1500", "SchemaType": "EditViewModelSchema"}}`.
+1. `Schemas/<Имя>/descriptor.json`: `UId` (новый GUID), `Name`, `ModifiedOnUtc`, `Parent` = `{UId, Name}` родителя (канонический UId, см. `client-schemas-edit.md`, правило 7; `BaseModulePageV2` = `d62293c0-7f14-44b1-b547-735fb40499cd`), `ManagerName: "ClientUnitSchemaManager"`, `Caption`, `DependsOn: []`. Без `ExtendParent`.
+2. `Schemas/<Имя>/properties.json`: `{"Properties": {"CreatedInVersion": "<версия платформы>", "SchemaType": "EditViewModelSchema"}}`.
 3. `Schemas/<Имя>/metadata.json` — только свои строки и штампы:
 ```
 = MetaData.Schema.UId "<UId схемы>"
 = MetaData.Schema.A2 "<Имя>"
-= MetaData.Schema.A5 "93b33147-c4e4-413f-9045-2004bca5f4fb"
-+ MetaData.Schema.B2 {"UId": "<GUID строки>", "A2": "<КлючСтроки>", "A3": "<UId схемы>", "A4": "<UId схемы>", "A5": "93b33147-c4e4-413f-9045-2004bca5f4fb"}
+= MetaData.Schema.A5 "<Id пакета>"
++ MetaData.Schema.B2 {"UId": "<GUID строки>", "A2": "<КлючСтроки>", "A3": "<UId схемы>", "A4": "<UId схемы>", "A5": "<Id пакета>"}
 ~ MetaData.Schema.B2 ["<GUID строки>"]
 = MetaData.Schema.B6 "<UId пакета>"
-= MetaData.Schema.B8 "7.18.5.1500"
+= MetaData.Schema.B8 "<версия платформы>"
 = MetaData.Schema.HD1 "<UId родителя>"
 ```
 В `~ B2` — только свои строки: унаследованные строки родителя остаются (✅ в дизайнере видны и свои, и все родительские). `HD1` = UId родителя (см. `client-schemas.md`).
@@ -48,7 +48,7 @@ define("<Имя>", ["BusinessRuleModule", "<Имя>Resources"], function(Busines
 
 **Вёрстка у наследника `BaseModulePageV2`** (✅): поля шапки — `insert` в `"parentName": "Header"`, `"propertyName": "items"`, `layout` без `layoutName`; вкладка — `insert` в `"parentName": "Tabs"`, `"propertyName": "tabs"`, `values: {caption: {bindTo: "Resources.Strings.<Ключ>"}, items: [], order: 0}`; группа — `itemType: 15` в `items` вкладки; сетка — `itemType: 0` в `items` группы; поля сетки — `layout` с `"layoutName": "<имя сетки>"`, `bindTo` = имя колонки; кнопка — `insert` в `"parentName": "LeftContainer"` с `itemType: BPMSoft.ViewItemType.BUTTON`, `caption`, `click: {bindTo: "<метод>"}`. Заголовки полей колонок объекта берутся из объекта; у виртуального атрибута задай `caption: {bindTo: "Resources.Strings.<Ключ>"}`.
 
-**Проверить без регистрации**: `<адрес CRM>/0/Nui/ViewModule.aspx#CardModuleV2/<Имя>/add` (или `/edit/<Id записи>`). Чтобы карточка открывалась из раздела и по ссылкам — `registration-edit.md`.
+**Проверить без регистрации**: `<адрес CRM>/Nui/ViewModule.aspx#CardModuleV2/<Имя>/add` (или `/edit/<Id записи>`). Чтобы карточка открывалась из раздела и по ссылкам — `registration-edit.md`. Адреса страниц — `browser-check.md`, «Адреса страниц».
 
 ## ✅ Атрибуты, методы, правила, валидация и кнопка на карточке
 **Подтверждено** на `TestColumnsPage`:
@@ -57,9 +57,9 @@ define("<Имя>", ["BusinessRuleModule", "<Имя>Resources"], function(Busines
 - **Валидация поля**: переопредели `setValidationConfig` (сначала `this.callParent(arguments)`), внутри `this.addColumnValidator("<Колонка>", this.<валидатор>)`; валидатор вызывается как `validator.call(this, value, column)` и возвращает `{invalidMessage: "<текст или пустая строка>"}`. Сообщение показывается под полем, сохранение блокируется.
 - ⚠️ **Свой валидатор не работает у обязательного поля** (✅ подтверждено в CRM и по коду платформы, 14.10.2026): `validateColumn` запускает сначала стандартные проверки (`getDefaultValidators` — `typeValidator`, `rangeValidator`, `requiredValidator`), потом твои из `validationConfig`, и останавливается на первой непройденной. У пустого обязательного поля (признак обязательности или правило REQUIRED) первым срабатывает `requiredValidator`, и свой валидатор уже не вызывается.
 - ✅ **Свой текст для обязательного поля** (подтверждено в CRM, 14.10.2026): переопредели `requiredValidator(value, column)`, возьми результат родителя через `this.callParent(arguments)` и, если `invalidMessage` не пуст и нужна именно твоя колонка (`column.name` или `column.columnPath`), замени его своей локализуемой строкой. Текст появится и под полем, и в окне при сохранении (шаблон платформы «Поле "<Подпись>": <текст>»). Саму обязательность задавай как обычно — правилом REQUIRED или признаком колонки.
-- **Правила** (`rules`, `businessRules`, `businessRulesMultiplyActions`): рецепты — `client-rules-edit.md`, коды и применение платформой — `client-rules.md`. В `rules` проверены REQUIRED + GREATER и VISIBLE + IS_NOT_NULL.
+- **Правила** (`rules`, `businessRules`, `businessRulesMultiplyActions`): рецепты — `client-rules-edit.md`, коды и применение платформой — `client-rules.md`. Пример `rules` — `client-rules-edit.md`, «`rules`: обязательность, видимость, доступность».
 - **Локализуемая строка в коде**: `resources.localizableStrings.<Ключ>` (модуль `<Имя>Resources` в зависимостях) или `this.get("Resources.Strings.<Ключ>")` — оба работают.
-- **Кнопка**: обработчик — метод из `methods`, `this.showInformationDialog(<текст>)` показывает сообщение. Стиль `BPMSoft.controls.ButtonEnums.style.GREEN` в BPMSoft заменён на `ORANGE` — для выделенной кнопки используй `ORANGE`.
+- **Кнопка**: обработчик — метод из `methods`, `this.showInformationDialog(<текст>)` показывает сообщение. Стиль выделенной кнопки — см. «Кнопка карточки в совмещённом режиме».
 - **Где искать базовые методы модели**: `setValidationConfig`, `addColumnValidator`, `showInformationDialog`, `validateColumn` определены не в схемах-конфигах, а в классах `conf/content/BaseSchemaViewModel.js` и `[app]/Resources/ui/BPMSoft/data/models/base-view-model.js`. Скрипт иерархии их не видит и помечает переопределение как «новый» — перед переопределением такого метода проверь его в этих двух файлах (сигнатура, нужен ли `callParent`).
 - ✅ **Автономер** (подтверждено в CRM, 08.10.2026): в карточке `getIncrementColumn: function() { return "<Колонка>"; }` и вызов `this.setIncrementCode()` в `onEntityInitialized` до `callParent` (образец — `InvoicePageV2` в `conf/content`). Нужны системные настройки `<Объект>CodeMask` (маска для `string.Format`, например `ЗАЯ-{0:00000}`) и `<Объект>LastNumber` (`data-edit.md`); у значения `LastNumber` в наборе — `IsForceUpdate: false`, чтобы обновление пакета не сбрасывало счётчик. Номер выдаёт сервис `SysSettingsService.GetIncrementValueVsMask`; при `UseDBSequence=true` (`BPMSoft.WebHost.dll.config`) вместо настройки берётся последовательность БД.
 - ✅ **Автономер на мини-карточке** (08.10.2026): у `BaseMiniPage` нет `setIncrementCode` (он есть только у `BasePageV2`) — при добавлении вызови `SysSettingsService.GetIncrementValueVsMask` сам. `isNewMode` на мини-карточке совпадает с `isAddMode`.
@@ -77,14 +77,14 @@ define("<Имя>", ["BusinessRuleModule", "<Имя>Resources"], function(Busines
 3. `metadata.json` — только дельта пакета, без `A2` и без `HD1` (как у override объекта):
 ```
 = MetaData.Schema.UId "<UId замещения>"
-= MetaData.Schema.A5 "93b33147-c4e4-413f-9045-2004bca5f4fb"
-+ MetaData.Schema.B2 {"UId": "<GUID>", "A2": "<Ключ>", "A3": "<UId замещения>", "A4": "<UId замещения>", "A5": "93b33147-c4e4-413f-9045-2004bca5f4fb"}
+= MetaData.Schema.A5 "<Id пакета>"
++ MetaData.Schema.B2 {"UId": "<GUID>", "A2": "<Ключ>", "A3": "<UId замещения>", "A4": "<UId замещения>", "A5": "<Id пакета>"}
 ~ MetaData.Schema.B2 ["<GUID>"]
 = MetaData.Schema.B6 "<UId пакета>"
-= MetaData.Schema.B8 "7.18.5.1500"
+= MetaData.Schema.B8 "<версия платформы>"
 = MetaData.Schema.B7 true
 ```
-**`= MetaData.Schema.B7 true` обязательна** — это признак замещения; без неё клиент может собрать схему без базовых слоёв (см. `client-schemas.md`, `B7`). Designer дополнительно пишет `= MetaData.Schema.HD1 "<UId родителя>"`, `- MetaData.Schema.HD12`, строки `= MetaData.Schema.B2.["<UId>"].A4 ...` для унаследованных строк и копирует в ресурсы несколько строк родителя — это не обязательно (70 рабочих замещений проекта без `HD1`). Версия `CreatedInVersion`/`B8`: текущий Designer стенда пишет `1.9.0.17103`, в старых файлах — `7.18.5.1500`; принимаются обе.
+**`= MetaData.Schema.B7 true` обязательна** — это признак замещения; без неё клиент может собрать схему без базовых слоёв (см. `client-schemas.md`, `B7`). Designer дополнительно пишет `= MetaData.Schema.HD1 "<UId родителя>"`, `- MetaData.Schema.HD12`, строки `= MetaData.Schema.B2.["<UId>"].A4 ...` для унаследованных строк и копирует в ресурсы несколько строк родителя — это не обязательно (рабочие замещения проекта без `HD1`). Версия `CreatedInVersion`/`B8`: текущий Designer стенда пишет `1.9.0.17103`, в старых файлах — `7.18.5.1500`; принимаются обе.
 Строки родителя при этом сохраняются (все заголовки вкладок и полей родителя на месте).
 4. `.js`: `define("<Имя>", [...], function(...) { return { entitySchemaName, attributes, methods, diff, ... }; });` — только то, что меняет или добавляет замещение.
 5. Ресурсы — только свои строки, без `Caption` схемы.
@@ -93,6 +93,7 @@ define("<Имя>", ["BusinessRuleModule", "<Имя>Resources"], function(Busines
 - `merge` элемента родителя по `name` — указывай только меняемые свойства (новый `caption` поля).
 - `remove` элемента родителя — `{"operation": "remove", "name": "<Элемент>"}`.
 - **Порядок вкладок задаётся свойством `order`, а не позицией**: `move` вкладки с `"index": 0` видимый порядок НЕ изменил. Чтобы переставить вкладки, сделай `merge` с новым `"order"` КАЖДОЙ вкладке (как делает Designer). Текущие `order` вкладок видны в слоях родителя.
+- ✅ подтверждено записью в CRM (30.10.2026): `move` обычного элемента с одной операцией `{"operation":"move","name":"<Поле>","parentName":"<Контейнер>","propertyName":"items","index":0}` загрузилось (операция есть в собранном коде страницы), но ни порядок в DOM, ни координаты поля не изменились: в контейнере-сетке позицию поля задаёт его `layout` (`row`/`column`). Чтобы переставить поле, сделай `merge` его `layout`.
 - Частичное переопределение атрибута родителя: `"Unit": {"isRequired": false}` — снимает обязательность, остальные свойства атрибута (например `dependencies`) остаются от родителя.
 - Переопределение `getActions` с `this.callParent(arguments)` и `actionMenuItems.addItem(this.getButtonMenuItem({"Caption": ..., "Tag": "<метод>"}))` — пункт добавляется в конец «Действий», по клику вызывается метод с именем из `Tag`. Разделитель — `this.getButtonMenuItem({"Type": "BPMSoft.MenuSeparator"})`.
 - **Совмещённый режим** (карточка открыта из реестра раздела): действия карточки отрисовывает раздел, и привязка `"Caption": {"bindTo": "Resources.Strings.<Ключ>"}` ищет строку в модели раздела — у раздела её нет, текст пустой. Решение ✅: передавать готовый текст — `"Caption": resources.localizableStrings.<Ключ>` (модуль `<Имя>Resources` в зависимостях `define`). Другой вариант — добавить ту же строку в схему раздела (проверим при замещении раздела).

@@ -4,12 +4,12 @@
       "ManagerName": "ProcessUserTaskSchemaManager",
       "UId": "<UId схемы действия>",
       "A2": "TestUserTask",
-      "A5": "f6ef2a1b-c8a8-4ab7-81fc-dfa94f7604af",
+      "A5": "<Id пакета>",
       "B1": [],
       "B2": [],
       "B3": [],
       "B6": "<UId пакета>",
-      "B8": "1.9.0.17103",
+      "B8": "<версия платформы>",
       "FJ1": [
         {
           "BL1": "BPMSoft.Core.Process.ProcessSchemaParameter",

@@ -1,11 +1,15 @@
 # Исходный код (SourceCodeSchemaManager) — рецепты создания/редактирования
 
-Общая механика ресурсов и локализации — см. `metadata-editing.md`. **Важное уточнение**: SourceCode использует ПЛОСКИЙ JSON формат (`metadata.json`), а НЕ построчный diff-журнал (как Entity/большинство Process) — значит правила «diff-журнала» и «последняя запись побеждает» из `metadata-editing.md` К НЕМУ НЕ ПРИМЕНЯЮТСЯ. Только общие правила про ресурсы, локализацию, `ModifiedOnUtc` применимы (см. `metadata-editing.md`).
+Общая механика ресурсов и локализации — см. `metadata-editing.md`. SourceCode использует плоский JSON (`metadata.json`), а не построчный diff-журнал (как Entity и большинство Process), поэтому правила diff-журнала и «последняя запись побеждает» здесь не применяются. Действуют общие правила про ресурсы, локализацию и `ModifiedOnUtc`.
 
-**Не забывай про обязательное правило из `metadata-editing.md`: `ModifiedOnUtc` в `descriptor.json` должно обновляться при любом создании новой схемы на РЕАЛЬНЫЙ текущий момент времени в формате `"\/Date(<миллисекунды>)\/"` (получить можно через `date +%s000`).**
+Факты и модель metadata — `source-code.md`. Серверная логика объекта и слушатель `EntityEventListener` — `server-events-edit.md`. Задания по расписанию и фоновые задачи — `server-background-edit.md`. Темы файла: создание и изменение схемы, константы, вызов из процесса, слушатель событий приложения, подмена класса через `ClassFactory`, системная настройка, сообщение в браузер и уведомление в «колокольчике», удаление.
+
+`ModifiedOnUtc` в `descriptor.json` ставь на текущий момент при создании и изменении схемы, формат `"\/Date(<миллисекунды>)\/"`, значение — `date +%s000` (`metadata-editing.md`).
 
 ## ✅ Создать схему исходного кода с нуля
 **Подтверждено 05.10.2026** на `TestSrcHelper` (класс-помощник с локализуемой строкой и логом) и `TestSrcService` (REST-сервис): после «Обновить из файловой системы» и компиляции дизайнер показал код и локализуемую строку, вызов сервиса из браузера вернул `{GreetResult: "Привет, тест S1! …"}`, строка помощника попала в `Common.log`.
+
+Новый сервис (новый класс или маршрут) до перезапуска приложения отвечает 404: `integration-api.md`, «Свой REST-сервис: адреса и ошибки». Новый метод в существующем сервисе вызывается сразу, см. «Изменить схему исходного кода».
 
 Файлы: `Schemas/<Имя>/descriptor.json`, `properties.json`, `metadata.json`, `<Имя>.cs`; `Resources/<Имя>.SourceCode/resource.ru-RU.xml` и `resource.en-US.xml`.
 
@@ -28,7 +32,7 @@
 ```json
 {
   "Properties": {
-    "CreatedInVersion": "1.9.0.17103"
+    "CreatedInVersion": "<версия платформы>"
   }
 }
 ```
@@ -41,7 +45,7 @@
       "ManagerName": "SourceCodeSchemaManager",
       "UId": "<UId из descriptor.json>",
       "A2": "TestSrcHelper",
-      "A5": "<новый GUID>",
+      "A5": "<Id пакета>",
       "B1": [],
       "B2": [
         {
@@ -54,7 +58,7 @@
       ],
       "B3": [],
       "B6": "<UId пакета>",
-      "B8": "1.9.0.17103",
+      "B8": "<версия платформы>",
       "HD1": "50e3acc0-26fc-4237-a095-849a1d534bd3"
     }
   }
@@ -121,8 +125,7 @@ namespace BPMSoft.Configuration
 - `LocalizableString` — в `BPMSoft.Common` (не в `BPMSoft.Core`): без `using BPMSoft.Common;` компиляция падает с CS0246 (проверено). При ошибке «тип не найден» ищи тип в `[app]/BPMSoft.*.xml` (`platform-api.md`) и бери пространство имён оттуда.
 - Логгер проекта — `LogManager.GetLogger("Common")` из `global::Common.Logging`; строки видны в `[app]/Logs/<ГГГГ-ММ-ДД>/Common.log`.
 - Вызов сервиса с клиента: `ServiceHelper.callService("<Сервис>", "<Метод>", function (r) { ... }, {<параметры>})` — ответ приходит как `{<Метод>Result: <значение>}`. Проверка из консоли браузера: `require(["ServiceHelper"], function (sh) { sh.callService("TestSrcService", "Greet", function (r) { console.log(r); }, { name: "тест" }); });`.
-- ✅ `ServiceHelper.callService` всегда шлёт `POST` с телом `{}` (подтверждено в CRM, 09.10.2026): метод, который вызывают так, объявляй с `Method = "POST"` и `BodyStyle = WebMessageBodyStyle.Wrapped` — ответ придёт как `{<Метод>Result: …}`. Метод с `Method = "GET"` и `BodyStyle = WebMessageBodyStyle.Bare` открывается из адресной строки (`<адрес CRM>/0/rest/<Сервис>/<Метод>`, на части стендов без `/0`; ✅ 08.10.2026), но через `ServiceHelper` даёт 400 Bad Request. Исключение внутри метода тоже возвращается страницей «Request Error» — причину смотри в `Error.log`.
-- ✅ Адрес своего REST-сервиса (13.10.2026, видно во вкладке сети встроенного браузера): на стенде .NET Core — `<адрес CRM>/rest/<Сервис>/<Метод>`, без `/0/`; на .NET Framework — 🧪 `<адрес CRM>/0/rest/<Сервис>/<Метод>`. Префикс смотри по адресу открытой CRM у пользователя (есть ли `/0/` в адресной строке).
+- ✅ `ServiceHelper.callService` всегда шлёт `POST` с телом `{}` (подтверждено в CRM, 09.10.2026): метод, который так вызывают, объявляй с `Method = "POST"` и `BodyStyle = WebMessageBodyStyle.Wrapped` — ответ придёт как `{<Метод>Result: …}`. Адреса, GET и ошибки — `integration-api.md`, «Свой REST-сервис: адреса и ошибки».
 
 ### Ресурсы
 `resource.ru-RU.xml` (и так же `resource.en-US.xml`):
@@ -142,10 +145,7 @@ namespace BPMSoft.Configuration
 ### Опровергнуто
 - `properties.json` без обёртки `"Properties"` — неверно, у всех схем проекта есть обёртка.
 - «`HD1` — фиксированная константа» — неверно: это UId родителя; `50e3acc0-...` почти у всех схем, у единичных — свои значения или поля нет.
-- Пример `.cs` с `namespace BPMSoft.Configuration.<Пакет>` и `using BPMSoft.Web` — не из реального файла; у образцов `BaseService` из `BPMSoft.Web.Common`.
-
-## Серверная логика объекта и слушатель событий
-Где писать логику объекта и слушатель `EntityEventListener` — в `server-events-edit.md`.
+- Ошибкой было `using BPMSoft.Web` и пример `.cs`, придуманный целиком, — он не из реального файла. Вложенное пространство `namespace BPMSoft.Configuration.<Пространство>` само по себе норма; у образцов `BaseService` из `BPMSoft.Web.Common`.
 
 ## ✅ Изменить схему исходного кода
 **Подтверждено 05.10.2026** на `TestSrcService`: в класс добавлен второй метод сервиса (`CreateRecord`), обновлён `ModifiedOnUtc` в `descriptor.json`; после «Обновить из файловой системы» и компиляции новый метод сразу вызывается с клиента. `metadata.json` при правке кода не меняется (если не добавляются локализуемые строки).
@@ -251,8 +251,9 @@ namespace BPMSoft.Configuration
 - `AppEventListenerBase` — `BPMSoft.Web.Common`; методы `OnAppStart`, `OnAppEnd`, `OnSessionStart`, `OnSessionEnd`. Регистрировать слушатель не нужно: платформа (`AppEventLoader`) сама находит в сборке конфигурации все классы, реализующие `IAppEventListener`.
 - ✅ Не делай общий абстрактный базовый класс от `AppEventListenerBase` (подтверждено на реальных схемах проекта, 28.10.2026): платформа при каждом старте создаёт экземпляр каждого наследника `AppEventListenerBase` и на абстрактном пишет в `Error.log` `AppEventDispatcher OnAppEvent - Error creating an instance of the <Класс> type | System.MissingMethodException: Constructor on type … not found` (сотни строк в журналах). Общий код выноси в хелпер или в не наследующий `AppEventListenerBase` класс.
 - `ClassFactory` — `BPMSoft.Core.Factories`: `Bind<IИнтерфейс, Реализация>()` при старте, `ClassFactory.Get<IИнтерфейс>()` в коде. Подмена существующей привязки — `ClassFactory.ReBind<...>()`.
-- Системное подключение в `OnAppStart`: `((AppConnection)context.Application["AppConnection"]).SystemUserConnection` (образец — любой наследник `AppEventListenerBase` в `Pkg`).
+- Системное подключение в `OnAppStart`: `((AppConnection)context.Application["AppConnection"]).SystemUserConnection`; права системного пользователя — `rights.md`, «Права в серверном коде».
 - `OnAppStart` выполняется только при запуске приложения; компиляция его перезапускает сама (в логе `BPMSoft.WebHost.Application OnStart - Application started`).
+- Задание по расписанию ставь из `OnAppStart`: `server-background-edit.md`, «Задание по расписанию на C#».
 - Несколько типов (интерфейс, реализация, слушатель) в одном `.cs` схемы — допустимо.
 - Время в логах стенда — UTC.
 
@@ -311,7 +312,7 @@ namespace BPMSoft.Configuration
 - ✅ `Bind` своего интерфейса и сразу `ReBind` того же интерфейса на наследника в одном `OnAppStart` отдают наследника (подтверждено строкой в `Common.log`, 09.10.2026).
 
 ## ✅ Прочитать системную настройку
-**Подтверждено 05.10.2026** (`TestSrcService.ReadSetting`): `BPMSoft.Core.Configuration.SysSettings.GetValue<string>(UserConnection, "TestSrcSetting", "<нет значения>")` вернул значение настройки, созданной данными пакета (`data-edit.md`, «Системная настройка и её значение»). Третий аргумент — значение по умолчанию, если настройки нет. Псевдоним `using SysSettings = BPMSoft.Core.Configuration.SysSettings;` можно объявлять только в своём вложенном пространстве имён (так в реальном образце проекта: `namespace BPMSoft.Configuration.<Пакет>`). ✅ Внутри `namespace BPMSoft.Configuration { ... }` он не компилируется: там есть сгенерированный класс объекта `SysSettings` — ошибка CS0576 «Namespace 'BPMSoft.Configuration' contains a definition conflicting with alias 'SysSettings'» (06.10.2026, `TestDiscountService`). В `BPMSoft.Configuration` пиши полное имя: `global::BPMSoft.Core.Configuration.SysSettings.GetValue<decimal>(UserConnection, "<Код>", 0m)` — проверено, вернуло значение дробной настройки.
+**Подтверждено 05.10.2026** (`TestSrcService.ReadSetting`): `BPMSoft.Core.Configuration.SysSettings.GetValue<string>(UserConnection, "TestSrcSetting", "<нет значения>")` вернул значение настройки, созданной данными пакета (`data-edit.md`, «Системная настройка и её значение»). Третий аргумент — значение по умолчанию, если настройки нет. В `namespace BPMSoft.Configuration` пиши полное имя: `global::BPMSoft.Core.Configuration.SysSettings.GetValue<decimal>(UserConnection, "<Код>", 0m)` — проверено, вернуло значение дробной настройки. Псевдоним `using SysSettings = …` там даёт CS0576, см. `platform-api.md`, «Системные настройки, функциональности, соединения».
 
 ## ✅ Сообщение в браузер пользователю и уведомление в «колокольчике»
 **Подтверждено 07.10.2026** на `TestTicketEscalationNotifier` (вызов из задания-сценария процесса эскалации заявки) и замещении `MainHeaderSchema`: ответственному в сети приходит окно с кнопкой «Открыть заявку», ответственному не в сети — уведомление в «колокольчике» со ссылкой на заявку.
@@ -322,16 +323,10 @@ namespace BPMSoft.Configuration
 - **Уведомление в «колокольчике»** — запись `Reminding` через `Entity`: `SetDefColumnValues()`, `AuthorId`, `ContactId` (получатель), `RemindTime` = `DateTime.UtcNow`, `NotificationTypeId` = `685e7149-c015-4a4d-b4a6-2e5625a6314c` («Уведомление»), `PopupTitle`, `SubjectCaption`, `SysEntitySchemaId` = `EntitySchemaManager.GetInstanceByName("<Объект>").UId`, `SubjectId` = Id записи (по клику открывается запись), затем `Save()`.
 - `MsgChannelManager`, `SimpleMessage` и `ServerChannel` нет ни в XML-документации, ни в `Autogenerated` как описания API — образцы ищи в `Pkg`: отправка — по `MsgChannelManager.Instance`, уведомление — по `GetInstanceByName("Reminding")`.
 
-## ✅ Удалить SourceCode-схему целиком
+## ✅ Удалить SourceCode-схему
 
-Процедура та же, что и для любого типа схемы (см. `entity-edit.md`, раздел «Удалить объект»):
+Общий порядок — `metadata-editing.md`, «Удаление схемы». Специфика SourceCode:
 
-1. Удалить рекурсивно две папки:
-   - `Pkg/<Пакет>/Schemas/<ИмяСхемы>/` (сама схема)
-   - `Pkg/<Пакет>/Resources/<ИмяСхемы>.SourceCode/` (ресурсы)
-
-2. Открыть BPMSoft-CRM и нажать "Обновить из файловой системы"
-
-3. Схема пропадает из runtime
-
-**ПЕРЕД удалением проверить зависимости** — убедиться, что никакие другие схемы/код не ссылаются на удаляемую SourceCode-схему через `using`-директиву с пространством имён этого кода или на её UId.
+1. Перед удалением проверить зависимости: никакой код не ссылается на схему через `using` с её пространством имён и не ссылается на её UId (поиск по `Pkg`).
+2. Удалить рекурсивно две папки: `Pkg/<Пакет>/Schemas/<ИмяСхемы>/` и `Pkg/<Пакет>/Resources/<ИмяСхемы>.SourceCode/`.
+3. Если в схеме есть задание по расписанию, сначала сними его: `server-background-edit.md`, «Удаление класса задания».

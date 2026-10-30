@@ -1,6 +1,6 @@
 # Интеграции: вход извне, CSRF, OData, DataService, свои REST-сервисы
 
-Входящие вызовы CRM из внешних систем и исходящие HTTP-вызовы из своего кода. Исходящий REST-сервис (ServiceSchemaManager) и элемент «Вызвать веб-сервис» — `web-service.md`, `web-service-edit.md`; свой REST-сервис в исходном коде (`BaseService`) — `source-code-edit.md`.
+Входящие вызовы CRM из внешних систем и исходящие HTTP-вызовы из своего кода. Исходящий REST-сервис (ServiceSchemaManager) и элемент «Вызвать веб-сервис» — `web-service.md`, `web-service-edit.md`; свой REST-сервис в исходном коде (`BaseService`) — `source-code-edit.md`. Вебхуки (вход без кода) — `webhook.md`.
 
 ✅ — подтверждено вызовами на стенде .NET 8 (21.10.2026). На .NET Framework адреса начинаются с `/0/` (по документации, 🧪).
 
@@ -16,6 +16,7 @@
 - ✅ Чтение: `GET /odata/<Объект>?$select=<Колонка1>,<Колонка2>&$filter=<Колонка> eq '<значение>'&$top=N`; связанный объект — `$expand=<Справочная колонка>($select=<Колонка>)`. Ответ — `{"@odata.context": …, "value": [ … ]}`.
 - ✅ Создать: `POST /odata/<Объект>` с JSON колонок (справочная — `<Колонка>Id`) → 201 и созданная запись с `Id`. Изменить: `PATCH /odata/<Объект>(<Id>)` → 204. Удалить: `DELETE /odata/<Объект>(<Id>)` → 204.
 - ✅ Запись через OData идёт через сущность: события объекта и слушатели срабатывают.
+- ✅ подтверждено записью в CRM (30.10.2026): после «Обновить из файловой системы» с новым, ещё не скомпилированным объектом `GET /odata/<Объект>` отвечает 500 для всех объектов; после компиляции — 200. См. `errors.md`, «Выполнение».
 - ✅ Файлы записи (содержимое через `/Data`) — `files.md`, «Файл через OData».
 - ✅ Количество (24.10.2026): `GET /odata/<Объект>/$count?$filter=<условие>` — число текстом (`text/plain`, в начале BOM); `$count=true` в обычном запросе добавляет `"@odata.count"`. `$orderby`, `$skip`, `$top` — обычная постраничность (`$top` — размер страницы, в отличие от `RowCount` в ESQ).
 - ✅ `GET /odata/$metadata` — описание всех объектов (XML).
@@ -39,19 +40,20 @@
 - Для внешних интеграций проще OData; DataService использует сам клиент CRM.
 
 ## Свой REST-сервис: адреса и ошибки
-- ✅ Адрес — `<CRM>/rest/<Класс>/<Метод>`. `/ServiceModel/<Класс>.svc/<Метод>` для своего сервиса — 404, пока класс не зарегистрирован как анонимный (ниже).
+- ✅ Адрес — `<CRM>/rest/<Класс>/<Метод>`. `/ServiceModel/<Класс>.svc/<Метод>` для своего сервиса — 404, пока класс не зарегистрирован как анонимный (ниже). Префикс `/0/` смотри по адресу открытой CRM у пользователя (✅ 13.10.2026, вкладка сети встроенного браузера); на .NET Framework — 🧪.
 - ✅ Свой префикс — атрибуты `BPMSoft.Web.Common.ServiceRouting` на классе: `[DefaultServiceRoute]` и `[ServiceRoute("<префикс>")]` вместе — сервис отвечает и по `/rest/<Класс>/…`, и по `/<префикс>/rest/<Класс>/…`. `[SspServiceRoute]` — для портала (🧪).
 - ✅ GET с параметрами: `[WebInvoke(Method = "GET", UriTemplate = "<Метод>?<параметр>={<параметр>}", BodyStyle = WebMessageBodyStyle.Bare, ResponseFormat = WebMessageFormat.Json)]`, параметры метода — `string`.
+- ✅ `Method = "GET"` с `BodyStyle = Bare` открывается из адресной строки (08.10.2026), но через `ServiceHelper.callService` даёт 400 Bad Request: `ServiceHelper` шлёт только `POST` с телом `{}` (09.10.2026), для него объявляй `Method = "POST"` и `BodyStyle = Wrapped`. Рецепт — `source-code-edit.md`, «Создать схему исходного кода с нуля».
 - ✅ Свой код HTTP: `throw new WebFaultException<string>("<текст>", HttpStatusCode.<Код>)` (`using System.Net; using System.ServiceModel.Web;`) — клиент получает этот код и строку JSON в теле.
 - ✅ Необработанное исключение в методе — HTTP 400 с HTML-страницей «Request Error», не 500 и не JSON. Для понятного ответа лови исключения и возвращай `WebFaultException` или объект-ответ с полями `success` и описанием ошибки.
-- ✅ Новый сервис после компиляции отвечает 404 до перезапуска приложения (`platform-api.md`).
+- ✅ Новый класс или маршрут сервиса после компиляции отвечает 404 до перезапуска приложения (21.10.2026). Инструмент компиляции перезапускает CRM сам; после компиляции в Designer нужен перезапуск (`platform-api.md`, «Кеши и перезапуск»).
 - ✅ Ответ REST-метода объектом (07.10.2026, `TestTicketStatsService`): классы с `[DataContract]`, свойства с `[DataMember(Name = "<имя в JSON>")]` (`using System.Runtime.Serialization;`); при `BodyStyle = WebMessageBodyStyle.Wrapped` клиент получает `{"<Метод>Result": {<поля по Name>}}`, `List<T>` — массивом объектов.
 
 ## Анонимный сервис (.NET 8)
 - ✅ Регистрация — не в `Pkg`: файл `[app]/appsettings.json`, раздел `ConfigurationServices` → `AnonymousRoutes`, запись `"BPMSoft.Configuration.<Класс>": ["/ServiceModel/<Класс>.svc"]` (ключ — полное имя класса с пространством имён), затем перезапуск приложения. Файл правит пользователь или администратор стенда: агент даёт готовую строку и инструкцию. При обновлении платформы файл может быть перезаписан — запись нужно сохранить.
 - ✅ Вызов без входа — `<CRM>/ServiceModel/<Класс>.svc/<Метод>`. Адрес `/rest/<Класс>/<Метод>` без входа по-прежнему перенаправляет на вход (302).
-- ✅ В анонимном вызове `UserConnection` сервиса — `null` (без исключения). Для работы с данными — `AppConnection.SystemUserConnection`: системный пользователь, права не ограничены, поэтому проверку вызывающего (подпись, токен) делай сам.
-- ✅ Перед работой с `Entity` и процессами в анонимном сервисе платформа и проекты вызывают `SessionHelper.SpecifyWebOperationIdentity(HttpContextAccessor.GetInstance(), SystemUserConnection.CurrentUser)` (`BPMSoft.Web.Common`; подтверждено на реальных схемах, 23.10.2026: так в большинстве из ~40 вызовов на трёх стендах; в сервисах-наследниках `BaseService` — `(CurrentHttpContext, UserConnection.CurrentUser)`). В анонимном вызове `UserConnection` — `null`, поэтому пользователь — `SystemUserConnection.CurrentUser`. ✅ Без этого вызова (24.10.2026): `Entity.Save` и `ProcessExecutor.Execute` через `SystemUserConnection` работают, а фоновая задача `Task.StartNewWithUserConnection` падает: `InvalidOperationException: Failed to get the context for the background operation. For services without authorization it is necessary to call BPMSoft.Web.Common.SessionHelper.SpecifyWebOperationIdentity.` С вызовом задача выполняется от системного пользователя.
+- ✅ В анонимном вызове `UserConnection` сервиса — `null` (без исключения). Для работы с данными — `AppConnection.SystemUserConnection`; его права не ограничены (`rights.md`, «Права в серверном коде»), поэтому проверку вызывающего (подпись, токен) делай сам.
+- ✅ Перед работой с `Entity` и процессами в анонимном сервисе платформа и проекты вызывают `SessionHelper.SpecifyWebOperationIdentity(HttpContextAccessor.GetInstance(), SystemUserConnection.CurrentUser)` (`BPMSoft.Web.Common`; подтверждено на реальных схемах, 23.10.2026: так в большинстве вызовов на стендах; в сервисах-наследниках `BaseService` — `(CurrentHttpContext, UserConnection.CurrentUser)`). В анонимном вызове `UserConnection` — `null`, поэтому пользователь — `SystemUserConnection.CurrentUser`. ✅ Без этого вызова (24.10.2026): `Entity.Save` и `ProcessExecutor.Execute` через `SystemUserConnection` работают, а фоновая задача `Task.StartNewWithUserConnection` падает: `InvalidOperationException: Failed to get the context for the background operation. For services without authorization it is necessary to call BPMSoft.Web.Common.SessionHelper.SpecifyWebOperationIdentity.` С вызовом задача выполняется от системного пользователя. Фоновые задачи и задания по расписанию — `server-background-edit.md`, «Фоновая задача».
 - 🧪 На .NET Framework регистрация — в `Web.config` папки `ServiceModel` (по документации Creatio).
 
 ## ✅ Текущий пользователь запроса (25.10.2026)
