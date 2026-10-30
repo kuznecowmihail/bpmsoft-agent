@@ -27,7 +27,7 @@
 ```json
 {
   "Properties": {
-    "CreatedInVersion": "<версия как у соседних схем пакета>",
+    "CreatedInVersion": "<версия платформы>",
     "Enabled": "True",
     "EntitySchemaUId": "<UId объекта>",
     "IsActiveVersion": "True",
@@ -43,10 +43,10 @@
   "ManagerName":"DcmSchemaManager",
   "UId":"<UId кейса>",
   "A2":"<Имя>",
-  "A5":"<новый GUID>",
+  "A5":"<Id пакета>",
   "B1":[],"B2":[],"B3":[],
   "B6":"<UId пакета>",
-  "B8":"<версия как у соседних схем пакета>",
+  "B8":"<версия платформы>",
   "FJ1":[],
   "IJ1":true,
   "BK8":"51b280eb-d8a3-4932-81b9-ef61a0877aab",

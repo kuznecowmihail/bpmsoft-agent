@@ -7,16 +7,16 @@
 
 **Файлы** (`Pkg/<Пакет>/`):
 1. `Schemas/<Имя>/descriptor.json`: `UId` (новый GUID), `Name`, `ModifiedOnUtc`, `Parent` = `{UId, Name}` родителя (канонический UId, см. `client-schemas-edit.md`, правило 7; `BaseModulePageV2` = `d62293c0-7f14-44b1-b547-735fb40499cd`), `ManagerName: "ClientUnitSchemaManager"`, `Caption`, `DependsOn: []`. Без `ExtendParent`.
-2. `Schemas/<Имя>/properties.json`: `{"Properties": {"CreatedInVersion": "7.18.5.1500", "SchemaType": "EditViewModelSchema"}}`.
+2. `Schemas/<Имя>/properties.json`: `{"Properties": {"CreatedInVersion": "<версия платформы>", "SchemaType": "EditViewModelSchema"}}`.
 3. `Schemas/<Имя>/metadata.json` — только свои строки и штампы:
 ```
 = MetaData.Schema.UId "<UId схемы>"
 = MetaData.Schema.A2 "<Имя>"
-= MetaData.Schema.A5 "<A5 как у соседних схем пакета>"
-+ MetaData.Schema.B2 {"UId": "<GUID строки>", "A2": "<КлючСтроки>", "A3": "<UId схемы>", "A4": "<UId схемы>", "A5": "<A5 как у соседних схем пакета>"}
+= MetaData.Schema.A5 "<Id пакета>"
++ MetaData.Schema.B2 {"UId": "<GUID строки>", "A2": "<КлючСтроки>", "A3": "<UId схемы>", "A4": "<UId схемы>", "A5": "<Id пакета>"}
 ~ MetaData.Schema.B2 ["<GUID строки>"]
 = MetaData.Schema.B6 "<UId пакета>"
-= MetaData.Schema.B8 "7.18.5.1500"
+= MetaData.Schema.B8 "<версия платформы>"
 = MetaData.Schema.HD1 "<UId родителя>"
 ```
 В `~ B2` — только свои строки: унаследованные строки родителя остаются (✅ в дизайнере видны и свои, и все родительские). `HD1` = UId родителя (см. `client-schemas.md`).
@@ -77,11 +77,11 @@ define("<Имя>", ["BusinessRuleModule", "<Имя>Resources"], function(Busines
 3. `metadata.json` — только дельта пакета, без `A2` и без `HD1` (как у override объекта):
 ```
 = MetaData.Schema.UId "<UId замещения>"
-= MetaData.Schema.A5 "<A5 как у соседних схем пакета>"
-+ MetaData.Schema.B2 {"UId": "<GUID>", "A2": "<Ключ>", "A3": "<UId замещения>", "A4": "<UId замещения>", "A5": "<A5 как у соседних схем пакета>"}
+= MetaData.Schema.A5 "<Id пакета>"
++ MetaData.Schema.B2 {"UId": "<GUID>", "A2": "<Ключ>", "A3": "<UId замещения>", "A4": "<UId замещения>", "A5": "<Id пакета>"}
 ~ MetaData.Schema.B2 ["<GUID>"]
 = MetaData.Schema.B6 "<UId пакета>"
-= MetaData.Schema.B8 "7.18.5.1500"
+= MetaData.Schema.B8 "<версия платформы>"
 = MetaData.Schema.B7 true
 ```
 **`= MetaData.Schema.B7 true` обязательна** — это признак замещения; без неё клиент может собрать схему без базовых слоёв (см. `client-schemas.md`, `B7`). Designer дополнительно пишет `= MetaData.Schema.HD1 "<UId родителя>"`, `- MetaData.Schema.HD12`, строки `= MetaData.Schema.B2.["<UId>"].A4 ...` для унаследованных строк и копирует в ресурсы несколько строк родителя — это не обязательно (рабочие замещения проекта без `HD1`). Версия `CreatedInVersion`/`B8`: текущий Designer стенда пишет `1.9.0.17103`, в старых файлах — `7.18.5.1500`; принимаются обе.

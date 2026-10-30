@@ -14,9 +14,9 @@
 ```
 = MetaData.Schema.UId "<UId страницы>"
 = MetaData.Schema.A2 "<Имя>"
-= MetaData.Schema.A5 "<новый GUID>"
+= MetaData.Schema.A5 "<Id пакета>"
 = MetaData.Schema.B6 "<UId пакета>"
-= MetaData.Schema.B8 "1.9.0.17103"
+= MetaData.Schema.B8 "<версия платформы>"
 = MetaData.Schema.HD1 "5826ff24-46c6-4169-9223-2aaad9ec2e18"
 = MetaData.Schema.HD11.["c49bd85e-159a-49ee-b10a-3c3bca63d7d5"].L8.GS2 "<список кнопок — строку целиком скопируй из metadata.json образца>"
 + MetaData.Schema.HD11 {"BL1": "BPMSoft.Core.ClientUnitSchemaParameter", "UId": "<UId параметра>", "A2": "Comment", "A3": "<UId страницы>", "A4": "<UId страницы>", "L1": "ddb3a1ee-07e8-4d62-b7a9-d0e618b00fbd", "L8": {}}

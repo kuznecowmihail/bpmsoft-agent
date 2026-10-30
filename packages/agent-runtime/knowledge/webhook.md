@@ -13,7 +13,7 @@
 - `properties.json`: `CheckClientUrl`, `IsWebhookLoggingEnabled`, `IsBodyWebhookLoggingEnabled` — строки `"False"`/`"True"`, `CreatedInVersion`.
 
 ## ✅ metadata.json: коды
-Схема (`MetaData.Schema`): `A2` — имя, `A5` — `<A5 как у соседних схем пакета>` (`metadata-editing.md`, поле A5), `B6` — UId пакета, `B8` — версия, `WS1` — проверять адрес клиента, `WS2` — адрес клиента (`"null"`), `WS3` — аутентификация, `WS4` — методы, `WS5`/`WS6` — логирование вебхука и тела.
+Схема (`MetaData.Schema`): `A2` — имя, `A5` — `<Id пакета>` (`metadata-editing.md`, поле A5), `B6` — UId пакета, `B8` — версия, `WS1` — проверять адрес клиента, `WS2` — адрес клиента (`"null"`), `WS3` — аутентификация, `WS4` — методы, `WS5`/`WS6` — логирование вебхука и тела.
 
 Аутентификация `WS3`:
 - `IY1` — тип: `0` нет, `1` Cookie (в коде BasicCookie), `2` JWT, `3` OAuth 2.0.

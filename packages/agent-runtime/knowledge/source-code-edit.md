@@ -32,7 +32,7 @@
 ```json
 {
   "Properties": {
-    "CreatedInVersion": "1.9.0.17103"
+    "CreatedInVersion": "<версия платформы>"
   }
 }
 ```
@@ -45,7 +45,7 @@
       "ManagerName": "SourceCodeSchemaManager",
       "UId": "<UId из descriptor.json>",
       "A2": "TestSrcHelper",
-      "A5": "<A5 как у соседних схем пакета>",
+      "A5": "<Id пакета>",
       "B1": [],
       "B2": [
         {
@@ -58,7 +58,7 @@
       ],
       "B3": [],
       "B6": "<UId пакета>",
-      "B8": "1.9.0.17103",
+      "B8": "<версия платформы>",
       "HD1": "50e3acc0-26fc-4237-a095-849a1d534bd3"
     }
   }

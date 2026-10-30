@@ -9,6 +9,12 @@ const normalizeRef = (value: string) => value.toLowerCase().replace(/[`*]/g, "")
 
 const knowledgeFiles = fs.readdirSync(knowledgeDir).filter((name) => name.endsWith(".md")).sort();
 
+const listFilesRecursive = (dir: string): string[] =>
+	fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+		const full = path.join(dir, entry.name);
+		return entry.isDirectory() ? listFilesRecursive(full) : [full];
+	});
+
 describe("knowledge files", () => {
 	it("each file is at most 50 KB", () => {
 		const big = knowledgeFiles
@@ -63,5 +69,19 @@ describe("knowledge files", () => {
 			}
 		}
 		expect(broken).toEqual([]);
+	});
+
+	it("placeholders do not depend on existing schemas of the package", () => {
+		// On an empty stand there are no neighbour schemas to copy a value from.
+		const found: string[] = [];
+		for (const file of listFilesRecursive(knowledgeDir)) {
+			const text = fs.readFileSync(file, "utf8");
+			text.split(/\r?\n/).forEach((line, index) => {
+				if (/соседн\S* схем/i.test(line)) {
+					found.push(`${path.relative(knowledgeDir, file)}:${index + 1}`);
+				}
+			});
+		}
+		expect(found).toEqual([]);
 	});
 });

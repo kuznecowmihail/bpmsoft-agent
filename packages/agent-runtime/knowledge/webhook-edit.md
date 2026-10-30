@@ -23,7 +23,7 @@
 {
   "Properties": {
     "CheckClientUrl": "False",
-    "CreatedInVersion": "<версия из properties.json соседних схем>",
+    "CreatedInVersion": "<версия платформы>",
     "IsBodyWebhookLoggingEnabled": "False",
     "IsWebhookLoggingEnabled": "False"
   }
@@ -37,7 +37,7 @@
       "ManagerName": "WebhookSchemaManager",
       "UId": "<UId схемы>",
       "A2": "<Имя>",
-      "A5": "<A5 как у соседних схем пакета>",
+      "A5": "<Id пакета>",
       "B1": [],
       "B2": [],
       "B3": [],

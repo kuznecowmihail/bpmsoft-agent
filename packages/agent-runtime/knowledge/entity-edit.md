@@ -35,7 +35,7 @@
     "AdministratedByColumns": "False",
     "AdministratedByOperations": "False",
     "AdministratedByRecords": "False",
-    "CreatedInVersion": "7.18.5.1500",
+    "CreatedInVersion": "<версия платформы>",
     "IsSSPAvailable": "False",
     "IsTrackChangesInDB": "False",
     "IsVirtual": "False"
@@ -48,23 +48,23 @@
 ```
 = MetaData.Schema.UId "714f45e1-061c-4506-a668-029ebc95d8e5"
 = MetaData.Schema.A2 "TestCounter2"
-= MetaData.Schema.A5 "<A5 как у соседних схем пакета>"
+= MetaData.Schema.A5 "<Id пакета>"
 = MetaData.Schema.B6 "<UId пакета>"
-= MetaData.Schema.B8 "7.18.5.1500"
+= MetaData.Schema.B8 "<версия платформы>"
 = MetaData.Schema.D8 "11ab4bcb-9b23-4b6d-9c86-520fae925d75"
 - MetaData.Schema.D1
-+ MetaData.Schema.D2 {"UId": "5ff80375-e1e8-4028-8b7a-b56a652b09c0", "A2": "Counter", "A3": "714f45e1-061c-4506-a668-029ebc95d8e5", "A4": "714f45e1-061c-4506-a668-029ebc95d8e5", "A5": "<A5 как у соседних схем пакета>", "S2": "6b6b74e2-820d-490e-a017-2b73d4ccf2b0"}
++ MetaData.Schema.D2 {"UId": "5ff80375-e1e8-4028-8b7a-b56a652b09c0", "A2": "Counter", "A3": "714f45e1-061c-4506-a668-029ebc95d8e5", "A4": "714f45e1-061c-4506-a668-029ebc95d8e5", "A5": "<Id пакета>", "S2": "6b6b74e2-820d-490e-a017-2b73d4ccf2b0"}
 ~ MetaData.Schema.D2 ["5ff80375-e1e8-4028-8b7a-b56a652b09c0"]
 + MetaData.Schema.EG1.UId "811177cb-af70-4769-a0df-d6d092653791"
 + MetaData.Schema.EG1.A2 "TestCounter2EventsProcess"
-+ MetaData.Schema.EG1.A5 "<A5 как у соседних схем пакета>"
++ MetaData.Schema.EG1.A5 "<Id пакета>"
 + MetaData.Schema.EG1.BK3 {
   "BL1": "BPMSoft.Core.Process.ProcessSchemaLaneSet",
   "UId": "ea8b546f-3739-4e7c-ae4f-15164168f78a",
   "A2": "LaneSet1_ea8b546f37394e7cae4f15164168f78a",
   "A3": "811177cb-af70-4769-a0df-d6d092653791",
   "A4": "811177cb-af70-4769-a0df-d6d092653791",
-  "A5": "<A5 как у соседних схем пакета>",
+  "A5": "<Id пакета>",
   "BL3": "0;5",
   "BL6": "LaneSet",
   "BL7": "11a47caf-a0d5-41fa-a274-a0b11f77447a",
@@ -78,7 +78,7 @@
       "A2": "Lane1_c003ece1ea2c499b9bee99713042064b",
       "A3": "811177cb-af70-4769-a0df-d6d092653791",
       "A4": "811177cb-af70-4769-a0df-d6d092653791",
-      "A5": "<A5 как у соседних схем пакета>",
+      "A5": "<Id пакета>",
       "IL2": "ea8b546f-3739-4e7c-ae4f-15164168f78a",
       "BL6": "Lane",
       "BL7": "abcd74b9-5912-414b-82ac-f1aa4dcd554e",
@@ -103,7 +103,7 @@
   "A2": "EventSubProcess1_9281a9d2612b40b4b7c0beb874757456",
   "A3": "811177cb-af70-4769-a0df-d6d092653791",
   "A4": "811177cb-af70-4769-a0df-d6d092653791",
-  "A5": "<A5 как у соседних схем пакета>",
+  "A5": "<Id пакета>",
   "IL2": "c003ece1-ea2c-499b-9bee-99713042064b",
   "BL3": "58;68",
   "BL6": "EventSubProcess",
@@ -121,7 +121,7 @@
       "A2": "StartMessage1_5c425c2aecf24db19c63065bd8e6a82a",
       "A3": "811177cb-af70-4769-a0df-d6d092653791",
       "A4": "811177cb-af70-4769-a0df-d6d092653791",
-      "A5": "<A5 как у соседних схем пакета>",
+      "A5": "<Id пакета>",
       "IL2": "9281a9d2-612b-40b4-b7c0-beb874757456",
       "BL3": "66;121",
       "BL6": "Event",
@@ -139,7 +139,7 @@
       "A2": "ScriptTask1_d7e11fc1d899428287de80dd364d24b1",
       "A3": "811177cb-af70-4769-a0df-d6d092653791",
       "A4": "811177cb-af70-4769-a0df-d6d092653791",
-      "A5": "<A5 как у соседних схем пакета>",
+      "A5": "<Id пакета>",
       "IL2": "9281a9d2-612b-40b4-b7c0-beb874757456",
       "BL3": "193;107",
       "BL6": "Task",
@@ -161,7 +161,7 @@
   "A2": "SequenceFlow1_fd57019532c14b5eab1b70f900cd9c12",
   "A3": "811177cb-af70-4769-a0df-d6d092653791",
   "A4": "811177cb-af70-4769-a0df-d6d092653791",
-  "A5": "<A5 как у соседних схем пакета>",
+  "A5": "<Id пакета>",
   "BL6": "SequenceFlow",
   "BL7": "0d8351f6-c2f4-4737-bdd9-6fbfe0837fec",
   "BL8": "abcea28a-e9d9-410b-8516-4f27985c814e",
@@ -186,7 +186,7 @@
 | `TestCounter2` | имя схемы (в `A2`, в `EG1.A2` как `<Имя>EventsProcess`, в `D20.A2` как `<Имя>Events`, в `CJ1`, в SQL скрипта) | своё имя |
 | `11ab4bcb-...` | UId родителя (`BaseLookup`) — в `Parent.UId` и `D8` | `RealUId` своего родителя (см. `crm-db.md`, как узнать UId залоченных схем) |
 | `<UId пакета>` | UId пакета (`B6`) | UId своего пакета из `Pkg/<Пакет>/descriptor.json` |
-| `<A5 как у соседних схем пакета>` | ревизия `A5` | можно оставить или взять `A5` из соседних схем пакета |
+| `<Id пакета>` | `A5` | `SysPackage.Id` своего пакета (`metadata-editing.md`, поле A5) |
 | `5ff80375-...`, `Counter`, `S2` | колонка `D2` | свои UId, имя, тип (`S2` из таблицы в `entity.md`) |
 | `811177cb-...` | UId `EG1` — он же `A3`/`A4` всех элементов внутри `EG1` | новый GUID |
 | `ea8b546f-...`, `c003ece1-...` | UId `LaneSet` и `Lane`; у Lane `IL2` и `CD4` = UId `LaneSet` | новые GUID |
@@ -195,7 +195,7 @@
 | `CJ1` + флаг `D20.FA11` | событие «После сохранения записи» | для другого события — `CJ1` и номер флага по таблице в `entity-schema.md` |
 | `CH1` | C#-код скрипта | свой код |
 
-Версия `B8` в `metadata.json` и `CreatedInVersion` в `properties.json` — бери как у соседних схем пакета: ✅ 06.10.2026 объект `TestDeliveryType` с `1.9.0.17103` (версия текущего Designer стенда) загрузился так же, как прежние с `7.18.5.1500`.
+Версия `B8` в `metadata.json` и `CreatedInVersion` в `properties.json` — `<версия платформы>` (`metadata-editing.md`, поле `B8`): ✅ 06.10.2026 объект `TestDeliveryType` с `1.9.0.17103` (версия текущего Designer стенда) загрузился так же, как прежние с `7.18.5.1500`.
 
 **Не менять** (платформенные константы): 6 строк `= ...BK4.[...].CK2.[...].BL7 "53818048-..."` (заглушки стандартных событий), UId заглушек в закрывающем списке `~ EG1.BK4` (набор по родителю, `entity-schema.md`), все значения `BL7` у элементов, `BL1`, `BL9`.
 
@@ -237,10 +237,10 @@
 4. `Schemas/<Имя>/metadata.json` — только дельта этого пакета. В отличие от новой схемы, у override НЕТ `A2` и `D8` (подтверждено на реальном override `Contact`):
 ```
 = MetaData.Schema.UId "08197889-c5a4-4639-93a4-76bebd7d3be9"
-= MetaData.Schema.A5 "<A5 как у соседних схем пакета>"
+= MetaData.Schema.A5 "<Id пакета>"
 = MetaData.Schema.B6 "<UId пакета>"
 = MetaData.Schema.B7 true
-+ MetaData.Schema.D2 {"UId": "406c1b9f-43c1-4d95-b984-4da82334ded7", "A2": "TestContact", "A3": "08197889-c5a4-4639-93a4-76bebd7d3be9", "A4": "08197889-c5a4-4639-93a4-76bebd7d3be9", "A5": "<A5 как у соседних схем пакета>", "S2": "b295071f-7ea9-4e62-8d1a-919bf3732ff2", "S4": "16be3651-8fe2-4159-8dd0-a803d4683dd3", "E6": true, "E17": "TestContactId", "E18": "TestContactName"}
++ MetaData.Schema.D2 {"UId": "406c1b9f-43c1-4d95-b984-4da82334ded7", "A2": "TestContact", "A3": "08197889-c5a4-4639-93a4-76bebd7d3be9", "A4": "08197889-c5a4-4639-93a4-76bebd7d3be9", "A5": "<Id пакета>", "S2": "b295071f-7ea9-4e62-8d1a-919bf3732ff2", "S4": "16be3651-8fe2-4159-8dd0-a803d4683dd3", "E6": true, "E17": "TestContactId", "E18": "TestContactName"}
 ~ MetaData.Schema.D2 ["406c1b9f-43c1-4d95-b984-4da82334ded7"]
 ```
 `= MetaData.Schema.B7 true` — признак замещения (Designer пишет его во все замещения объектов). В исходном ручном `TimeZone` его не было и колонка добавилась, но для клиентских схем без него база не подключается — пиши всегда.

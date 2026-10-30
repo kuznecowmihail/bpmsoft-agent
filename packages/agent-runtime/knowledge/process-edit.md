@@ -41,7 +41,7 @@
 ```json
 {
   "Properties": {
-    "CreatedInVersion": "7.18.5.1500",
+    "CreatedInVersion": "<версия платформы>",
     "IsActiveVersion": "True",
     "IsCreatedInSvg": "True",
     "IsInterpretable": "True",
@@ -65,7 +65,7 @@
       "B2": [],
       "B3": [],
       "B6": "<UId пакета>",
-      "B8": "7.18.5.1500",
+      "B8": "<версия платформы>",
       "FJ1": [],
       "IJ1": true,
       "BK8": "bb4d6607-026b-4b27-b640-8f5c77c1e89d",

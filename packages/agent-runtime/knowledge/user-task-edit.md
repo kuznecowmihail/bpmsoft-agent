@@ -37,12 +37,12 @@
 ```json
 {
   "Properties": {
-    "CreatedInVersion": "1.9.0.17103",
+    "CreatedInVersion": "<версия платформы>",
     "IsInteractive": "True"
   }
 }
 ```
-`CreatedInVersion` возьми из соседней схемы пакета; `IsInteractive` — как у образца (в `metadata.json` то же свойство — `FK17`, `metadata-codes.md`).
+`CreatedInVersion` — `<версия платформы>` (`metadata-editing.md`, поле `B8`); `IsInteractive` — как у образца (в `metadata.json` то же свойство — `FK17`, `metadata-codes.md`).
 
 ### `metadata.json` (плоский JSON)
 ```json
@@ -57,7 +57,7 @@
       "B2": [],
       "B3": [],
       "B6": "<UId пакета>",
-      "B8": "1.9.0.17103",
+      "B8": "<версия платформы>",
       "FJ1": [
         {
           "BL1": "BPMSoft.Core.Process.ProcessSchemaParameter",
@@ -97,7 +97,7 @@
   }
 }
 ```
-- `UId` = UId из `descriptor.json`; `A5` — новый GUID; `B6` — UId пакета (как у соседних схем пакета); `B8` — версия из `properties.json`.
+- `UId` = UId из `descriptor.json`; `A5` — `<Id пакета>` (`metadata-editing.md`, поле A5); `B6` — UId пакета из `Pkg/<Пакет>/descriptor.json`; `B8` — версия из `properties.json`.
 - `FJ1` — параметры действия: у каждого новый `UId`, `A3` = `A4` = UId действия.
 - `L1` — тип: текст `ddb3a1ee-07e8-4d62-b7a9-d0e618b00fbd`, целое `6b6b74e2-820d-490e-a017-2b73d4ccf2b0` (остальные типы — `processes.md`, `metadata-codes.md`).
 - `L12` — направление: `0` вход (Designer рисует →), `1` выход (←). Без `L12` параметр и вход, и выход — так у старых действий проекта.
