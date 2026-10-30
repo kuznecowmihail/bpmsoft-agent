@@ -217,7 +217,7 @@
 
 - `BL7` = `J6` = `db6abed1-0c5f-455b-8053-2665378cdb71`; `A3`/`A4` параметров — тот же UId.
 - `EntitySchemaId` — `GS2` = UId объекта (в `L8` и в `GT1` маппинга).
-- `RecordAddMode` — `"0"` = добавить одну запись. (Режим по выборке с источником значения `6` — колонка «Результат выборки» — встречается в проекте, записью не проверен.)
+- `RecordAddMode` — `"0"` = добавить одну запись, `"1"` = «Добавить результат выборки» (✅ подтверждено записью в CRM, 30.10.2026: Designer, выборка из двух записей другого объекта — создались две записи). В режиме `"1"` ещё два параметра: `FilterEntitySchemaId` — `GS2` = UId объекта выборки; `DataSourceFilters` — `GS2` = JSON фильтра в том же виде, что у «Читать данные» (`className`, `serializedFilterEditData`, `dataSourceFilters`; например `comparisonType` 9 — «начинается на»). Значение колонки из выборки — элемент `RecordDefValues` с `Source` `6`, `MetaPath` = UId колонки объекта выборки, `Value`/`DisplayValue` пустые, `value`/`displayValue` = `{"isLczValue": true}`, `DataValueTypeUId` — тип колонки; в Designer — «Колонка из выборки», показ `[#Результат выборки.<Колонка>#]`.
 - `RecordId` — выход, Id созданной записи: `[#[IsOwnerSchema:false].[IsSchema:false].[Element:{<UId элемента>}].[Parameter:{<UId параметра RecordId>}]#]`.
 - `RecordDefValues` — `GS2` = JSON-строка `{"$type": "BPMSoft.Core.Process.LocalizableParameterValuesList, BPMSoft.Core", "$values": [...]}`, по элементу на колонку: `ItemUId` (новый GUID), `columnMetaPath.value` = UId колонки, `schemaUId.value` = UId объекта, `value` / `displayValue`, `parameterValue.value` = JSON-строка `ProcessSchemaParameterValue` (`Source`, `DataValueTypeUId` = тип колонки, `ReferenceSchemaUId` = объект справочника или нули).
 
