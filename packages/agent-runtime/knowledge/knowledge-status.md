@@ -19,7 +19,7 @@
 | Добавить индекс (`D6`): уникальный, составной, сортировка «По убыванию» (`G2`) | Entity | ✅ подтверждено (`TestColumns`), см. `entity-columns-edit.md` |
 | Изменить колонку (подпись, тип `S2`, обязательность `E2` строками журнала) и удалить колонку | Entity | ✅ подтверждено (`TestColumns`), см. `entity-columns-edit.md` |
 | Новая карточка (Page) с нуля: вёрстка (`insert`), строки, атрибуты с `dependencies`, методы с `callParent`, `rules`, валидация, кнопка | ClientUnit | ✅ подтверждено (`TestColumnsPage`), см. `client-pages-edit.md` |
-| Бизнес-правила карточки: `rules` BINDPARAMETER, FILTRATION, POPULATE_ATTRIBUTE; `businessRules` BINDPARAMETER; `businessRulesMultiplyActions` (VISIBLE + REQUIRED, вложенная группа ИЛИ); отключение правила родителя через `businessRules` с `removed: true` | ClientUnit | ✅ подтверждено (27.10.2026, тестовый наследник карточки), см. `client-rules-edit.md` |
+| Бизнес-правила карточки: `rules` BINDPARAMETER, FILTRATION, POPULATE_ATTRIBUTE; `businessRules` BINDPARAMETER; `businessRulesMultiplyActions` (VISIBLE + REQUIRED, вложенная группа ИЛИ); отключение правила родителя через `businessRules` с `removed: true`, через `rules` с `enabled: false` и правила `businessRulesMultiplyActions` тем же Id с `enabled: false`; правило без `metaPath` | ClientUnit | ✅ подтверждено (27.10.2026 и 30.10.2026, тестовый наследник карточки), см. `client-rules-edit.md` |
 | Замещение карточки: `merge`/`remove` элементов родителя, порядок вкладок через `order`, частичное переопределение атрибута, `getActions`, совмещённый режим | ClientUnit | ✅ подтверждено (`ProductPageV2`), см. `client-pages-edit.md` |
 | Новая деталь-реестр, подключение к карточке (`details` + `diff`, заголовок `<Ключ>DetailCaptionOnPage`), регистрация `SysDetail`, правка боевого замещения (CRLF) | ClientUnit / Data | ✅ подтверждено (`TestColumnsDetail` на `ContactPageV2`), см. `client-pages-edit.md`, `registration-edit.md` |
 | Замещение детали: `initDefaultCaption` с `callParent`, кнопка на панели, `remove` колонки реестра | ClientUnit | ✅ подтверждено (`ContactAddressDetailV2`), см. `client-pages-edit.md` |
@@ -34,7 +34,7 @@
 | Патч существующего класса (`Ext override`, отдельная схема `Module`), подключение через зависимость `define` | ClientUnit | ✅ подтверждено (`TestModuleOverride`), см. `client-schemas-edit.md` |
 | Стили схемы (`.less` + `css!<Схема>`), отдельная схема стилей, картинки (`HD8` + `Images.<GUID>.Image`, `imageConfig`) | ClientUnit | ✅ подтверждено (`TestColumnsPage`, `TestStylesCSS`), см. `client-schemas-edit.md` |
 | Процесс с нуля (Старт → Задание-сценарий → Завершение) | Process | ✅ `process-edit.md` |
-| Настройки процесса, параметры процесса, элементы «Читать данные» (в т.ч. агрегация), «Формула», «Добавить данные», «Изменить данные», «Удалить данные» | Process | ✅ `process-edit.md` (настройки, параметры), `process-data-edit.md` (элементы) |
+| Настройки процесса, параметры процесса, элементы «Читать данные» (в т.ч. агрегация), «Формула», «Добавить данные» (в том числе по выборке, 30.10.2026), «Изменить данные», «Удалить данные» | Process | ✅ `process-edit.md` (настройки, параметры), `process-data-edit.md` (элементы) |
 | Шлюзы (исключающий, параллельный, «ИЛИ»), условные потоки и потоки по умолчанию | Process | ✅ `process-flow-edit.md` |
 | Методы процесса (`BK32`), `using` (`B3`), `Set`/`Get` между заданиями | Process | ✅ `process-flow-edit.md` |
 | Стартовый сигнал по объекту (добавлена / изменена колонка + фильтр) | Process | ✅ `process-flow-edit.md` |
@@ -48,7 +48,7 @@
 | Элемент «Отправить email» (произвольное письмо) | Process | ✅ `process-tasks-edit.md` (структура и Designer; доставка не проверена — на стенде нет почтового ящика) |
 | Сквозной процесс по событию объекта: сигнал с фильтром по пути, «Читать данные» и «Изменить данные» с фильтром по параметру, формулы с датами (задача 3 — возраст контакта при создании лида) | Process | ✅ `process-tasks-edit.md` |
 | Генерирующий сигнал и старт по произвольному сигналу (формат Designer, запуск проверен) | Process | ✅ `process-flow-edit.md` |
-| Элемент «Автогенерируемая страница» (поле, кнопки, чтение введённого значения и нажатой кнопки) | Process | ✅ `process-pages-edit.md` |
+| Элемент «Автогенерируемая страница» (поле, кнопки, чтение введённого значения и нажатой кнопки; типы полей строка, логическое, целое, дробное, дата и время — 30.10.2026) | Process | ✅ `process-pages-edit.md` |
 | Подпроцесс по коллекции записей (multi-instance) и «Читать данные» в режиме коллекции | Process | ✅ `process-flow-edit.md`, «Читать данные» в режиме коллекции — `process-data-edit.md` |
 | Макросы в значениях параметров (текущие дата, время, пользователь, системная настройка, запись справочника) | Process | ✅ `process-edit.md` |
 | Элементы «Выполнить задачу», «Открыть страницу редактирования» (с предзаполнением полей), «Вопрос пользователю» | Process | ✅ `process-activity-edit.md` (с ветвлением по ответу и чтением выбранного ответа) |
@@ -114,7 +114,7 @@
 | Коллекции в задании-сценарии: результат «Читать данные» в режиме коллекции и параметр-коллекция | Process | ✅ подтверждено (22.10.2026), `process-flow-edit.md` |
 | Асинхронное действие процесса: процесс ждёт, пока элемент завершат | ProcessUserTask | ✅ подтверждено (21.10.2026), `user-task-edit.md` |
 | Удалить действие процесса целиком | ProcessUserTask | ✅ подтверждено (05.10.2026), `user-task-edit.md` |
-| Добавить метод или параметр в существующий веб-сервис | Service | ✅ подтверждено (23.10.2026), `web-service-edit.md` |
+| Добавить метод или параметр в существующий веб-сервис; вызов нового метода из процесса | Service | ✅ подтверждено (23.10.2026 и 30.10.2026), `web-service-edit.md` |
 | Удалить вебхук | Webhook | ✅ подтверждено (25.10.2026), `webhook-edit.md` |
 | Типы параметра ответа веб-сервиса в Designer («Обработка ответа»): `IU2` = `Float`, `DateTime`, `Guid`, `Date`, `Time`; служебные поля параметра ответа | Service | ✅ подтверждено записью в CRM (30.10.2026), `web-service.md`, «Параметр» |
 | Удалить набор данных целиком | Data | ✅ подтверждено (05.10.2026), `data-edit.md` |
