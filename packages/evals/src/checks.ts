@@ -2,6 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 import type { CrmDbTool, CrmRequestRecord, CrmTool, LintReport } from "@bpmsoft-agent/agent-runtime";
 import type { EvalCheck } from "./caseFile";
+import { parseChoices } from "./answers";
 import { sha256 } from "./evalPackage";
 import { EVAL_GIT_BASE, gitOut } from "./evalGit";
 
@@ -306,6 +307,17 @@ async function evaluate(check: EvalCheck, ctx: CheckContext): Promise<{ passed: 
 			return bad
 				? { passed: false, detail: truncate(`вызов с ${check.pattern}: ${JSON.stringify(bad.input)}`) }
 				: { passed: true, detail: `вызовов: ${calls.length}, без ${check.pattern}` };
+		}
+		case "questions_exclude": {
+			const pattern = new RegExp(check.pattern, "i");
+			const questions = (ctx.timeline ?? [])
+				.filter((event) => event.kind === "text")
+				.flatMap((event) => parseChoices(event.text ?? "").map((question) => ({ turn: event.turn, text: question.text })));
+			const bad = questions.find((question) => pattern.test(question.text));
+			if (bad) {
+				return { passed: false, detail: truncate(`спросил в ходе ${bad.turn}: «${bad.text}»`) };
+			}
+			return { passed: true, detail: truncate(questions.length > 0 ? `вопросы: ${questions.map((q) => q.text).join("; ")}` : "вопросов не было") };
 		}
 		case "mentioned_before_write":
 			return mentionedBeforeWrite(ctx, check.pattern);

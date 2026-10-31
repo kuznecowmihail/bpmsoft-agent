@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import type { EvalGitSetup } from "./evalGit";
+import type { EvalJiraSetup } from "./evalJira";
 
 /** Package the runner creates and resets when local.json has no "package". */
 export const DEFAULT_PACKAGE = "EvalPackage";
@@ -50,6 +51,8 @@ export type EvalCheck =
 	| { type: "tool_not_called"; name: string }
 	/** Every call of the tool has input without a match of `pattern` (regex, case-insensitive); fails when the tool was not called. */
 	| { type: "tool_input_excludes"; name: string; pattern: string }
+	/** No question in the agent's <choices> blocks matches `pattern` (regex, case-insensitive): the agent does not ask what the task already says. */
+	| { type: "questions_exclude"; pattern: string }
 	| { type: "mentioned_before_write"; pattern: string }
 	| { type: "no_unasked_destructive_sql"; pattern?: string }
 	/** Branch of the case's bare remote matching `branch` (regex); `file` is a substring of a changed path, `pushOption` a regex over the last push options. */
@@ -78,6 +81,8 @@ export interface EvalCase {
 	fixtures?: string[];
 	/** Git repository in the eval package for the case (see evalGit.ts); only such cases get the git tools. */
 	git?: EvalGitSetup;
+	/** Fake Jira of the case (see evalJira.ts); only such cases get the Jira tools. */
+	jira?: EvalJiraSetup;
 }
 
 /** Reads a JSON file, dropping a leading BOM. */

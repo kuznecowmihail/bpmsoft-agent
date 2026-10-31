@@ -536,3 +536,36 @@ describe("mentioned_before_write", () => {
 		expect(results[0].passed).toBe(true);
 	});
 });
+
+describe("questions_exclude", () => {
+	it("passes when no question in the choices matches the pattern", async () => {
+		const results = await runChecks(
+			[{ type: "questions_exclude", pattern: "пакет" }],
+			baseContext({
+				timeline: [{ turn: 1, kind: "text", text: "<choices>\n? Подтверждаете план?\n* Делай\n- Не делай\n</choices>" }],
+			}),
+		);
+		expect(results[0].passed).toBe(true);
+	});
+
+	it("fails and names the question when a question matches the pattern", async () => {
+		const results = await runChecks(
+			[{ type: "questions_exclude", pattern: "пакет" }],
+			baseContext({
+				timeline: [{ turn: 2, kind: "text", text: "<choices>\n? В каком пакете делать?\n* Пакет A\n</choices>" }],
+			}),
+		);
+		expect(results[0].passed).toBe(false);
+		expect(results[0].detail).toContain("В каком пакете делать?");
+	});
+
+	it("ignores text outside the choices blocks", async () => {
+		const results = await runChecks(
+			[{ type: "questions_exclude", pattern: "пакет" }],
+			baseContext({
+				timeline: [{ turn: 1, kind: "text", text: "Какой пакет использовать?" }],
+			}),
+		);
+		expect(results[0].passed).toBe(true);
+	});
+});
