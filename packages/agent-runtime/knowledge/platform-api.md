@@ -36,28 +36,28 @@ grep -o 'name="F:BPMSoft.Common.OrderDirectionStrict\.[^"]*"' [app]/BPMSoft.Comm
 | Тип | `using` | Подтверждение |
 |---|---|---|
 | `UserConnection` | `BPMSoft.Core` | ✅ |
-| `Entity`, `EntityBeforeEventArgs`, `EntityAfterEventArgs`, `EntitySchemaManager` | `BPMSoft.Core.Entities` | ✅ слушатели 05–07.10.2026 |
-| `EntitySchemaQuery`, `EntitySchemaQueryFilterCollection`, `FilterComparisonType` | `BPMSoft.Core.Entities` | ✅ `TestTicketStatsService` 07.10.2026 |
+| `Entity`, `EntityBeforeEventArgs`, `EntityAfterEventArgs`, `EntitySchemaManager` | `BPMSoft.Core.Entities` | ✅ слушатели |
+| `EntitySchemaQuery`, `EntitySchemaQueryFilterCollection`, `FilterComparisonType` | `BPMSoft.Core.Entities` | ✅ |
 | `EntitySchema` | `BPMSoft.Core.Entities` | XML |
-| `EntityColumnValue` (элементы `ModifiedColumnValues`) | `BPMSoft.Core.Entities` | ✅ журнал приоритета 07.10.2026 |
+| `EntityColumnValue` (элементы `ModifiedColumnValues`) | `BPMSoft.Core.Entities` | ✅ |
 | `BaseEntityEventListener`, атрибут `[EntityEventListener]` | `BPMSoft.Core.Entities.Events` | ✅ |
-| `StoringObjectState` | `BPMSoft.Core.Configuration` | ✅ `TestTicketEventListener`; в XML тип не описан |
+| `StoringObjectState` | `BPMSoft.Core.Configuration` | ✅; в XML тип не описан |
 | `SysUserInfo` (тип `UserConnection.CurrentUser`) | `BPMSoft.Core.Configuration` | XML; при `var` `using` не нужен |
 | `Select`, `Update`, `Column` | `BPMSoft.Core.DB` | ✅ |
-| `Insert` | `BPMSoft.Core.DB` | ✅ журнал приоритета 07.10.2026 |
-| `DBExecutor`, `Delete`, `Func` | `BPMSoft.Core.DB` | ✅ 21.10.2026 |
-| `IDataReader` | `System.Data` | ✅ 21.10.2026 |
-| `GetColumnValue<T>` (расширение `IDataReader`, класс `DBUtilities`) | `BPMSoft.Common` | ✅ 21.10.2026 |
-| `GetIsFeatureEnabled` (расширение `UserConnection`, класс `FeatureUtilities`) | `BPMSoft.Configuration` — в схемах исходного кода уже есть по `namespace` | ✅ 21.10.2026 |
+| `Insert` | `BPMSoft.Core.DB` | ✅ |
+| `DBExecutor`, `Delete`, `Func` | `BPMSoft.Core.DB` | ✅ |
+| `IDataReader` | `System.Data` | ✅ |
+| `GetColumnValue<T>` (расширение `IDataReader`, класс `DBUtilities`) | `BPMSoft.Common` | ✅ |
+| `GetIsFeatureEnabled` (расширение `UserConnection`, класс `FeatureUtilities`) | `BPMSoft.Configuration` — в схемах исходного кода уже есть по `namespace` | ✅ |
 | `LocalizableString` | `BPMSoft.Common` (не `BPMSoft.Core`: иначе CS0246) | ✅ |
 | `OrderDirectionStrict` | `BPMSoft.Common` | XML |
-| `AggregationTypeStrict` (для `EntitySchemaQuery.CreateAggregationFunction`) | `BPMSoft.Common` | ✅ 09.10.2026 |
-| `LogicalOperationStrict` | `BPMSoft.Common` | ✅ `TestTicketStatsService` |
+| `AggregationTypeStrict` (для `EntitySchemaQuery.CreateAggregationFunction`) | `BPMSoft.Common` | ✅ |
+| `LogicalOperationStrict` | `BPMSoft.Common` | ✅ |
 | `BaseService` (REST-сервис) | `BPMSoft.Web.Common` | ✅; в XML есть одноимённый класс в `BPMSoft.Nui.ServiceModel.WebService` — в проекте используется `BPMSoft.Web.Common` |
 | `ClassFactory` | `BPMSoft.Core.Factories` | ✅ рецепт `ReBind` |
 | `ILog`, `LogManager` | `global::Common.Logging` | ✅ |
-| `MsgChannelManager`, `SimpleMessage` | `BPMSoft.Messaging.Common` | ✅ `TestTicketEscalationNotifier` 07.10.2026; в XML нет |
-| `JsonConvert` | `Newtonsoft.Json` | ✅ `TestTicketEscalationNotifier` |
+| `MsgChannelManager`, `SimpleMessage` | `BPMSoft.Messaging.Common` | ✅; в XML нет |
+| `JsonConvert` | `Newtonsoft.Json` | ✅ |
 
 ## Перечисления
 - `StoringObjectState` (свойство `entity.StoringState`): `NotChanged`, `New`, `Changed`, `Deleted`.
@@ -67,12 +67,12 @@ grep -o 'name="F:BPMSoft.Common.OrderDirectionStrict\.[^"]*"' [app]/BPMSoft.Comm
 ## Работа с данными
 Запись через `Entity`, ESQ, запросы `Select`/`Insert`/`Update`/`Delete`, транзакции — в `server-data-api.md`. Права и обход прав в серверном коде — `rights.md`, «Права в серверном коде». Системная настройка в коде, `ClassFactory` и `ReBind`, слушатель событий приложения — `source-code-edit.md`. Фоновые задачи и задания по расписанию — `server-background-edit.md`.
 
-## ✅ Системные настройки, функциональности, соединения (проверено записью в CRM, 22.10.2026)
-- ✅ Системная настройка (21.10.2026): `BPMSoft.Core.Configuration.SysSettings.TryGetValue(uc, "<Код>", out object value)` → `bool`; `BPMSoft.Core.Configuration.SysSettings.GetValue(uc, "<Код>", <умолчание>)` для несуществующей настройки возвращает умолчание. Значение настройки типа Float приходит десятичным (`10,00`). Внутри `namespace BPMSoft.Configuration` пиши класс с полным именем: короткое `SysSettings` указывает на сгенерированный класс объекта `SysSettings`, и компиляция падает с `CS0117: 'SysSettings' does not contain a definition for 'GetValue'` даже при `using BPMSoft.Core.Configuration;`. Код платформы делает так же: полное имя или псевдоним `using CoreSysSettings = BPMSoft.Core.Configuration.SysSettings;`.
+## ✅ Системные настройки, функциональности, соединения
+- ✅ Системная настройка: `BPMSoft.Core.Configuration.SysSettings.TryGetValue(uc, "<Код>", out object value)` → `bool`; `BPMSoft.Core.Configuration.SysSettings.GetValue(uc, "<Код>", <умолчание>)` для несуществующей настройки возвращает умолчание. Значение настройки типа Float приходит десятичным (`10,00`). Внутри `namespace BPMSoft.Configuration` пиши класс с полным именем: короткое `SysSettings` указывает на сгенерированный класс объекта `SysSettings`, и компиляция падает с `CS0117: 'SysSettings' does not contain a definition for 'GetValue'` даже при `using BPMSoft.Core.Configuration;`. Код платформы делает так же: полное имя или псевдоним `using CoreSysSettings = BPMSoft.Core.Configuration.SysSettings;`.
 - `SysSettings.SetValue(UserConnection, "<Код>", <значение>)` пишет **персональное** значение текущего пользователя (строка `SysSettingsValue` на пользователя), даже у администратора и у настройки с `IsPersonal: false`. Общее значение («Все сотрудники») пишет только `SysSettings.SetDefValue(UserConnection, "<Код>", <значение>)`; персональные значения пользователей при этом остаются и перекрывают его. Класс — `global::BPMSoft.Core.Configuration.SysSettings` (см. CS0117 выше).
-- ✅ Псевдоним `using SysSettings = BPMSoft.Core.Configuration.SysSettings;` внутри `namespace BPMSoft.Configuration { … }` не компилируется: CS0576 «Namespace 'BPMSoft.Configuration' contains a definition conflicting with alias 'SysSettings'» (06.10.2026). Пиши полное имя `global::BPMSoft.Core.Configuration.SysSettings`.
+- ✅ Псевдоним `using SysSettings = BPMSoft.Core.Configuration.SysSettings;` внутри `namespace BPMSoft.Configuration { … }` не компилируется: CS0576 «Namespace 'BPMSoft.Configuration' contains a definition conflicting with alias 'SysSettings'». Пиши полное имя `global::BPMSoft.Core.Configuration.SysSettings`.
 - `SysSettings.TryGetValue(UserConnection, "<Код>", out object value)` — параметр `out` (не `ref`: с `ref` ошибка компиляции «Argument 3 must be passed with the 'out' keyword»); для несуществующего кода — `false` и `null`.
-- ✅ Функциональность (21.10.2026): `UserConnection.GetIsFeatureEnabled("<Код>")` для несуществующего кода возвращает `false` без исключения.
+- ✅ Функциональность: `UserConnection.GetIsFeatureEnabled("<Код>")` для несуществующего кода возвращает `false` без исключения.
 - Функциональности (`using BPMSoft.Configuration;`, методы-расширения `UserConnection` из `FeatureUtilities`): `SafeSetFeatureState("<Код>", 1)` создаёт функциональность, если её нет, и ставит состояние **только текущему пользователю**; создание требует операции `CanManageLookups` — у обычного пользователя `SecurityException`. `SetFeatureState("<Код>", <состояние>, forAllUsers: true)` меняет только уже существующие строки `AdminUnitFeatureState`, новых не создаёт. `GetIsFeatureEnabled` читает состояние через роли пользователя (`SysAdminUnitInRole`).
 - `UserConnection.GetLocalizableString("<Схема>", "<Ключ>")` (расширение из `NotificationProviderHelper`, `BPMSoft.Configuration`) — то же, что `new LocalizableString(UserConnection.Workspace.ResourceStorage, "<Схема>", "LocalizableStrings.<Ключ>.Value")`; язык — культура пользователя.
 
@@ -83,22 +83,22 @@ grep -o 'name="F:BPMSoft.Common.OrderDirectionStrict\.[^"]*"' [app]/BPMSoft.Comm
 - ⚠️ Кеш функциональностей: `GetIsFeatureEnabled` после `SetFeatureState`/`SafeSetFeatureState` возвращает старое значение (в той же и в новых сессиях) — очистка кеша в платформенном коде не попадает в группу, из которой читается состояние. Новое состояние видно после перезапуска приложения. Не включай функциональность кодом с расчётом сразу на неё опереться.
 - Клиентский кеш системных настроек (`IsCacheable`) — `data-edit.md`, «`IsPersonal` и `IsCacheable`».
 - Клиентская схема после обновления может прийти из кеша браузера — `browser-check.md`, «Кэш после обновления».
-- ✅ Свой кеш (подтверждено записью в CRM, 24.10.2026; тип — `ICacheStore`, `using BPMSoft.Core.Store;`): `UserConnection.ApplicationCache["<ключ>"] = <значение>` — общий для всех; `UserConnection.WorkspaceCache` — отдельное пространство ключей; `UserConnection.SessionCache` — только текущая сессия (в новой сессии `null`). Чтение — тот же индексатор, нет значения — `null`; удаление — `.Remove("<ключ>")`. Проверены `string`, `int`, `Guid`.
+- ✅ Свой кеш (подтверждено записью в CRM; тип — `ICacheStore`, `using BPMSoft.Core.Store;`): `UserConnection.ApplicationCache["<ключ>"] = <значение>` — общий для всех; `UserConnection.WorkspaceCache` — отдельное пространство ключей; `UserConnection.SessionCache` — только текущая сессия (в новой сессии `null`). Чтение — тот же индексатор, нет значения — `null`; удаление — `.Remove("<ключ>")`. Проверены `string`, `int`, `Guid`.
 - ✅ На стенде с Redis (строка `redis` в `[app]/ConnectionStrings.config`) кеш приложения и рабочего пространства переживает перезапуск приложения — свои ключи сбрасывай сам.
-- ⚠️ Объект своего класса без `[Serializable]` в кеше (24.10.2026): запрос висит около 2 минут (повторы записи), в `[app]/Logs/<дата>/Redis.log` — `SerializationException: Type '<класс>' … is not marked as serializable`, значение не сохраняется. Клади простые типы или строку JSON.
+- ⚠️ Объект своего класса без `[Serializable]` в кеше: запрос висит около 2 минут (повторы записи), в `[app]/Logs/<дата>/Redis.log` — `SerializationException: Type '<класс>' … is not marked as serializable`, значение не сохраняется. Клади простые типы или строку JSON.
 
 ## Дата и время
-- ✅ Текущее время пользователя (подтверждено записью в CRM, 24.10.2026, пользователь с поясом UTC+5): `UserConnection.CurrentUser.GetCurrentDateTime()` — время в поясе пользователя, `Kind = Unspecified`; `CurrentUser.GetTimeZoneOffset()` — `05:00:00`; `CurrentUser.TimeZone.Id` на стенде .NET 8 — идентификатор IANA (`<пояс IANA>`), хотя в профиле хранится `<пояс Windows>`.
-- ✅ В БД дата и время хранятся в UTC. `Entity.SetColumnValue` переводит в UTC и `DateTime.UtcNow` (`Kind = Utc`), и `GetCurrentDateTime()` (`Kind = Unspecified` — считается временем пользователя): обе записи легли одинаковым UTC (24.10.2026). Не пиши `DateTime.Now` — это время сервера. ESQ читает дату уже в поясе пользователя.
-- ✅ `Update` (и другие запросы `BPMSoft.Core.DB`) пишет дату как есть, без перевода (24.10.2026, пользователь UTC+5): `GetCurrentDateTime()` легло в БД на 5 часов позже настоящего UTC, `DateTime.UtcNow` — верно. В запросах передавай дату только в UTC.
+- ✅ Текущее время пользователя (подтверждено записью в CRM, пользователь с поясом UTC+5): `UserConnection.CurrentUser.GetCurrentDateTime()` — время в поясе пользователя, `Kind = Unspecified`; `CurrentUser.GetTimeZoneOffset()` — `05:00:00`; `CurrentUser.TimeZone.Id` на стенде .NET 8 — идентификатор IANA (`<пояс IANA>`), хотя в профиле хранится `<пояс Windows>`.
+- ✅ В БД дата и время хранятся в UTC. `Entity.SetColumnValue` переводит в UTC и `DateTime.UtcNow` (`Kind = Utc`), и `GetCurrentDateTime()` (`Kind = Unspecified` — считается временем пользователя): обе записи легли одинаковым UTC. Не пиши `DateTime.Now` — это время сервера. ESQ читает дату уже в поясе пользователя.
+- ✅ `Update` (и другие запросы `BPMSoft.Core.DB`) пишет дату как есть, без перевода (пользователь UTC+5): `GetCurrentDateTime()` легло в БД на 5 часов позже настоящего UTC, `DateTime.UtcNow` — верно. В запросах передавай дату только в UTC.
 - Дата и время в `InsertQuery`/`UpdateQuery` `DataService` — JSON-строка внутри строки: `integration-api.md`, «DataService».
 - Смещение пояса для итогов (`timeZoneOffset`, в минутах) — раздел «Итоги (дашборды) в серверном коде» ниже.
 
 ## Итоги (дашборды) в серверном коде
-- ✅ Свои классы виджетов (подтверждено в CRM, 20.10.2026): `DashboardItemDataFactory` (`[app]/BPMSoft.Configuration/Autogenerated/Src/DashboardItemDataFactory.Platform.cs`) собирает словарь «тип виджета → класс» через `GetCustomAttributes(typeof(DashboardItemDataAttribute), true)` — атрибут наследуется. Наследник `GridDashboardItemData` (или другого `*DashboardItemData`) без своего `[DashboardItemData("<Тип>")]` получает атрибут родителя, и `types.Add` падает с `An item with the same key has already been added` — ломаются все виджеты стенда (`Logs/<дата>/Error.log`, стек `DashboardItemDataFactory.GetWidgetTypes`). Лечится своим атрибутом с уникальным типом на наследнике.
-- ✅ Данные виджета с изменённой конфигурацией (подтверждено в CRM, 20.10.2026): подставь свой `filterData` в JSON конфигурации виджета (вложенный `EXISTS` тоже работает) и вызови `new DashboardItemDataFactory(UserConnection).CreateInstance(<тип виджета>, <имя итога>, <config JObject>, <timeZoneOffset>).GetJson()` — фильтр применяется штатно, результат совпал с SQL.
-- ✅ `timeZoneOffset` у `CreateInstance` и классов `*DashboardItemData` — в минутах, UTC+3 → `180` (подтверждено в CRM, 20.10.2026): на сервере — `(int)UserConnection.CurrentUser.GetTimeZoneOffset().TotalMinutes`; клиент передаёт `-BPMSoft.util.getCurrentTimezoneOffsetInMinutes()` (`[app]/conf/content/MobileDashboardDataManager.js`).
-- ✅ `SysDashboard.Caption` локализуемая (подтверждено в CRM, 20.10.2026; переводы — в таблице `SysDashboardLcz`): ESQ из серверного кода сравнивает название на языке текущего пользователя, поэтому поиск итога по английскому названию у пользователя с русским языком ничего не находит. Ищи итог по `Id`, а не по `Caption`.
+- ✅ Свои классы виджетов (подтверждено в CRM): `DashboardItemDataFactory` (`[app]/BPMSoft.Configuration/Autogenerated/Src/DashboardItemDataFactory.Platform.cs`) собирает словарь «тип виджета → класс» через `GetCustomAttributes(typeof(DashboardItemDataAttribute), true)` — атрибут наследуется. Наследник `GridDashboardItemData` (или другого `*DashboardItemData`) без своего `[DashboardItemData("<Тип>")]` получает атрибут родителя, и `types.Add` падает с `An item with the same key has already been added` — ломаются все виджеты стенда (`Logs/<дата>/Error.log`, стек `DashboardItemDataFactory.GetWidgetTypes`). Лечится своим атрибутом с уникальным типом на наследнике.
+- ✅ Данные виджета с изменённой конфигурацией (подтверждено в CRM): подставь свой `filterData` в JSON конфигурации виджета (вложенный `EXISTS` тоже работает) и вызови `new DashboardItemDataFactory(UserConnection).CreateInstance(<тип виджета>, <имя итога>, <config JObject>, <timeZoneOffset>).GetJson()` — фильтр применяется штатно, результат совпал с SQL.
+- ✅ `timeZoneOffset` у `CreateInstance` и классов `*DashboardItemData` — в минутах, UTC+3 → `180` (подтверждено в CRM): на сервере — `(int)UserConnection.CurrentUser.GetTimeZoneOffset().TotalMinutes`; клиент передаёт `-BPMSoft.util.getCurrentTimezoneOffsetInMinutes()` (`[app]/conf/content/MobileDashboardDataManager.js`).
+- ✅ `SysDashboard.Caption` локализуемая (подтверждено в CRM; переводы — в таблице `SysDashboardLcz`): ESQ из серверного кода сравнивает название на языке текущего пользователя, поэтому поиск итога по английскому названию у пользователя с русским языком ничего не находит. Ищи итог по `Id`, а не по `Caption`.
 
 ## Чего нет в XML-документации
 - `StoringObjectState` — не описан совсем (значения — выше).

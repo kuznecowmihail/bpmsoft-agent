@@ -68,7 +68,7 @@
 
 `properties.json`: `CreatedInVersion`, `Enabled`, `EntitySchemaUId`, `IsActiveVersion`, `IsTracing`, `StageColumnUId`, `Version` — значения строками (`"True"`, `"0"`).
 
-В БД свойства кейса лежат в таблице `"SysSchemaProperty"` (`"SysSchemaId"` = `"SysSchema"."Id"` кейса, `"Name"`, `"Value"`): `EntitySchemaUId`, `StageColumnUId`, `Enabled`, `IsActiveVersion`, `Version`, `IsTracing`, `CreatedInVersion` (✅ запрос к БД, 28.10.2026). Условие запуска (`Filters`) и стадии — только в metadata: `convert_from("MetaData", 'UTF8')` из `"VwSysSchemaInfo"` (общий приём, `crm-db.md`). Это текст diff-журнала, а не JSON, поэтому `::json` падает (`invalid input syntax for type json`) — ищи `position`/`regexp_matches` по `"Filters"`, `"StageRecordId"`.
+В БД свойства кейса лежат в таблице `"SysSchemaProperty"` (`"SysSchemaId"` = `"SysSchema"."Id"` кейса, `"Name"`, `"Value"`): `EntitySchemaUId`, `StageColumnUId`, `Enabled`, `IsActiveVersion`, `Version`, `IsTracing`, `CreatedInVersion` (✅ запрос к БД). Условие запуска (`Filters`) и стадии — только в metadata: `convert_from("MetaData", 'UTF8')` из `"VwSysSchemaInfo"` (общий приём, `crm-db.md`). Это текст diff-журнала, а не JSON, поэтому `::json` падает (`invalid input syntax for type json`) — ищи `position`/`regexp_matches` по `"Filters"`, `"StageRecordId"`.
 
 ## ✅ Версии, замещение, «Активен», удаление
 - Правка файлов кейса с тем же `UId` меняет кейс на месте («Изменено» в окне обновления).
@@ -76,5 +76,5 @@
 - Строку `SysDcmSchemaInSettings` для новой версии дизайнер пишет в БД и создаёт для неё привязку данных `SysDcmSchemaInSettings_<Id>`, но без папки в `Pkg`. Следующее «Обновить из файловой системы» удаляет эту привязку, сама строка в таблице остаётся. На другом стенде у такой версии связи не будет — добавь строку в свой набор данных.
 - Замещений кейсов нет: кейсы проекта и платформенные — самостоятельные схемы (`ExtendParent` false). Менять платформенный кейс — новой версией в своём пакете 🧪.
 - 🧪 «Активен» — `Enabled` корневой (первой) версии; действие на все версии не проверено.
-- ❌ Опровергнуто как способ выключения: `"Enabled": "False"` в `properties.json` корневой версии после обновления и перезапуска не выключил кейс, дизайнер показывал «Активен». Выключай чекбоксом «Активен» в дизайнере 🧪.
+- ❌ Выключить кейс через `"Enabled": "False"` в `properties.json` корневой версии не получилось: после обновления и перезапуска дизайнер показывал «Активен». Выключай чекбоксом «Активен» в дизайнере 🧪.
 - Удаление схемы версии через «Обновить из файловой системы» убирает её запущенные экземпляры из `SysProcessData` и `SysEntityCommonPrcEl` и её строку `SysDcmSchemaInSettings`; журнал `SysProcessLog` остаётся со статусом Running.
