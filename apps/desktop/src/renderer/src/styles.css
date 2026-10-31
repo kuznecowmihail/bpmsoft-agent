@@ -673,6 +673,7 @@ button, input, textarea { font: inherit; color: inherit; }
   .project-kind { display: none; }
   .feed-inner { padding: 20px 14px 12px; }
   .composer-wrap { padding: 4px 12px 12px; }
+  .main > .jira-task-bar { max-width: calc(var(--content-w) + 24px); padding: 4px 12px 4px; }
   .activity, .permission { margin-left: 0; }
   .turn-result { margin-left: 6px; }
   .msg-user { max-width: 92%; }
@@ -827,5 +828,5 @@ button, input, textarea { font: inherit; color: inherit; }
 .fdm-steps li + li { margin-top: 2px; }
 .fdm-card .btn-block { margin-top: 12px; }
 
-.jira-task-bar { display: flex; flex-direction: column; gap: 6px; padding: 0 16px 8px; }
+.jira-task-bar { display: flex; flex-direction: column; gap: 6px; width: 100%; max-width: calc(var(--content-w) + 48px); margin: 0 auto; padding: 4px 24px 4px; }
 .jira-task-bar-row { display: flex; gap: 8px; align-items: center; }

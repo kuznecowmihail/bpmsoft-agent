@@ -21,7 +21,7 @@ import { Composer } from './components/Composer'
 import { EmptyState } from './components/EmptyState'
 import { EnvironmentPanel } from './components/EnvironmentPanel'
 import { FileDesignModeCard } from './components/FileDesignModeCard'
-import { Header } from './components/Header'
+import { Header, type BadgeState } from './components/Header'
 import { JiraTaskBar } from './components/JiraTaskBar'
 import { LogsDrawer } from './components/LogsDrawer'
 import { MessageList } from './components/MessageList'
@@ -41,6 +41,8 @@ function App(): React.JSX.Element {
   const [recentProjects, setRecentProjects] = useState<RecentProject[]>([])
 
   const [agentSettings, setAgentSettings] = useState<AgentSettings | null>(null)
+  // the Jira bar is shown only after the header badge reached Jira
+  const [jiraState, setJiraState] = useState<BadgeState>('checking')
 
   const [envReport, setEnvReport] = useState<EnvironmentReport | null>(null)
   const [envRechecking, setEnvRechecking] = useState(false)
@@ -494,6 +496,7 @@ function App(): React.JSX.Element {
           void handleRecheckEnvironment()
         }}
         environmentRechecking={envRechecking}
+        onJiraStateChange={setJiraState}
       />
       <div className="workspace">
         {sidebarOpen && (
@@ -527,7 +530,7 @@ function App(): React.JSX.Element {
               />
             )}
           </div>
-          {agentSettings?.jiraUrl && agentSettings?.hasJiraToken && validation?.pkgRoot && !readOnlyReason && (
+          {agentSettings?.jiraUrl && agentSettings?.hasJiraToken && jiraState === 'ok' && validation?.pkgRoot && !readOnlyReason && (
             <JiraTaskBar disabled={isRunning || isOpeningChat} onTake={handleTakeJiraTask} />
           )}
           <Composer

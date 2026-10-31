@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { AgentProvider, AgentSettings, CursorModelOption, ClaudeModelOption, DbSettingsPatch, CrmSettingsPatch, TrackerSettingsPatch, EnvironmentReport } from '../../../shared/types'
 import type { ClaudeMdChoice, ClaudeSkillsStatus } from '@bpmsoft-agent/agent-runtime'
+import { reportConnection } from '../connectionStatus'
 import { IconAlert, IconExternal, IconTrash } from './icons'
 import { Toggle } from './Toggle'
 
@@ -331,8 +332,10 @@ export function SettingsMenu({
     try {
       const text = await window.api.testDbConnection(appRoot)
       setDbTestResult({ ok: true, text })
+      reportConnection('db', { ok: true, text })
     } catch (error) {
       setDbTestResult({ ok: false, text: errorText(error) })
+      reportConnection('db', { ok: false, text: errorText(error) })
     } finally {
       setIsTestingDb(false)
     }
@@ -425,8 +428,10 @@ export function SettingsMenu({
     try {
       const text = await window.api.testCrmConnection()
       setCrmTestResult({ ok: true, text })
+      reportConnection('crm', { ok: true, text })
     } catch (error) {
       setCrmTestResult({ ok: false, text: errorText(error) })
+      reportConnection('crm', { ok: false, text: errorText(error) })
     } finally {
       setIsTestingCrm(false)
     }
@@ -478,8 +483,10 @@ export function SettingsMenu({
     try {
       const text = await window.api.testJiraConnection()
       setJiraTestResult({ ok: true, text })
+      reportConnection('jira', { ok: true, text })
     } catch (error) {
       setJiraTestResult({ ok: false, text: errorText(error) })
+      reportConnection('jira', { ok: false, text: errorText(error) })
     } finally {
       setIsTestingJira(false)
     }
@@ -521,8 +528,10 @@ export function SettingsMenu({
     try {
       const text = await window.api.testConfluenceConnection()
       setConfluenceTestResult({ ok: true, text })
+      reportConnection('confluence', { ok: true, text })
     } catch (error) {
       setConfluenceTestResult({ ok: false, text: errorText(error) })
+      reportConnection('confluence', { ok: false, text: errorText(error) })
     } finally {
       setIsTestingConfluence(false)
     }

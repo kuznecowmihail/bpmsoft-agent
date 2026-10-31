@@ -3,6 +3,7 @@ import type { AgentProvider, AgentSettings, EnvironmentReport } from '../../../s
 import { projectName } from '../chatFormat'
 import { problemChecks } from '../environmentFormat'
 import { EnvironmentPanel } from './EnvironmentPanel'
+import { subscribeConnection, type ConnectionKind } from '../connectionStatus'
 import { IconAlert, IconFolder, IconGlobe, IconLogo, IconLogout, IconPlus, IconSettings, IconSidebar, IconTerminal } from './icons'
 import { SettingsMenu } from './SettingsMenu'
 
@@ -35,23 +36,30 @@ interface HeaderProps {
   environment?: EnvironmentReport | null
   onRecheckEnvironment?: () => void
   environmentRechecking?: boolean
+  /** Result of the Jira connection check from the header badge. */
+  onJiraStateChange?: (state: BadgeState) => void
 }
 
-type BadgeStatus = { state: 'checking' | 'ok' | 'error'; text: string }
+export type BadgeState = 'checking' | 'ok' | 'error'
+type BadgeStatus = { state: BadgeState; text: string }
 
-/** Header status badge (DB, CRM): gray when off, checks on change and on click. */
+/** Header status badge (DB, CRM, Jira, Confluence): gray when off, checks on change and on click. */
 function StatusBadge({
+  kind,
   label,
   enabled,
   offTitle,
   deps,
-  check
+  check,
+  onStateChange
 }: {
+  kind: ConnectionKind
   label: string
   enabled: boolean
   offTitle: string
   deps: unknown[]
   check: () => Promise<string>
+  onStateChange?: (state: BadgeState) => void
 }): React.JSX.Element {
   const [status, setStatus] = useState<BadgeStatus>({ state: 'checking', text: '' })
   const [attempt, setAttempt] = useState(0)
@@ -75,6 +83,19 @@ function StatusBadge({
       cancelled = true
     }
   }, [enabled, ...deps, attempt])
+
+  // a check from the settings menu updates the badge right away
+  useEffect(
+    () =>
+      subscribeConnection(kind, (result) => {
+        setStatus({ state: result.ok ? 'ok' : 'error', text: result.text })
+      }),
+    [kind]
+  )
+
+  useEffect(() => {
+    onStateChange?.(status.state)
+  }, [status.state])
 
   if (!enabled) {
     return (
@@ -103,6 +124,18 @@ function StatusBadge({
   )
 }
 
+/** Confluence works with its own token, or with the Jira token when both sites are on the same host (as trackerConfig in main). */
+function confluenceReady(settings: AgentSettings): boolean {
+  if (!settings.confluenceUrl) return false
+  if (settings.hasConfluenceToken) return true
+  if (!settings.jiraUrl || !settings.hasJiraToken) return false
+  try {
+    return new URL(settings.confluenceUrl).host === new URL(settings.jiraUrl).host
+  } catch {
+    return false
+  }
+}
+
 export function Header({
   projectPath,
   projectKind,
@@ -124,7 +157,8 @@ export function Header({
   onNewChat,
   environment,
   onRecheckEnvironment,
-  environmentRechecking = false
+  environmentRechecking = false,
+  onJiraStateChange
 }: HeaderProps): React.JSX.Element {
   const [menuOpen, setMenuOpen] = useState(false)
   const [envOpen, setEnvOpen] = useState(false)
@@ -220,6 +254,7 @@ export function Header({
             )}
             {settings && (
               <StatusBadge
+                kind="db"
                 label="БД"
                 enabled={Boolean(settings.dbAccessEnabled && appRoot)}
                 offTitle={settings.dbAccessEnabled ? 'БД CRM: откройте проект, чтобы проверить подключение' : 'Доступ агента к БД CRM выключен — включается в настройках'}
@@ -229,6 +264,7 @@ export function Header({
             )}
             {settings && (
               <StatusBadge
+                kind="crm"
                 label="CRM"
                 enabled={Boolean((settings.crmActionsEnabled || settings.crmBrowserEnabled) && settings.crmUrl && settings.crmUser && settings.hasCrmPassword)}
                 offTitle={
@@ -238,6 +274,27 @@ export function Header({
                 }
                 deps={[settings.crmUrl, settings.crmUser, settings.hasCrmPassword]}
                 check={() => window.api.testCrmConnection()}
+              />
+            )}
+            {settings && (
+              <StatusBadge
+                kind="jira"
+                label="Jira"
+                enabled={Boolean(settings.jiraUrl && settings.hasJiraToken)}
+                offTitle="Jira не подключена — адрес и токен задаются в настройках"
+                deps={[settings.jiraUrl, settings.jiraEmail, settings.hasJiraToken]}
+                check={() => window.api.testJiraConnection()}
+                onStateChange={onJiraStateChange}
+              />
+            )}
+            {settings && (
+              <StatusBadge
+                kind="confluence"
+                label="Confluence"
+                enabled={confluenceReady(settings)}
+                offTitle="Confluence не подключена — адрес и токен задаются в настройках"
+                deps={[settings.confluenceUrl, settings.confluenceEmail, settings.hasConfluenceToken, settings.jiraUrl, settings.hasJiraToken]}
+                check={() => window.api.testConfluenceConnection()}
               />
             )}
             {environment && problemCount > 0 && (
