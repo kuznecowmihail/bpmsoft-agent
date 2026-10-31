@@ -740,6 +740,13 @@ button, input, textarea { font: inherit; color: inherit; }
 .db-badge.is-checking { cursor: default; }
 .db-badge.is-off { cursor: default; }
 .db-badge.is-checking::before { animation: db-pulse 1s ease-in-out infinite; }
+.db-badge.is-warn { background: var(--warning-soft); color: var(--warning); }
+.git-badge { margin-left: 0; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.git-badge::before { display: none; }
+.git-badge svg { flex-shrink: 0; }
+.git-repo { padding: 6px 0; border-top: 1px solid var(--border); }
+.git-repo:first-of-type { border-top: 0; }
+.git-repo .popover-row-title { overflow-wrap: anywhere; }
 @keyframes db-pulse { 50% { opacity: 0.3; } }
 /* ChoicesCard */
 .choices { margin-top: 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); padding: 12px 14px; display: flex; flex-direction: column; gap: 14px; }

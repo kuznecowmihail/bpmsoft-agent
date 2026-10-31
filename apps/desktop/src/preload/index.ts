@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { IpcRendererEvent } from 'electron'
-import type { ProjectValidationResult, AgentProvider, AgentSettings, CursorModelOption, ClaudeModelOption, CursorModelParam, ClaudeEffort, DbSettingsPatch, CrmSettingsPatch, CrmBrowserState, TrackerSettingsPatch, RecentProject, ChatSummary, OpenedChat, EnvironmentReport } from '../shared/types'
+import type { ProjectValidationResult, AgentProvider, AgentSettings, CursorModelOption, ClaudeModelOption, CursorModelParam, ClaudeEffort, DbSettingsPatch, CrmSettingsPatch, CrmBrowserState, TrackerSettingsPatch, RecentProject, ChatSummary, OpenedChat, EnvironmentReport, GitState } from '../shared/types'
 import type { AgentEvent, ClaudeSkillsStatus, ClaudeMdChoice, InstallOutcome } from '@bpmsoft-agent/agent-runtime'
 
 export interface AgentPermissionRequest {
@@ -60,6 +60,7 @@ const api = {
   testJiraConnection: (): Promise<string> => ipcRenderer.invoke('jira:test'),
   testConfluenceConnection: (): Promise<string> => ipcRenderer.invoke('confluence:test'),
   loadJiraTask: (keyOrUrl: string): Promise<string> => ipcRenderer.invoke('jira:loadTask', keyOrUrl),
+  gitStatus: (pkgRoot: string): Promise<GitState> => ipcRenderer.invoke('git:status', pkgRoot),
   claudeSkillsStatus: (appRoot: string): Promise<ClaudeSkillsStatus> => ipcRenderer.invoke('claudeSkills:status', appRoot),
   installClaudeSkills: (appRoot: string, options: { claudeMd?: ClaudeMdChoice; overwriteModified?: boolean }): Promise<InstallOutcome> =>
     ipcRenderer.invoke('claudeSkills:install', appRoot, options),

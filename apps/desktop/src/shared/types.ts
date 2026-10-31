@@ -215,3 +215,26 @@ export interface EnvironmentReport {
   checks: EnvCheck[]
   canOpenProject: boolean
 }
+
+/** Branch state of one git repository of the Pkg packages. */
+export interface GitRepoState {
+  /** "Pkg" or the package name. */
+  label: string
+  dir: string
+  /** Current branch, "HEAD" when detached, "?" when unknown. */
+  branch: string
+  /** MR target branch; undefined when not found. */
+  target?: string
+  ahead: number
+  behind: number
+  /** Changed or new files. */
+  changed: number
+}
+
+/** Git state of the Pkg folder for the header badge. */
+export interface GitState {
+  repos: GitRepoState[]
+  /** Packages outside any git repository. */
+  withoutGit: string[]
+  gitMissing?: boolean
+}
