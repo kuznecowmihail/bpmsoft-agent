@@ -6,6 +6,7 @@ import { EnvironmentPanel } from './EnvironmentPanel'
 import { subscribeConnection, type ConnectionKind } from '../connectionStatus'
 import { IconAlert, IconFolder, IconGlobe, IconLogo, IconLogout, IconPlus, IconSettings, IconSidebar, IconTerminal } from './icons'
 import { SettingsMenu } from './SettingsMenu'
+import { GitBadge } from './GitBadge'
 
 interface HeaderProps {
   projectPath: string
@@ -20,6 +21,8 @@ interface HeaderProps {
   onSettingsChanged: () => void
   /** Opened application folder: the root for the CRM database connection check. */
   appRoot?: string
+  /** Pkg folder: git branch badge. */
+  pkgRoot?: string
   /** CRM browser panel is open. */
   browserOpen: boolean
   onToggleBrowser: () => void
@@ -148,6 +151,7 @@ export function Header({
   onProviderChange,
   onSettingsChanged,
   appRoot,
+  pkgRoot,
   browserOpen,
   onToggleBrowser,
   onMenuOpenChange,
@@ -162,6 +166,7 @@ export function Header({
 }: HeaderProps): React.JSX.Element {
   const [menuOpen, setMenuOpen] = useState(false)
   const [envOpen, setEnvOpen] = useState(false)
+  const [gitOpen, setGitOpen] = useState(false)
   const [copied, setCopied] = useState(false)
   const menuRef = useRef<HTMLDivElement | null>(null)
   const envRef = useRef<HTMLDivElement | null>(null)
@@ -171,8 +176,8 @@ export function Header({
   const envPopoverOpen = envOpen && problemCount > 0
 
   useEffect(() => {
-    onMenuOpenChange?.(menuOpen || envPopoverOpen)
-  }, [menuOpen, envPopoverOpen])
+    onMenuOpenChange?.(menuOpen || envPopoverOpen || gitOpen)
+  }, [menuOpen, envPopoverOpen, gitOpen])
 
   useEffect(() => {
     if (!envPopoverOpen) {
@@ -297,6 +302,7 @@ export function Header({
                 check={() => window.api.testConfluenceConnection()}
               />
             )}
+            {settings && <GitBadge pkgRoot={pkgRoot} isRunning={isRunning} onOpenChange={setGitOpen} />}
             {environment && problemCount > 0 && (
               <div className="popover-anchor env-anchor" ref={envRef}>
                 <button

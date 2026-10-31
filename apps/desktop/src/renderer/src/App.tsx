@@ -474,6 +474,7 @@ function App(): React.JSX.Element {
         projectPath={selectedPath ?? ''}
         projectKind={validation?.kind}
         appRoot={validation?.appRoot ?? validation?.pkgRoot}
+        pkgRoot={validation?.pkgRoot}
         isRunning={isRunning}
         showDebug={showDebug}
         onToggleDebug={setShowDebug}

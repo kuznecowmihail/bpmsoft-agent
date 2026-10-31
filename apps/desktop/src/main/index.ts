@@ -62,7 +62,7 @@ import { initAppSettings, getAppSettings, updateAppSettings, addRecentProject, r
 import type { ProjectConnection, StoredSettings } from './appSettings'
 import { loadLoginShellPath } from './shellPath'
 import { isExternalWebUrl } from './urlPolicy'
-import { listCursorModels, listClaudeModels, claudeSkillsStatus, installClaudeSkills, defaultExportSources } from '@bpmsoft-agent/agent-runtime'
+import { listCursorModels, listClaudeModels, claudeSkillsStatus, installClaudeSkills, defaultExportSources, pkgGitSummary } from '@bpmsoft-agent/agent-runtime'
 import type { ClaudeMdChoice } from '@bpmsoft-agent/agent-runtime'
 import type { AgentProvider, CursorModelParam, ClaudeEffort, DbSettingsPatch, CrmSettingsPatch, TrackerSettingsPatch, RecentProject, ProjectValidationResult, DeviceInfo, EnvironmentReport, FileDesignModeCheck } from '../shared/types'
 
@@ -456,6 +456,9 @@ app.whenReady().then(() => {
   ipcMain.handle('confluence:test', () => testConfluenceConnection())
 
   ipcMain.handle('jira:loadTask', (_event, keyOrUrl: string) => loadJiraTaskText(String(keyOrUrl ?? '')))
+
+  // Branch of the Pkg git repositories for the header badge: read-only, no git fetch.
+  ipcMain.handle('git:status', (_event, pkgRoot: string) => pkgGitSummary(String(pkgRoot ?? '')))
 
   // CRM browser panel: bounds of the placeholder in the renderer, visibility, the user's home button, reload.
   ipcMain.handle('crmBrowser:setBounds', (_event, b: { x: number; y: number; width: number; height: number }) => {
