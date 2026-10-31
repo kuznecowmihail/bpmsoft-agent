@@ -164,11 +164,17 @@ describe("git tools", () => {
 	it("create MR on a branch with the issue key commits to that branch", async () => {
 		git(pkg, "switch", "-c", "PRJ-11-existing");
 		write("P1/Schemas/TestA/metadata.json", '{"a":5}');
-		const result = await gitCreateMr(pkg, { issueKey: "PRJ-11", title: "другое название", paths: ["P1/Schemas/TestA"], description: "d" });
+		let card = "";
+		const result = await gitCreateMr(pkg, { issueKey: "PRJ-11", title: "другое название", paths: ["P1/Schemas/TestA"], description: "d" }, async (text) => {
+			card = text;
+			return true;
+		});
 		expect(result.isError).toBe(false);
 		expect(git(pkg, "rev-parse", "--abbrev-ref", "HEAD").trim()).toBe("PRJ-11-existing");
 		expect(git(pkg, "branch", "--list", "PRJ-11-drugoe*").trim()).toBe("");
 		expect(git(remote, "rev-list", "--count", "develop..PRJ-11-existing").trim()).toBe("1");
+		expect(card.split("\n")[0]).toBe("Коммит и push в ветку открытого MR: PRJ-11 другое название");
+		expect(card).toContain("Ветка: PRJ-11-existing (уже есть) → MR в develop");
 	});
 
 	it("a declined confirmation changes nothing", async () => {

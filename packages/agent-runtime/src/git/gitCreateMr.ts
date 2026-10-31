@@ -197,9 +197,9 @@ export async function gitCreateMr(pkgDir: string, input: CreateMrInput, confirm?
 			warnings.push(`ВНИМАНИЕ (${label}): ветка отстаёт от ${plan.target} на ${plan.behindTarget} коммит(ов) — в MR возможны конфликты`);
 		}
 	}
-	const card = [`Создать ветку и MR: ${subject}`, ...warnings];
+	const card = [`${plans.every((plan) => plan.current === plan.branch) ? "Коммит и push в ветку открытого MR" : "Создать ветку и MR"}: ${subject}`, ...warnings];
 	for (const plan of plans) {
-		card.push("", `Репозиторий: ${repoLabel(pkgRoot, plan.dir)}`, `Ветка: ${plan.branch} (от ${plan.current}) → MR в ${plan.target}`);
+		card.push("", `Репозиторий: ${repoLabel(pkgRoot, plan.dir)}`, plan.current === plan.branch ? `Ветка: ${plan.branch} (уже есть) → MR в ${plan.target}` : `Ветка: ${plan.branch} (от ${plan.current}) → MR в ${plan.target}`);
 		if (plan.files.length > 0) {
 			card.push("Файлы:", ...plan.files.map((file) => `  ${path.relative(pkgRoot, file)}`));
 		} else {

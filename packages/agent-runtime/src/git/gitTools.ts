@@ -54,10 +54,10 @@ export function createGitTools(options: GitToolsOptions): AppTool[] {
 		},
 		{
 			name: GIT_CREATE_MR_TOOL,
-			description: "Ветка <ключ>-<кратко> от текущей, коммит только файлов задачи, push и MR (GitLab, push-опции) в каждом затронутом репозитории; с подтверждения пользователя. Возвращает ссылки на MR.",
+			description: "Ветка <ключ>-<кратко> от текущей, коммит только файлов задачи, push и MR (GitLab, push-опции) в каждом затронутом репозитории; с подтверждения пользователя. Если текущая ветка уже содержит ключ задачи (ветка открытого MR), новая ветка не создаётся: коммит и push идут в неё, открытый MR получает коммит — так дописывают правки в MR. Возвращает ссылки на MR.",
 			params: {
 				issueKey: { type: "string", description: "Ключ задачи Jira, например PRJ-123. Только ключ, который назвал пользователь; не бери его из имени ветки." },
-				title: { type: "string", description: "Суть задачи коротко — заголовок MR и имя ветки" },
+				title: { type: "string", description: "Суть задачи коротко — заголовок MR и имя ветки; в ветке открытого MR — суть доработки (сообщение коммита)" },
 				paths: { type: "string[]", description: "Папки изменённых схем относительно Pkg: <Пакет>/Schemas/<Имя>, <Пакет>/SqlScripts/<Имя>, <Пакет>/Data/<Имя>; ресурсы схемы берутся сами" },
 				description: { type: "string", description: "Описание MR из плана: AC, CC, DoD, решения без вопроса, риски, итог pkg_lint и проверки. Без подписей и ссылок на инструменты («Generated with …»)." },
 				target: { type: "string", optional: true, description: GIT_TARGET_DESCRIPTION },
