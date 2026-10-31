@@ -1,0 +1,40 @@
+{
+  "title": "Задача из Jira: агент берёт требования из задачи и не переспрашивает то, что в ней есть",
+  "provider": "claude",
+  "jira": {
+    "issues": {
+      "PRJ-201": {
+        "fields": {
+          "summary": "Нормализация телефона для SMS",
+          "issuetype": { "name": "Задача" },
+          "status": { "name": "В работе" },
+          "priority": { "name": "Средний" },
+          "description": "Пакет: {{package}}.\nСоздать клиентский модуль {{prefix}}EvalSmsPhone с функцией normalizePhone(value).\n\nКритерии приёмки:\n* \"+7 (999) 123-45-67\" → \"+79991234567\"\n* \"8 999 123 45 67\" → \"89991234567\"\n* пустая строка, null и undefined → \"\"\n* плюс остаётся только первым символом: \"7+999\" → \"7999\"",
+          "comment": {
+            "total": 1,
+            "comments": [
+              {
+                "author": { "displayName": "Аналитик" },
+                "created": "2026-10-30T10:00:00.000+0300",
+                "body": "Модуль только клиентский, серверная часть не нужна. Модуль экспортирует одну функцию normalizePhone."
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "task": "Возьми задачу PRJ-201.",
+  "answers": [
+    { "when": "Подтверждаете план", "text": "Делай" }
+  ],
+  "maxTurns": 8,
+  "checks": [
+    { "type": "tool_called", "name": "jira_get_issue" },
+    { "type": "questions_exclude", "pattern": "пакет|назва|имя (модул|функци)|null|undefined|пуст|сервер" },
+    { "type": "file_exists", "path": "Schemas/{{prefix}}EvalSmsPhone/descriptor.json" },
+    { "type": "file_contains", "path": "Schemas/{{prefix}}EvalSmsPhone/{{prefix}}EvalSmsPhone.js", "pattern": "normalizePhone" },
+    { "type": "lint_clean" },
+    { "type": "crm_update_ok" }
+  ]
+}

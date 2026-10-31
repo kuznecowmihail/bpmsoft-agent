@@ -3,6 +3,7 @@ import * as path from "path";
 import {
 	createGitTools,
 	createPkgLintTool,
+	createTrackerTools,
 	listChangedFiles,
 	lintChanged,
 	runBpmsoftAgentQuery,
@@ -25,6 +26,7 @@ import type { EvalCase, EvalConfig } from "./caseFile";
 import { RESULT_CHECK_TYPES, runChecks } from "./checks";
 import type { CheckContext, CheckResult, TimelineEvent } from "./checks";
 import { isEvalPackageOnly } from "./evalGitGuard";
+import { createEvalJira } from "./evalJira";
 import { setupEvalGit } from "./evalGit";
 import type { EvalGitRepo } from "./evalGit";
 import {
@@ -374,6 +376,7 @@ export async function runCase(
 			crmRequests.push(record);
 			log("crm_request", { record });
 		});
+		const jira = evalCase.jira ? createEvalJira(evalCase.jira) : undefined;
 		const appTools: AppTool[] = [
 			...(requestTool ? [requestTool] : []),
 			createPkgLintTool({ pkgRoot, since: () => since }),
@@ -384,6 +387,16 @@ export async function runCase(
 							const approved = isEvalPackageOnly(text, config.package);
 							log("git_confirm", { text, approved });
 							return approved;
+						},
+					})
+				: []),
+			...(jira
+				? createTrackerTools({
+						jira: jira.connection,
+						fetchImpl: jira.fetchImpl,
+						confirm: async (text) => {
+							log("jira_confirm", { text });
+							return true;
 						},
 					})
 				: []),
@@ -447,6 +460,7 @@ export async function runCase(
 			}
 			prompt = answer;
 		}
+		if (jira && jira.comments.length > 0) log("jira_comments", { comments: jira.comments });
 
 		inTurns = false;
 		checks = await runChecks(evalCase.checks, ctx);
